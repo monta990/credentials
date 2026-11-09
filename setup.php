@@ -14,7 +14,7 @@ use GlpiPlugin\Credentials\CredentialItem;
 use GlpiPlugin\Credentials\CredentialTicketTab;
 use GlpiPlugin\Credentials\Profile;
 
-define('PLUGIN_CREDENTIALS_VERSION', '0.0.27');
+define('PLUGIN_CREDENTIALS_VERSION', '0.0.28');
 define('PLUGIN_CREDENTIALS_MIN_GLPI', '12.0.0');
 define('PLUGIN_CREDENTIALS_MAX_GLPI', '12.0.99');
 
@@ -57,6 +57,7 @@ function plugin_init_credentials(): void
     $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['credentials'][] = 'js/credentials.js';
     $PLUGIN_HOOKS[Hooks::ADD_CSS]['credentials'][] = 'css/credentials.css?v=' . PLUGIN_CREDENTIALS_VERSION;
 
+    $PLUGIN_HOOKS[Hooks::ITEM_TRANSFER]['credentials'] = 'plugin_credentials_item_transfer';
     $PLUGIN_HOOKS[Hooks::CHANGE_PROFILE]['credentials'] = [Profile::class, 'initProfile'];
     $PLUGIN_HOOKS[Hooks::POST_INIT]['credentials'] = 'plugin_credentials_postinit';
 }
