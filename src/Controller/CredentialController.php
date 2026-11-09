@@ -624,10 +624,37 @@ final class CredentialController extends AbstractController
                 }
 
                 if ($errors === []) {
-                    $saved_id = $this->runTransaction(function () use ($credential, $input, $is_update, $credential_id, $itemtype, $items_id): int {
+                    $expected_entity_id = CredentialItem::resolveParentEntityID($parent);
+                    $saved_id = $this->runTransaction(function () use ($credential, $input, $is_update, $credential_id, $itemtype, $items_id, $expected_entity_id): int {
                         if ($is_update) {
+                            // A credential form may have been opened before its parent
+                            // item was transferred. Lock first, then re-read both the
+                            // parent and exact link before changing any credential data.
+                            if (!CredentialItemLink::lockCredential($credential_id, $expected_entity_id, true)) {
+                                return 0;
+                            }
+
+                            $live_parent = CredentialItem::loadReadableItem($itemtype, $items_id);
+                            $locked_credential = new Credential();
+                            if (
+                                $live_parent === null
+                                || CredentialItem::resolveParentEntityID($live_parent) !== $expected_entity_id
+                                || !$live_parent->can($items_id, UPDATE)
+                                || !CredentialItemLink::exists($credential_id, $itemtype, $items_id)
+                                || !$locked_credential->getFromDB($credential_id)
+                                || (int) ($locked_credential->fields['is_deleted'] ?? 0) !== 0
+                                || (int) ($locked_credential->fields['entities_id'] ?? 0) !== $expected_entity_id
+                                || !$locked_credential->can($credential_id, UPDATE)
+                            ) {
+                                return 0;
+                            }
+
+                            // Do not persist a stale entity value from the form's
+                            // initial GET. Entity ownership is derived from the
+                            // parent reloaded after the credential row lock.
                             $input['id'] = $credential_id;
-                            $saved = (bool) $credential->update($input);
+                            unset($input['entities_id']);
+                            $saved = (bool) $locked_credential->update($input);
                             return $saved && CredentialHistory::recordForItem(
                                 $itemtype,
                                 $items_id,
