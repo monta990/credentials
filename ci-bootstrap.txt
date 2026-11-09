@@ -1,1 +1,0 @@
-Credentials 0.0.27 CI bootstrap test
