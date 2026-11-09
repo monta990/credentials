@@ -1,5 +1,8 @@
 ## 0.0.28 — 2026-11-09
 
+- Revalidated the exact source-item relationship after acquiring the credential row lock before copying links for a cloned item. This prevents a stale pre-lock ID list from restoring a relationship concurrently removed by a user.
+- Hardened credential edits against stale forms submitted after a parent item transfer: lock the credential, reload and authorize the current parent, recheck the exact relationship and credential entity, and omit the stale form's `entities_id` from the update.
+- Added a race regression that removes the source relationship after the transfer lock and verifies no destination credential/link is created.
 - Registered GLPI 12's native `ITEM_TRANSFER` hook so credentials follow supported users and assets when GLPI moves or clones them between entities.
 - When an item keeps its ID, a single-link credential moves to the destination entity; a shared credential is copied with its encrypted fields unchanged and only the moved item's relationship is reassigned. Other source-entity relationships remain untouched.
 - When GLPI creates a new item ID, the copy receives a destination-entity credential copy when crossing entities; same-entity copies reuse the existing credential. The original item's relationships are preserved.
