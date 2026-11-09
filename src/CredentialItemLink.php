@@ -131,6 +131,58 @@ final class CredentialItemLink extends CommonDBTM
         return array_values($unique);
     }
 
+    /**
+     * Read the latest committed credential fields after its row lock is held.
+     *
+     * This must be a locking/current read: under InnoDB REPEATABLE READ, a
+     * normal DB->request() can keep returning an older snapshot after waiting
+     * for a concurrent credential edit. The transfer path copies encrypted
+     * columns directly, so it must copy the latest committed ciphertext.
+     *
+     * The caller must already hold this credential's row lock in a transaction.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function getCredentialForUpdate(int $credential_id): ?array
+    {
+        global $DB;
+
+        if ($credential_id <= 0) {
+            return null;
+        }
+
+        $columns = [
+            'id',
+            'name',
+            'entities_id',
+            'login',
+            'password',
+            'url',
+            'notes',
+            'users_id',
+            'date_creation',
+            'date_mod',
+            'is_deleted',
+        ];
+        $select = implode(', ', array_map(
+            static fn(string $column): string => \DBmysql::quoteName($column),
+            $columns,
+        ));
+        $query = 'SELECT ' . $select
+            . ' FROM ' . \DBmysql::quoteName(Credential::getTable())
+            . ' WHERE ' . \DBmysql::quoteName('id')
+            . ' = ' . \DBmysql::quoteValue($credential_id)
+            . ' FOR UPDATE';
+
+        $result = $DB->doQuery($query);
+        try {
+            $row = $DB->fetchAssoc($result);
+            return $row === false || $row === null ? null : $row;
+        } finally {
+            $DB->freeResult($result);
+        }
+    }
+
     public static function countForCredential(int $credential_id): int
     {
         return count(self::getLinksForCredential($credential_id));

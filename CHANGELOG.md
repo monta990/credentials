@@ -1,3 +1,11 @@
+## 0.0.30 — 2026-11-09
+
+- Added a current InnoDB locking read for credential rows after the transfer lock is acquired. Cross-entity copies now use the latest committed name and GLPIKey ciphertext for login, password, URL and notes instead of values retained by an older REPEATABLE READ snapshot.
+- Fixed the package validator's transfer-regression markers and added explicit checks that transfer reloads credential fields through the current locking read.
+- Added a regression that simulates a credential edit committed while a transfer waits for the row lock and verifies every copied protected field is the latest ciphertext.
+- Extended the DBmysql current-read regression to verify the credential-row query is ID-scoped, quoted and uses FOR UPDATE.
+- Incremented plugin and translation metadata to 0.0.30.
+
 ## 0.0.29 — 2026-11-09
 
 - Added a narrowly scoped InnoDB current locking read for credential relationships. It uses GLPI 12's `DBmysql::doQuery()` with fixed identifiers and values quoted through GLPI's `DBmysql::quoteName()` and `quoteValue()`, because the GLPI query builder does not expose a `FOR UPDATE` option.

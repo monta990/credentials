@@ -123,6 +123,16 @@ namespace {
             ));
         }
 
+        public function getCurrentCredentialForUpdate(int $credential_id): ?array
+        {
+            foreach ($this->credentials as $credential) {
+                if ((int) $credential['id'] === $credential_id) {
+                    return $credential;
+                }
+            }
+            return null;
+        }
+
         public function beginTransaction(): void
         {
             $this->snapshot = [$this->credentials, $this->links, $this->last_insert_id];
@@ -195,6 +205,11 @@ namespace GlpiPlugin\Credentials {
         {
             global $DB;
             return $DB->getCurrentLinksForCredential($id);
+        }
+        public static function getCredentialForUpdate(int $id): ?array
+        {
+            global $DB;
+            return $DB->getCurrentCredentialForUpdate($id);
         }
         public static function countForCredential(int $id): int
         {
@@ -363,6 +378,42 @@ namespace {
     ]);
     transferAssert((int) $DB->credentials[0]['entities_id'] === 1, 'A same-ID transfer must not move a credential after its source relationship was concurrently removed.');
     transferAssert(count($DB->links) === 1 && (int) $DB->links[0]['items_id'] === 601, 'A same-ID transfer must preserve the surviving relationship and skip the stale source link.');
+
+    // Concurrent credential edit while waiting for the row lock: the ordinary
+    // read snapshot contains the old ciphertext, but the copy must use the
+    // latest committed encrypted values returned by the current locking read.
+    $DB = new FakeCredentialTransferDB();
+    $TRANSFER_ITEMS = [FakeAsset::class => [
+        700 => ['id' => 700, 'entities_id' => 1],
+        701 => ['id' => 701, 'entities_id' => 2],
+    ]];
+    $DB->credentials = [transferCredential(60, 1)];
+    $DB->links = [
+        ['id' => 1, 'plugin_credentials_credentials_id' => 60, 'itemtype' => 'FakeAsset', 'items_id' => 700],
+    ];
+    $DB->afterLock = static function (FakeCredentialTransferDB $database): void {
+        foreach ($database->credentials as &$credential) {
+            if ((int) $credential['id'] === 60) {
+                $credential['name'] = 'Updated database access';
+                $credential['login'] = 'glpikey-login-ciphertext-v2';
+                $credential['password'] = 'glpikey-password-ciphertext-v2';
+                $credential['url'] = 'glpikey-url-ciphertext-v2';
+                $credential['notes'] = 'glpikey-notes-ciphertext-v2';
+            }
+        }
+        unset($credential);
+    };
+    \GlpiPlugin\Credentials\CredentialHistory::$events = [];
+    \GlpiPlugin\Credentials\CredentialTransfer::handle([
+        'type' => 'FakeAsset', 'id' => 700, 'newID' => 701, 'entities_id' => 2,
+    ]);
+    transferAssert(count($DB->credentials) === 2, 'A cross-entity clone must create exactly one destination credential.');
+    $copied = $DB->credentials[1];
+    transferAssert($copied['name'] === 'Updated database access', 'A transfer must copy the latest committed credential name.');
+    transferAssert($copied['login'] === 'glpikey-login-ciphertext-v2', 'A transfer must copy the latest committed login ciphertext.');
+    transferAssert($copied['password'] === 'glpikey-password-ciphertext-v2', 'A transfer must copy the latest committed password ciphertext.');
+    transferAssert($copied['url'] === 'glpikey-url-ciphertext-v2', 'A transfer must copy the latest committed URL ciphertext.');
+    transferAssert($copied['notes'] === 'glpikey-notes-ciphertext-v2', 'A transfer must copy the latest committed notes ciphertext.');
 
     echo "Credential entity transfer regression tests: OK\n";
 }

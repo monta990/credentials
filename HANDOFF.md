@@ -1,12 +1,19 @@
-# HANDOFF — Credentials 0.0.29
+# HANDOFF — Credentials 0.0.30
 
 ## Estado actual
 
-La versión `0.0.29` conserva los flujos funcionales de la versión `0.0.28`: la contraseña revelada se muestra en un `<input type="text" readonly>` seleccionable; copiar y ocultar leen y limpian `input.value`. Después de guardar desde el modal, `public/js/credential-frame.js` solicita la navegación completa del padre mediante `postMessage` same-origin validado. Cancelar sigue siendo independiente y no envía el formulario.
+La versión `0.0.30` conserva los flujos funcionales de la versión `0.0.28`: la contraseña revelada se muestra en un `<input type="text" readonly>` seleccionable; copiar y ocultar leen y limpian `input.value`. Después de guardar desde el modal, `public/js/credential-frame.js` solicita la navegación completa del padre mediante `postMessage` same-origin validado. Cancelar sigue siendo independiente y no envía el formulario.
 
-El bloqueo principal por credencial sigue usando un `UPDATE` con token aleatorio a través de la API de base de datos GLPI. Además, las decisiones de transferencia y purga usan una lectura bloqueante actual de las relaciones (`SELECT ... FOR UPDATE`) después de obtener ese bloqueo. Esto evita usar una vista consistente anterior de InnoDB `REPEATABLE READ` después de esperar por una operación concurrente. La consulta se ejecuta mediante `DBmysql::doQuery()` y cita tabla, columnas y valores con `DBmysql::quoteName()`/`quoteValue()`; no acepta fragmentos SQL del usuario.
+El bloqueo principal por credencial sigue usando un `UPDATE` con token aleatorio a través de la API de base de datos GLPI. La transferencia vuelve a leer la fila de credencial con `SELECT ... FOR UPDATE` después de obtener el bloqueo, para copiar el último nombre y el último ciphertext comprometido aunque haya ocurrido una edición concurrente durante la espera. La consulta selecciona columnas fijas del plugin y limita por el ID de la credencial. Además, las decisiones de transferencia y purga usan una lectura bloqueante actual de las relaciones (`SELECT ... FOR UPDATE`) después de obtener ese bloqueo. Esto evita usar una vista consistente anterior de InnoDB `REPEATABLE READ` después de esperar por una operación concurrente. La consulta se ejecuta mediante `DBmysql::doQuery()` y cita tabla, columnas y valores con `DBmysql::quoteName()`/`quoteValue()`; no acepta fragmentos SQL del usuario.
 
 En este entorno se ejecutó la batería PHP en PHP 8.4.24, incluida la prueba nueva del bloqueo y la regresión de transacciones/savepoints; también pasaron todos los tests JavaScript, `node --check` sobre los scripts públicos, la comprobación PO/MO y `tools/validate-package.php`. `credentials.xml` se validó como XML bien formado mediante Python ElementTree porque el PHP local no tiene habilitada la extensión DOM (CI sí la instala). No se dispone de Composer/PHPCS ni de una instancia GLPI real conectada al entorno, así que el estándar oficial y las pruebas dinámicas de actualización, concurrencia, cifrado y navegador siguen requiriendo CI/staging. El manifiesto permanece en `development`: las URLs públicas y capturas requeridas no se deben inventar.
+
+## Cambios de 0.0.30
+
+- La transferencia vuelve a leer la fila de credencial con una lectura actual bloqueante después de obtener el bloqueo. Las copias entre entidades utilizan los campos cifrados más recientes y no una versión retenida por el snapshot anterior de InnoDB.
+- El validador comprueba los marcadores de regresión sin depender de mayúsculas/minúsculas e incluye el contrato de lectura actual de los datos cifrados.
+- Se agregó una regresión de edición concurrente que cambia nombre, login, contraseña, URL y notas durante la espera del bloqueo y verifica que la copia use los últimos valores cifrados.
+- La prueba de API DBmysql valida la consulta actual sobre la fila de credencial, además de la lectura bloqueante de relaciones.
 
 ## Cambios de 0.0.29
 
@@ -100,7 +107,7 @@ En este entorno se ejecutó la batería PHP en PHP 8.4.24, incluida la prueba nu
 
 - **Plugin:** Credentials
 - **Clave / carpeta:** `credentials`
-- **Versión:** `0.0.29` (compilación de remediación; no estable)
+- **Versión:** `0.0.30` (compilación de remediación; no estable)
 - **GLPI soportado:** `12.0.x` (`~12.0.0` en el manifiesto; `12.0.0`–`12.0.99` en `setup.php`)
 - **PHP mínimo declarado:** `8.3`
 - **Idioma fuente:** inglés
@@ -214,7 +221,7 @@ Estas comprobaciones son estáticas. No equivalen a pruebas de integración, pen
 
 ## Procedimiento para continuar
 
-- La siguiente modificación incrementa el plugin a `0.0.30` en `setup.php`, `credentials.xml`, encabezados PO, CHANGELOG, README/HANDOFF y validadores.
+- La siguiente modificación incrementa el plugin a `0.0.31` en `setup.php`, `credentials.xml`, encabezados PO, CHANGELOG, README/HANDOFF y validadores.
 - No crear catálogos ingleses: inglés es idioma fuente.
 - No cambiar el uso de GLPIKey ni quitar `Hooks::SECURED_FIELDS`.
 - No migrar datos existentes ni eliminar tablas como parte de una actualización.

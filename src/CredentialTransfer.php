@@ -254,7 +254,7 @@ final class CredentialTransfer
             throw new \RuntimeException('Unable to lock credential during entity transfer.');
         }
 
-        $row = self::readCredential($credential_id);
+        $row = CredentialItemLink::getCredentialForUpdate($credential_id);
         if (
             $row === null
             || (int) $row['is_deleted'] !== 0
