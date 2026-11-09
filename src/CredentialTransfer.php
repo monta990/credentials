@@ -88,7 +88,7 @@ final class CredentialTransfer
         try {
             $credential_ids = self::getCredentialIDsForItem($itemtype, $items_id);
             foreach ($credential_ids as $credential_id) {
-                $credential = self::lockAndReadCredential($credential_id);
+                $credential = self::lockAndReadCredential($credential_id, $itemtype, $items_id);
                 if ($credential === null) {
                     continue;
                 }
@@ -167,11 +167,15 @@ final class CredentialTransfer
         global $DB;
 
         foreach (self::getCredentialIDsForItem($itemtype, $source_id) as $credential_id) {
-            $credential = self::lockAndReadCredential($credential_id);
+            $credential = self::lockAndReadCredential($credential_id, $itemtype, $source_id);
+            if ($credential === null) {
+                // The credential was deleted, archived or unlinked while this clone waited.
+                continue;
+            }
+
             $credential_links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
             if (
-                $credential === null
-                || (int) $credential['entities_id'] !== $source_entity
+                (int) $credential['entities_id'] !== $source_entity
                 || !self::containsLink($credential_links, $itemtype, $source_id)
             ) {
                 // A stale cross-entity relationship must never be copied into a
@@ -240,7 +244,7 @@ final class CredentialTransfer
      *
      * @return array<string, mixed>|null
      */
-    private static function lockAndReadCredential(int $credential_id): ?array
+    private static function lockAndReadCredential(int $credential_id, string $itemtype, int $items_id): ?array
     {
         global $DB;
 
@@ -251,7 +255,25 @@ final class CredentialTransfer
 
         $expected_entity = (int) $row['entities_id'];
         if (!CredentialItemLink::lockCredential($credential_id, $expected_entity, true)) {
-            throw new \RuntimeException('Unable to lock credential during entity transfer.');
+            // The conditional UPDATE may have waited for a concurrent archive or unlink.
+            // Use current reads to distinguish stale transfer input from a real lock failure.
+            $current = CredentialItemLink::getCredentialForUpdate($credential_id);
+            if (
+                $current === null
+                || (int) $current['is_deleted'] !== 0
+                || (int) $current['entities_id'] !== $expected_entity
+            ) {
+                return null;
+            }
+
+            $current_links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
+            if (!self::containsLink($current_links, $itemtype, $items_id)) {
+                return null;
+            }
+
+            // The row and exact source relationship are still active. Do not hide
+            // an unexpected DB lock failure behind a stale-ID skip.
+            throw new \RuntimeException('Unable to lock active credential during entity transfer.');
         }
 
         $row = CredentialItemLink::getCredentialForUpdate($credential_id);

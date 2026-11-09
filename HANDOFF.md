@@ -1,12 +1,19 @@
-# HANDOFF — Credentials 0.0.30
+# HANDOFF — Credentials 0.0.31
 
 ## Estado actual
 
-La versión `0.0.30` conserva los flujos funcionales de la versión `0.0.28`: la contraseña revelada se muestra en un `<input type="text" readonly>` seleccionable; copiar y ocultar leen y limpian `input.value`. Después de guardar desde el modal, `public/js/credential-frame.js` solicita la navegación completa del padre mediante `postMessage` same-origin validado. Cancelar sigue siendo independiente y no envía el formulario.
+La versión `0.0.31` conserva los flujos funcionales de la versión `0.0.28`: la contraseña revelada se muestra en un `<input type="text" readonly>` seleccionable; copiar y ocultar leen y limpian `input.value`. Después de guardar desde el modal, `public/js/credential-frame.js` solicita la navegación completa del padre mediante `postMessage` same-origin validado. Cancelar sigue siendo independiente y no envía el formulario.
 
-El bloqueo principal por credencial sigue usando un `UPDATE` con token aleatorio a través de la API de base de datos GLPI. La transferencia vuelve a leer la fila de credencial con `SELECT ... FOR UPDATE` después de obtener el bloqueo, para copiar el último nombre y el último ciphertext comprometido aunque haya ocurrido una edición concurrente durante la espera. La consulta selecciona columnas fijas del plugin y limita por el ID de la credencial. Además, las decisiones de transferencia y purga usan una lectura bloqueante actual de las relaciones (`SELECT ... FOR UPDATE`) después de obtener ese bloqueo. Esto evita usar una vista consistente anterior de InnoDB `REPEATABLE READ` después de esperar por una operación concurrente. La consulta se ejecuta mediante `DBmysql::doQuery()` y cita tabla, columnas y valores con `DBmysql::quoteName()`/`quoteValue()`; no acepta fragmentos SQL del usuario.
+El bloqueo principal por credencial sigue usando un `UPDATE` con token aleatorio a través de la API de base de datos GLPI. Si ese `UPDATE` no afecta una fila activa, la transferencia consulta el estado de la credencial y el vínculo exacto de origen con lecturas `FOR UPDATE`: una credencial archivada, movida de entidad o desvinculada mientras esperaba se considera entrada obsoleta y se omite sin abortar GLPI. Si sigue activa y vinculada, el fallo de bloqueo se conserva como error explícito. La transferencia vuelve a leer la fila de credencial con `SELECT ... FOR UPDATE` después de obtener el bloqueo, para copiar el último nombre y el último ciphertext comprometido aunque haya ocurrido una edición concurrente durante la espera. La consulta selecciona columnas fijas del plugin y limita por el ID de la credencial. Además, las decisiones de transferencia y purga usan una lectura bloqueante actual de las relaciones (`SELECT ... FOR UPDATE`) después de obtener ese bloqueo. Esto evita usar una vista consistente anterior de InnoDB `REPEATABLE READ` después de esperar por una operación concurrente. La consulta se ejecuta mediante `DBmysql::doQuery()` y cita tabla, columnas y valores con `DBmysql::quoteName()`/`quoteValue()`; no acepta fragmentos SQL del usuario.
 
 En este entorno se ejecutó la batería PHP en PHP 8.4.24, incluida la prueba nueva del bloqueo y la regresión de transacciones/savepoints; también pasaron todos los tests JavaScript, `node --check` sobre los scripts públicos, la comprobación PO/MO y `tools/validate-package.php`. `credentials.xml` se validó como XML bien formado mediante Python ElementTree porque el PHP local no tiene habilitada la extensión DOM (CI sí la instala). No se dispone de Composer/PHPCS ni de una instancia GLPI real conectada al entorno, así que el estándar oficial y las pruebas dinámicas de actualización, concurrencia, cifrado y navegador siguen requiriendo CI/staging. El manifiesto permanece en `development`: las URLs públicas y capturas requeridas no se deben inventar.
+
+## Cambios de 0.0.31
+
+- Si el bloqueo condicional no afecta filas, la transferencia consulta la fila y el vínculo exacto de origen con lecturas actuales bloqueantes. Credenciales archivadas, movidas de entidad o desvinculadas durante la espera se omiten sin abortar el movimiento o clonación de GLPI.
+- El cambio cubre las rutas de movimiento y clonación; una credencial todavía activa y vinculada mantiene el error ante un fallo real de bloqueo.
+- Se añadieron regresiones para archivado concurrente en ambas rutas y bloqueo fallido con relación todavía activa.
+- Se aclaró que `getCredentialForUpdate()` también adquiere el bloqueo de fila mediante su propia lectura `FOR UPDATE`.
 
 ## Cambios de 0.0.30
 
@@ -107,7 +114,7 @@ En este entorno se ejecutó la batería PHP en PHP 8.4.24, incluida la prueba nu
 
 - **Plugin:** Credentials
 - **Clave / carpeta:** `credentials`
-- **Versión:** `0.0.30` (compilación de remediación; no estable)
+- **Versión:** `0.0.31` (compilación de remediación; no estable)
 - **GLPI soportado:** `12.0.x` (`~12.0.0` en el manifiesto; `12.0.0`–`12.0.99` en `setup.php`)
 - **PHP mínimo declarado:** `8.3`
 - **Idioma fuente:** inglés
@@ -221,7 +228,7 @@ Estas comprobaciones son estáticas. No equivalen a pruebas de integración, pen
 
 ## Procedimiento para continuar
 
-- La siguiente modificación incrementa el plugin a `0.0.31` en `setup.php`, `credentials.xml`, encabezados PO, CHANGELOG, README/HANDOFF y validadores.
+- La siguiente modificación incrementa el plugin a `0.0.32` en `setup.php`, `credentials.xml`, encabezados PO, CHANGELOG, README/HANDOFF y validadores.
 - No crear catálogos ingleses: inglés es idioma fuente.
 - No cambiar el uso de GLPIKey ni quitar `Hooks::SECURED_FIELDS`.
 - No migrar datos existentes ni eliminar tablas como parte de una actualización.

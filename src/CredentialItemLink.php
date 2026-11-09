@@ -86,7 +86,8 @@ final class CredentialItemLink extends CommonDBTM
      * a lock wait. SELECT ... FOR UPDATE is a current read and observes the latest
      * committed relationship rows before transfer or purge decisions are made.
      *
-     * The caller must already hold this credential's row lock in a transaction.
+     * This SELECT ... FOR UPDATE acquires the row lock itself. The caller must
+     * run it inside a transaction and keep that transaction open through its work.
      *
      * @return array<int, array{itemtype:string,items_id:int}>
      */

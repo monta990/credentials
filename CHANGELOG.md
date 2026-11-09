@@ -1,3 +1,12 @@
+## 0.0.31 — 2026-11-09
+
+- La transferencia ahora trata como obsoletos los IDs de credencial cuyo registro fue archivado, cambió de entidad o perdió el vínculo exacto de origen mientras se esperaba el bloqueo. La decisión se basa en lecturas actuales bloqueantes, no en el snapshot anterior de InnoDB.
+- Se aplica tanto al movimiento con ID conservado como a la clonación con ID nuevo. Una relación retirada no se recrea y una credencial archivada no se copia.
+- Si la credencial sigue activa y conserva el vínculo exacto de origen, un fallo al adquirir el bloqueo continúa como error explícito.
+- Añadidas regresiones para archivado concurrente en movimiento y clonación, así como para un fallo de bloqueo inesperado con la relación todavía activa.
+- Aclarada la semántica de bloqueo de la lectura actual de la fila de credencial.
+- Incrementados la versión del plugin y los metadatos de traducción a 0.0.31.
+
 ## 0.0.30 — 2026-11-09
 
 - Added a current InnoDB locking read for credential rows after the transfer lock is acquired. Cross-entity copies now use the latest committed name and GLPIKey ciphertext for login, password, URL and notes instead of values retained by an older REPEATABLE READ snapshot.
