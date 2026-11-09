@@ -111,8 +111,9 @@ final class FakeCredentialDB
 
     public function doQuery(string $query): FakeCredentialDBResult
     {
+        $credential_field = 'plugin_credentials_credentials_id' . chr(96);
         if (!str_contains($query, 'FOR UPDATE')
-            || !preg_match("/plugin_credentials_credentials_id\\s*=\\s*'([0-9]+)'/i", $query, $match)
+            || !preg_match("/" . preg_quote($credential_field, '/') . "\\s*=\\s*'([0-9]+)'/i", $query, $match)
         ) {
             throw new RuntimeException('Purge must use a current locking read scoped to one credential.');
         }
