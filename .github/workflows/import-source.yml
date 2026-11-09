@@ -30,7 +30,10 @@ jobs:
           test -f /tmp/credentials-source/credentials/credentials.xml
           test -f /tmp/credentials-source/credentials/tools/run-cli-tests.sh
           cp -a /tmp/credentials-source/credentials/. .
-          rm -f credentials-source-0.0.27.tar.xz.b64.part* example.txt ci-bootstrap.txt .github/workflows/import-source.yml
+          # The workflow token cannot create or delete workflow files via git push.
+          # The CI workflow is added separately through the GitHub Contents API.
+          rm -f .github/workflows/ci.yml
+          rm -f credentials-source-0.0.27.tar.xz.b64.part* example.txt ci-bootstrap.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all
