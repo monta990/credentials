@@ -67,7 +67,7 @@ final class CredentialHistory
             $credential_id,
             Credential::class,
             [0, (string) $credential_id, ''],
-            '',
+            Credential::class,
             Log::HISTORY_PLUGIN + $action,
         );
     }
