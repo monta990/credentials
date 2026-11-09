@@ -87,7 +87,7 @@ namespace {
         {
             $key = $table === 'glpi_plugin_credentials_credentials' ? 'credentials' : 'links';
             $existing_ids = array_map(static fn(array $row): int => (int) ($row['id'] ?? 0), $this->{$key});
-            $this->last_insert_id = max($existing_ids, default: 0) + 1;
+            $this->last_insert_id = ($existing_ids === [] ? 0 : max($existing_ids)) + 1;
             $values['id'] = $this->last_insert_id;
             $this->{$key}[] = $values;
             $this->affected_rows = 1;
