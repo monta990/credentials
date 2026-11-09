@@ -400,6 +400,21 @@ foreach (glob($root . '/templates/credential/*.html.twig') ?: [] as $template) {
     }
 }
 
+
+$transfer_source = file_get_contents($root . '/src/CredentialTransfer.php');
+if (!is_string($transfer_source)
+    || !str_contains($transfer_source, 'public static function handle(array $params)')
+    || !str_contains($transfer_source, 'CredentialItemLink::lockCredential(')
+    || !str_contains($transfer_source, 'insertCredentialCopy(')
+    || str_contains($transfer_source, 'decryptValue(')
+    || str_contains($transfer_source, 'doQuery(')
+    || !str_contains((string) $setup, 'Hooks::ITEM_TRANSFER')
+    || !str_contains((string) file_get_contents($root . '/hook.php'), 'CredentialTransfer::handle($params)')
+    || !is_file($root . '/tests/php/credential_transfer_test.php')
+) {
+    $errors[] = 'GLPI item transfers must preserve credential entity isolation, ciphertext and regression coverage.';
+}
+
 if ($errors !== []) {
     foreach ($errors as $error) {
         fwrite(STDERR, "FAIL: {$error}\n");
