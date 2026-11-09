@@ -415,6 +415,18 @@ if (!is_string($transfer_source)
     $errors[] = 'GLPI item transfers must preserve credential entity isolation, ciphertext and regression coverage.';
 }
 
+
+$transfer_test = file_get_contents($root . '/tests/php/credential_transfer_test.php');
+if (!is_string($transfer_source)
+    || !str_contains($transfer_source, '!self::hasCredentialLink($credential_id, $itemtype, $source_id)')
+    || !str_contains($transfer_test, 'A source relationship removed during lock wait')
+    || !str_contains((string) $credential_controller_source, 'unset($input[\'entities_id\'])')
+    || !str_contains((string) $credential_controller_source, 'CredentialItem::loadReadableItem($itemtype, $items_id)')
+    || !str_contains((string) $credential_controller_source, 'CredentialItemLink::exists($credential_id, $itemtype, $items_id)')
+) {
+    $errors[] = 'Clone and edit operations must revalidate the live item relationship and entity after acquiring the credential lock.';
+}
+
 if ($errors !== []) {
     foreach ($errors as $error) {
         fwrite(STDERR, "FAIL: {$error}\n");
