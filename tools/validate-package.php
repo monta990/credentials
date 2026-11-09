@@ -120,6 +120,7 @@ if (!is_string($cleanup)
     || !is_string($history_source)
     || !str_contains($history_source, 'public static function recordForCredential(')
     || !str_contains($history_source, 'Log::history(')
+    || !is_file($root . '/tests/php/credential_history_rendering_test.php')
 ) {
     $errors[] = 'Purge of the final linked item must write the secret-free orphan event to credential history.';
 }
