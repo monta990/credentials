@@ -1,0 +1,343 @@
+<?php
+
+/**
+ * GLPI Credentials plugin.
+ * Copyright (C) 2026 Edwin Elias Alvarez.
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+namespace GlpiPlugin\\Credentials;
+
+/**
+ * Keeps credential relationships aligned with GLPI entity transfers.
+ *
+ * GLPI calls ITEM_TRANSFER once for each moved or cloned item. Cross-entity
+ * moves split a shared credential before moving that item's relationship;
+ * clones receive their own credential copy. Protected values are copied as
+ * GLPIKey ciphertext and are never decrypted by this class.
+ */
+final class CredentialTransfer
+{
+    /**
+     * Handle the GLPI Hooks::ITEM_TRANSFER payload.
+     *
+     * @param array{type?:mixed,id?:mixed,newID?:mixed,entities_id?:mixed} $params
+     */
+    public static function handle(array $params): void
+    {
+        global $DB;
+
+        $itemtype = $params['type'] ?? null;
+        $item_id = (int) ($params['id'] ?? 0);
+        $new_id = (int) ($params['newID'] ?? 0);
+        $destination_entity = (int) ($params['entities_id'] ?? -1);
+
+        if (
+            !is_string($itemtype)
+            || !CredentialItem::isSupportedItemtype($itemtype)
+            || $item_id <= 0
+            || $new_id <= 0
+            || $destination_entity < 0
+        ) {
+            return;
+        }
+
+        $source_item = getItemForItemtype($itemtype);
+        if (!$source_item instanceof \\CommonDBTM || !$source_item->getFromDB($item_id)) {
+            return;
+        }
+
+        $source_entity = CredentialItem::resolveParentEntityID($source_item);
+        if ($item_id === $new_id) {
+            if ($source_entity !== $destination_entity) {
+                throw new \\RuntimeException('Transferred item entity does not match the destination entity.');
+            }
+            self::moveItemRelationships($itemtype, $item_id, $destination_entity);
+            return;
+        }
+
+        $destination_item = getItemForItemtype($itemtype);
+        if (
+            !$destination_item instanceof \\CommonDBTM
+            || !$destination_item->getFromDB($new_id)
+            || CredentialItem::resolveParentEntityID($destination_item) !== $destination_entity
+        ) {
+            throw new \\RuntimeException('Cloned item entity does not match the destination entity.');
+        }
+
+        $DB->beginTransaction();
+        try {
+            self::copyItemRelationships($itemtype, $item_id, $new_id, $source_entity, $destination_entity);
+            $DB->commit();
+        } catch (\\Throwable $exception) {
+            $DB->rollBack();
+            throw $exception;
+        }
+    }
+
+    /**
+     * Move relationships for an item whose ID remains unchanged.
+     * A credential shared with other items is split so those items stay in
+     * their original entity and only the transferred relationship moves.
+     */
+    private static function moveItemRelationships(string $itemtype, int $items_id, int $destination_entity): void
+    {
+        global $DB;
+
+        $DB->beginTransaction();
+        try {
+            $credential_ids = self::getCredentialIDsForItem($itemtype, $items_id);
+            foreach ($credential_ids as $credential_id) {
+                $credential = self::lockAndReadCredential($credential_id);
+                if ($credential === null) {
+                    continue;
+                }
+
+                $current_entity = (int) $credential['entities_id'];
+                if ($current_entity === $destination_entity) {
+                    continue;
+                }
+
+                $date_mod = self::currentTime();
+                if (CredentialItemLink::countForCredential($credential_id) <= 1) {
+                    $updated = $DB->update(Credential::getTable(), [
+                        'entities_id' => $destination_entity,
+                        'date_mod' => $date_mod,
+                    ], [
+                        'id' => $credential_id,
+                        'entities_id' => $current_entity,
+                        'is_deleted' => 0,
+                    ]);
+                    if ($updated === false || $DB->getAffectedRows() !== 1) {
+                        throw new \\RuntimeException('Unable to move the credential to the destination entity.');
+                    }
+                    if (!CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_UPDATED)) {
+                        throw new \\RuntimeException('Unable to record the credential entity transfer.');
+                    }
+                    continue;
+                }
+
+                // Do not change the entity of a credential still used by other items.
+                // Copy ciphertext as-is, then move only this item's relationship.
+                $new_credential_id = self::insertCredentialCopy($credential, $destination_entity);
+                $moved = $DB->update(CredentialItemLink::getTable(), [
+                    'plugin_credentials_credentials_id' => $new_credential_id,
+                ], [
+                    'plugin_credentials_credentials_id' => $credential_id,
+                    'itemtype' => $itemtype,
+                    'items_id' => $items_id,
+                ]);
+                if ($moved === false || $DB->getAffectedRows() !== 1) {
+                    throw new \\RuntimeException('Unable to move the credential relationship to its entity copy.');
+                }
+
+                if (
+                    !CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_UPDATED)
+                    || !CredentialHistory::recordForCredential($new_credential_id, Credential::HISTORY_CREATED)
+                ) {
+                    throw new \\RuntimeException('Unable to record the split credential transfer.');
+                }
+            }
+
+            $DB->commit();
+        } catch (\\Throwable $exception) {
+            $DB->rollBack();
+            throw $exception;
+        }
+    }
+
+    /**
+     * Copy an item's relationships when GLPI creates a new item ID.
+     * The original item and its credentials remain untouched.
+     */
+    private static function copyItemRelationships(
+        string $itemtype,
+        int $source_id,
+        int $destination_id,
+        int $source_entity,
+        int $destination_entity,
+    ): void {
+        global $DB;
+
+        foreach (self::getCredentialIDsForItem($itemtype, $source_id) as $credential_id) {
+            $credential = self::lockAndReadCredential($credential_id);
+            if ($credential === null || (int) $credential['entities_id'] !== $source_entity) {
+                // A stale cross-entity relationship must never be copied into a
+                // destination where the source credential is not owned.
+                continue;
+            }
+
+            if (self::hasCredentialLink($credential_id, $itemtype, $destination_id)) {
+                continue;
+            }
+
+            $new_credential_id = $credential_id;
+            if ($source_entity !== $destination_entity) {
+                $new_credential_id = self::insertCredentialCopy($credential, $destination_entity);
+            }
+
+            $inserted = $DB->insert(CredentialItemLink::getTable(), [
+                'plugin_credentials_credentials_id' => $new_credential_id,
+                'itemtype' => $itemtype,
+                'items_id' => $destination_id,
+                'date_creation' => self::currentTime(),
+            ]);
+            if ($inserted === false) {
+                throw new \\RuntimeException('Unable to link the credential to the cloned item.');
+            }
+
+            $action = $new_credential_id === $credential_id
+                ? Credential::HISTORY_LINKED
+                : Credential::HISTORY_CREATED;
+            if (!CredentialHistory::recordForCredential($new_credential_id, $action)) {
+                throw new \\RuntimeException('Unable to record the credential link created by the transfer.');
+            }
+        }
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private static function getCredentialIDsForItem(string $itemtype, int $items_id): array
+    {
+        global $DB;
+
+        $ids = [];
+        $iterator = $DB->request([
+            'SELECT' => ['plugin_credentials_credentials_id'],
+            'FROM' => CredentialItemLink::getTable(),
+            'WHERE' => [
+                'itemtype' => $itemtype,
+                'items_id' => $items_id,
+            ],
+        ]);
+        foreach ($iterator as $row) {
+            $id = (int) $row['plugin_credentials_credentials_id'];
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+
+        $ids = array_values($ids);
+        sort($ids, SORT_NUMERIC);
+        return $ids;
+    }
+
+    /**
+     * Lock a credential and return only fields needed to copy its encrypted row.
+     *
+     * @return array<string, mixed>|null
+     */
+    private static function lockAndReadCredential(int $credential_id): ?array
+    {
+        global $DB;
+
+        $row = self::readCredential($credential_id);
+        if ($row === null || (int) $row['is_deleted'] !== 0) {
+            return null;
+        }
+
+        $expected_entity = (int) $row['entities_id'];
+        if (!CredentialItemLink::lockCredential($credential_id, $expected_entity, true)) {
+            throw new \\RuntimeException('Unable to lock credential during entity transfer.');
+        }
+
+        $row = self::readCredential($credential_id);
+        if (
+            $row === null
+            || (int) $row['is_deleted'] !== 0
+            || (int) $row['entities_id'] !== $expected_entity
+        ) {
+            throw new \\RuntimeException('Credential changed while its entity transfer was being prepared.');
+        }
+
+        return $row;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function readCredential(int $credential_id): ?array
+    {
+        global $DB;
+
+        $iterator = $DB->request([
+            'SELECT' => [
+                'id',
+                'name',
+                'entities_id',
+                'login',
+                'password',
+                'url',
+                'notes',
+                'users_id',
+                'date_creation',
+                'date_mod',
+                'is_deleted',
+            ],
+            'FROM' => Credential::getTable(),
+            'WHERE' => ['id' => $credential_id],
+            'LIMIT' => 1,
+        ]);
+        foreach ($iterator as $row) {
+            return $row;
+        }
+        return null;
+    }
+
+    /**
+     * Create a destination-entity copy without decrypting protected fields.
+     *
+     * @param array<string, mixed> $credential
+     */
+    private static function insertCredentialCopy(array $credential, int $destination_entity): int
+    {
+        global $DB;
+
+        $inserted = $DB->insert(Credential::getTable(), [
+            'name' => (string) $credential['name'],
+            'entities_id' => $destination_entity,
+            'login' => $credential['login'],
+            'password' => (string) $credential['password'],
+            'url' => $credential['url'],
+            'notes' => $credential['notes'],
+            'users_id' => (int) $credential['users_id'],
+            'date_creation' => self::currentTime(),
+            'date_mod' => self::currentTime(),
+            'link_lock_token' => bin2hex(random_bytes(16)),
+            'is_deleted' => 0,
+        ]);
+        if ($inserted === false) {
+            throw new \\RuntimeException('Unable to create a credential copy in the destination entity.');
+        }
+
+        $new_id = (int) $DB->insertId();
+        if ($new_id <= 0) {
+            throw new \\RuntimeException('Unable to determine the ID of the copied credential.');
+        }
+
+        return $new_id;
+    }
+
+    private static function hasCredentialLink(int $credential_id, string $itemtype, int $items_id): bool
+    {
+        global $DB;
+
+        $iterator = $DB->request([
+            'SELECT' => ['id'],
+            'FROM' => CredentialItemLink::getTable(),
+            'WHERE' => [
+                'plugin_credentials_credentials_id' => $credential_id,
+                'itemtype' => $itemtype,
+                'items_id' => $items_id,
+            ],
+            'LIMIT' => 1,
+        ]);
+        return count($iterator) > 0;
+    }
+
+    private static function currentTime(): string
+    {
+        return (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s'));
+    }
+}
