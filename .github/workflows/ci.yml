@@ -1,0 +1,77 @@
+name: Credentials CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-validation:
+    name: Static validation (GLPI 12 / PHP ${{ matrix.php-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # PHP 8.6 is a required compatibility leg and runs the same CLI checks without continue-on-error.
+        php-version: ['8.3', '8.4', '8.5', '8.6']
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: dom, mbstring, intl, openssl, sodium
+          coverage: none
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: PHP CLI compatibility, syntax and regression tests
+        run: bash tools/run-cli-tests.sh "${{ matrix.php-version }}"
+
+      - name: JavaScript syntax
+        run: |
+          node --check public/js/credentials.js
+          node --check public/js/credential-details.js
+          node --check public/js/credential-frame.js
+
+      - name: Destructive-action confirmation regression
+        run: |
+          node tests/js/confirmation_test.js
+          node tests/js/detail_confirmation_test.js
+
+      - name: GLPI iframe modal cancel regression
+        run: |
+          node tests/js/modal_frame_test.js
+          node tests/js/modal_parent_message_test.js
+          node tests/js/save_navigation_frame_test.js
+
+      - name: Real iframe password reveal/copy/hide regression
+        run: node tests/js/password_ui_test.js
+
+      - name: GLPI tab refresh and live count regression
+        run: node tests/js/tab_refresh_test.js
+
+      - name: Validate XML and plugin package
+        run: |
+          php -r '$xml = new DOMDocument(); if (!$xml->load("credentials.xml", LIBXML_NONET)) { exit(1); }'
+          php tools/validate-package.php
+
+      - name: Verify PO and MO catalogs are synchronized
+        run: python tools/compile_locales.py --check
+
+      - name: Verify no generated English catalogs
+        run: |
+          ! find locales -maxdepth 1 -type f \( -name 'en_*.po' -o -name 'en_*.mo' \) | grep .
