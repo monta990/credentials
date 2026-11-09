@@ -1,3 +1,11 @@
+## 0.0.29 — 2026-11-09
+
+- Added a narrowly scoped InnoDB current locking read for credential relationships. It uses GLPI 12's `DBmysql::doQuery()` with fixed identifiers and values quoted through GLPI's `DBmysql::quoteName()` and `quoteValue()`, because the GLPI query builder does not expose a `FOR UPDATE` option.
+- Same-ID entity transfers and new-ID clones now recheck the current relationships after acquiring the credential row lock. Links removed while the transfer waited are skipped instead of being restored or causing the GLPI transfer to fail.
+- Purge now checks surviving links with the same current read, so a relationship committed while purge waits prevents an incorrect orphan archive.
+- Added snapshot-aware regressions for clone/move stale-link races, purge survivors committed during a lock wait and the generated locking query.
+- Incremented plugin and translation metadata to `0.0.29`.
+
 ## 0.0.28 — 2026-11-09
 
 - Revalidated the exact source-item relationship after acquiring the credential row lock before copying links for a cloned item. This prevents a stale pre-lock ID list from restoring a relationship concurrently removed by a user.

@@ -2,7 +2,7 @@
 
 <p align="center"><img src="logo.png" alt="Logotipo de Credentials" width="160"></p>
 
-**Versión:** `0.0.28` (compilación de desarrollo)  
+**Versión:** `0.0.29` (compilación de desarrollo)  
 **Clave/directorio:** `credentials`  
 **Idioma fuente:** inglés  
 **Catálogos:** `es_ES`, `es_MX`, `fr_FR` (no se generan archivos PO/MO en inglés)  
