@@ -1,3 +1,12 @@
+## 0.0.28 — 2026-11-09
+
+- Registered GLPI 12's native `ITEM_TRANSFER` hook so credentials follow supported users and assets when GLPI moves or clones them between entities.
+- When an item keeps its ID, a single-link credential moves to the destination entity; a shared credential is copied with its encrypted fields unchanged and only the moved item's relationship is reassigned. Other source-entity relationships remain untouched.
+- When GLPI creates a new item ID, the copy receives a destination-entity credential copy when crossing entities; same-entity copies reuse the existing credential. The original item's relationships are preserved.
+- Kept the transfer operation transactional, serialized against credential edits using the existing row-lock token, and audited through secret-free native GLPI history entries.
+- Added executable regressions for single-link moves, shared-credential splitting, cross-entity clones, same-entity clones and byte-for-byte ciphertext preservation.
+- Bumped plugin and translation metadata to `0.0.28`.
+
 ## 0.0.27 — 2026-11-08
 
 - Replaced the runtime `SELECT ... FOR UPDATE` statement with a GLPI database-API `UPDATE` that writes a per-credential random lock token. The affected-row check distinguishes a locked credential from a missing or stale row; the InnoDB write lock remains held by the surrounding transaction.
