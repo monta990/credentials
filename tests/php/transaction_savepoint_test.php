@@ -26,12 +26,16 @@ class Session
     }
 }
 
-final class FakeCredentialDBResult
+final class FakeCredentialDBResult implements IteratorAggregate
 {
     private int $position = 0;
     public function __construct(private array $rows) {}
     public function fetch_assoc(): array|false { return $this->rows[$this->position++] ?? false; }
     public function free(): void {}
+    public function getIterator(): Traversable
+    {
+        return new ArrayIterator($this->rows);
+    }
 }
 
 class DBmysql
