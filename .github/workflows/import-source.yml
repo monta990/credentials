@@ -1,0 +1,38 @@
+name: Import Credentials source
+
+on:
+  push:
+    branches:
+      - marketplace/0.0.27
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out bootstrap branch
+        uses: actions/checkout@v4
+        with:
+          ref: marketplace/0.0.27
+          persist-credentials: true
+
+      - name: Verify and extract source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode credentials-source-0.0.27.zip.b64 > /tmp/credentials-source.zip
+          echo "32cdacce51198332d538d562e821f1a9ef6729b516f15be2ea1eb00b7033824d  /tmp/credentials-source.zip" | sha256sum --check
+          unzip -t /tmp/credentials-source.zip
+          mkdir -p /tmp/credentials-source
+          unzip -q /tmp/credentials-source.zip -d /tmp/credentials-source
+          test -f /tmp/credentials-source/credentials/credentials.xml
+          test -f /tmp/credentials-source/credentials/tools/run-cli-tests.sh
+          cp -a /tmp/credentials-source/credentials/. .
+          rm -f credentials-source-0.0.27.zip.b64 example.txt ci-bootstrap.txt .github/workflows/import-source.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git commit -m "chore: import complete Credentials 0.0.27 source tree"
+          git push origin HEAD:marketplace/0.0.27
