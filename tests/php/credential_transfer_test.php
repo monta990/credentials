@@ -301,8 +301,8 @@ namespace {
     $DB->afterLock = static function (FakeCredentialTransferDB $database): void {
         $database->links = [];
     };
-    \\GlpiPlugin\\Credentials\\CredentialHistory::$events = [];
-    \\GlpiPlugin\\Credentials\\CredentialTransfer::handle([
+    \GlpiPlugin\Credentials\CredentialHistory::$events = [];
+    \GlpiPlugin\Credentials\CredentialTransfer::handle([
         'type' => 'FakeAsset', 'id' => 500, 'newID' => 501, 'entities_id' => 2,
     ]);
     transferAssert(count($DB->credentials) === 1, 'A source relationship removed during lock wait must not create a destination credential copy.');
