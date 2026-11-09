@@ -79,6 +79,58 @@ final class CredentialItemLink extends CommonDBTM
         return array_values($unique);
     }
 
+    /**
+     * Read current committed relationships while the credential row is locked.
+     *
+     * InnoDB consistent reads may retain an older REPEATABLE READ snapshot after
+     * a lock wait. SELECT ... FOR UPDATE is a current read and observes the latest
+     * committed relationship rows before transfer or purge decisions are made.
+     *
+     * The caller must already hold this credential's row lock in a transaction.
+     *
+     * @return array<int, array{itemtype:string,items_id:int}>
+     */
+    public static function getLinksForCredentialForUpdate(int $credential_id): array
+    {
+        global $DB;
+
+        if ($credential_id <= 0) {
+            return [];
+        }
+
+        // GLPI 12 DBmysql::request() has no FOR UPDATE option. Use the supported
+        // DBmysql::doQuery() API with fixed, explicitly quoted identifiers/values.
+        $query = 'SELECT '
+            . \DBmysql::quoteName('itemtype') . ', '
+            . \DBmysql::quoteName('items_id')
+            . ' FROM ' . \DBmysql::quoteName(self::getTable())
+            . ' WHERE ' . \DBmysql::quoteName('plugin_credentials_credentials_id')
+            . ' = ' . \DBmysql::quoteValue($credential_id)
+            . ' ORDER BY ' . \DBmysql::quoteName('itemtype') . ', '
+            . \DBmysql::quoteName('items_id')
+            . ' FOR UPDATE';
+
+        $result = $DB->doQuery($query);
+        $unique = [];
+        try {
+            while (($row = $DB->fetchAssoc($result)) !== false && $row !== null) {
+                $itemtype = (string) ($row['itemtype'] ?? '');
+                $items_id = (int) ($row['items_id'] ?? 0);
+                if ($itemtype === '' || $items_id <= 0) {
+                    continue;
+                }
+                $unique[$itemtype . '#' . $items_id] = [
+                    'itemtype' => $itemtype,
+                    'items_id' => $items_id,
+                ];
+            }
+        } finally {
+            $DB->freeResult($result);
+        }
+
+        return array_values($unique);
+    }
+
     public static function countForCredential(int $credential_id): int
     {
         return count(self::getLinksForCredential($credential_id));
@@ -220,13 +272,10 @@ final class CredentialItemLink extends CommonDBTM
                 }
 
                 foreach ($credential_ids as $credential_id) {
-                    $remaining = $DB->request([
-                        'SELECT' => ['id'],
-                        'FROM'   => self::getTable(),
-                        'WHERE'  => ['plugin_credentials_credentials_id' => $credential_id],
-                        'LIMIT'  => 1,
-                    ]);
-                    if (count($remaining) === 0) {
+                    // Use a current read: link_existing may have committed another
+                    // relationship while purge waited for this credential's row lock.
+                    $remaining = self::getLinksForCredentialForUpdate($credential_id);
+                    if ($remaining === []) {
                         $updated = $DB->update(Credential::getTable(), [
                             'is_deleted' => 1,
                             'date_mod'   => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),

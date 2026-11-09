@@ -32,13 +32,22 @@ namespace {
         public int $affected_rows = 0;
         public ?\Closure $afterLock = null;
         private ?array $snapshot = null;
+        private ?array $transaction_read_snapshot = null;
+        private bool $in_transaction = false;
 
         public function request(array $query): FakeCredentialTransferIterator
         {
+            if ($this->in_transaction) {
+                $this->transaction_read_snapshot ??= [$this->credentials, $this->links];
+                [$credentials, $links] = $this->transaction_read_snapshot;
+            } else {
+                $credentials = $this->credentials;
+                $links = $this->links;
+            }
             $table = $query['FROM'];
             $rows = $table === 'glpi_plugin_credentials_credentials'
-                ? $this->credentials
-                : $this->links;
+                ? $credentials
+                : $links;
             $where = $query['WHERE'] ?? [];
             $rows = array_values(array_filter($rows, function (array $row) use ($where): bool {
                 foreach ($where as $field => $expected) {
@@ -106,17 +115,34 @@ namespace {
             }
         }
 
+        public function getCurrentLinksForCredential(int $credential_id): array
+        {
+            return array_values(array_filter(
+                $this->links,
+                static fn(array $row): bool => (int) $row['plugin_credentials_credentials_id'] === $credential_id
+            ));
+        }
+
         public function beginTransaction(): void
         {
             $this->snapshot = [$this->credentials, $this->links, $this->last_insert_id];
+            $this->transaction_read_snapshot = null;
+            $this->in_transaction = true;
         }
-        public function commit(): void { $this->snapshot = null; }
+        public function commit(): void
+        {
+            $this->snapshot = null;
+            $this->transaction_read_snapshot = null;
+            $this->in_transaction = false;
+        }
         public function rollBack(): void
         {
             if ($this->snapshot !== null) {
                 [$this->credentials, $this->links, $this->last_insert_id] = $this->snapshot;
                 $this->snapshot = null;
             }
+            $this->transaction_read_snapshot = null;
+            $this->in_transaction = false;
         }
     }
 
@@ -164,6 +190,11 @@ namespace GlpiPlugin\Credentials {
                 $DB->runAfterLock();
             }
             return $locked;
+        }
+        public static function getLinksForCredentialForUpdate(int $id): array
+        {
+            global $DB;
+            return $DB->getCurrentLinksForCredential($id);
         }
         public static function countForCredential(int $id): int
         {
@@ -307,6 +338,31 @@ namespace {
     ]);
     transferAssert(count($DB->credentials) === 1, 'A source relationship removed during lock wait must not create a destination credential copy.');
     transferAssert($DB->links === [], 'A source relationship removed during lock wait must not be recreated on the cloned item.');
+
+    // Same-ID move race: ordinary reads retain the old RR snapshot while the
+    // locking current read sees that the source unlink has committed.
+    $DB = new FakeCredentialTransferDB();
+    $TRANSFER_ITEMS = [FakeAsset::class => [
+        600 => ['id' => 600, 'entities_id' => 2],
+        601 => ['id' => 601, 'entities_id' => 1],
+    ]];
+    $DB->credentials = [transferCredential(50, 1)];
+    $DB->links = [
+        ['id' => 1, 'plugin_credentials_credentials_id' => 50, 'itemtype' => 'FakeAsset', 'items_id' => 600],
+        ['id' => 2, 'plugin_credentials_credentials_id' => 50, 'itemtype' => 'FakeAsset', 'items_id' => 601],
+    ];
+    $DB->afterLock = static function (FakeCredentialTransferDB $database): void {
+        $database->links = array_values(array_filter(
+            $database->links,
+            static fn(array $row): bool => (int) $row['items_id'] !== 600
+        ));
+    };
+    \GlpiPlugin\Credentials\CredentialHistory::$events = [];
+    \GlpiPlugin\Credentials\CredentialTransfer::handle([
+        'type' => 'FakeAsset', 'id' => 600, 'newID' => 600, 'entities_id' => 2,
+    ]);
+    transferAssert((int) $DB->credentials[0]['entities_id'] === 1, 'A same-ID transfer must not move a credential after its source relationship was concurrently removed.');
+    transferAssert(count($DB->links) === 1 && (int) $DB->links[0]['items_id'] === 601, 'A same-ID transfer must preserve the surviving relationship and skip the stale source link.');
 
     echo "Credential entity transfer regression tests: OK\n";
 }

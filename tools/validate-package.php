@@ -94,14 +94,20 @@ if (!is_string($hook) || !str_contains($hook, 'resetAllCaches()')) {
 $cleanup = file_get_contents($root . '/src/CredentialItemLink.php');
 $controller = file_get_contents($root . '/src/Controller/CredentialController.php');
 if (!is_file($root . '/tests/php/credential_lock_test.php')
+    || !is_file($root . '/tests/php/credential_transfer_test.php')
+    || !is_file($root . '/tests/php/transaction_savepoint_test.php')
     || !str_contains((string) $cleanup, "'link_lock_token' => bin2hex(random_bytes(16))")
     || !str_contains((string) file_get_contents($root . '/hook.php'), "'link_lock_token'")
     || !str_contains((string) file_get_contents($root . '/hook.php'), '->addField(')
     || !str_contains((string) file_get_contents($root . '/src/Credential.php'), "'link_lock_token'")
-    || str_contains((string) $cleanup, 'FOR UPDATE')
-    || str_contains((string) $cleanup, 'doQuery(')
+    || !str_contains((string) $cleanup, 'getLinksForCredentialForUpdate(')
+    || !str_contains((string) $cleanup, '$DB->doQuery($query)')
+    || !str_contains((string) $cleanup, 'FOR UPDATE')
+    || !str_contains((string) $cleanup, 'DBmysql::quoteName')
+    || !str_contains((string) $cleanup, 'DBmysql::quoteValue')
+    || !str_contains((string) file_get_contents($root . '/src/CredentialTransfer.php'), 'CredentialItemLink::getLinksForCredentialForUpdate(')
 ) {
-    $errors[] = 'Relationship serialization must use a migrated GLPI DB API lock token with a regression test, never raw runtime SQL.';
+    $errors[] = 'Credential mutations must retain the migrated row lock and use a narrowly scoped DBmysql-quoted current read with transfer/purge race regressions.';
 }
 if (!is_string($controller)
     || !str_contains($controller, '$locked_candidate->getFromDB($candidate_id)')
