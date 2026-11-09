@@ -93,13 +93,20 @@ final class CredentialTransfer
                     continue;
                 }
 
+                $credential_links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
+                if (!self::containsLink($credential_links, $itemtype, $items_id)) {
+                    // The source link may have been removed while this transfer
+                    // waited for the credential lock. Skip it; do not abort GLPI's move.
+                    continue;
+                }
+
                 $current_entity = (int) $credential['entities_id'];
                 if ($current_entity === $destination_entity) {
                     continue;
                 }
 
                 $date_mod = self::currentTime();
-                if (CredentialItemLink::countForCredential($credential_id) <= 1) {
+                if (count($credential_links) <= 1) {
                     $updated = $DB->update(Credential::getTable(), [
                         'entities_id' => $destination_entity,
                         'date_mod' => $date_mod,
@@ -161,17 +168,18 @@ final class CredentialTransfer
 
         foreach (self::getCredentialIDsForItem($itemtype, $source_id) as $credential_id) {
             $credential = self::lockAndReadCredential($credential_id);
+            $credential_links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
             if (
                 $credential === null
                 || (int) $credential['entities_id'] !== $source_entity
-                || !self::hasCredentialLink($credential_id, $itemtype, $source_id)
+                || !self::containsLink($credential_links, $itemtype, $source_id)
             ) {
                 // A stale cross-entity relationship must never be copied into a
                 // destination where the source credential is not owned.
                 continue;
             }
 
-            if (self::hasCredentialLink($credential_id, $itemtype, $destination_id)) {
+            if (self::containsLink($credential_links, $itemtype, $destination_id)) {
                 continue;
             }
 
@@ -323,21 +331,17 @@ final class CredentialTransfer
         return $new_id;
     }
 
-    private static function hasCredentialLink(int $credential_id, string $itemtype, int $items_id): bool
+    /**
+     * @param array<int, array{itemtype:string,items_id:int}> $links
+     */
+    private static function containsLink(array $links, string $itemtype, int $items_id): bool
     {
-        global $DB;
-
-        $iterator = $DB->request([
-            'SELECT' => ['id'],
-            'FROM' => CredentialItemLink::getTable(),
-            'WHERE' => [
-                'plugin_credentials_credentials_id' => $credential_id,
-                'itemtype' => $itemtype,
-                'items_id' => $items_id,
-            ],
-            'LIMIT' => 1,
-        ]);
-        return count($iterator) > 0;
+        foreach ($links as $link) {
+            if ($link['itemtype'] === $itemtype && $link['items_id'] === $items_id) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static function currentTime(): string

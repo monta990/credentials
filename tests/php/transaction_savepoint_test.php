@@ -26,6 +26,26 @@ class Session
     }
 }
 
+final class FakeCredentialDBResult
+{
+    private int $position = 0;
+    public function __construct(private array $rows) {}
+    public function fetch_assoc(): array|false { return $this->rows[$this->position++] ?? false; }
+    public function free(): void {}
+}
+
+class DBmysql
+{
+    public static function quoteName(string $name): string
+    {
+        return chr(96) . str_replace(chr(96), chr(96) . chr(96), $name) . chr(96);
+    }
+    public static function quoteValue(mixed $value): string
+    {
+        return "'" . addslashes((string) $value) . "'";
+    }
+}
+
 final class FakeCredentialDB
 {
     public int $transactionLevel = 1; // GLPI owns an outer transaction.
@@ -34,7 +54,11 @@ final class FakeCredentialDB
     public bool $failUpdate = false;
     public int $affectedRows = 0;
     public array $updates = [];
-    private bool $linksDeleted = false;
+    public array $links = [
+        ['id' => 1, 'plugin_credentials_credentials_id' => 17, 'itemtype' => 'DummyAsset', 'items_id' => 42],
+    ];
+    public ?Closure $afterLock = null;
+    private ?array $consistentSnapshot = null;
 
     public function getAffectedRows(): int
     {
@@ -64,20 +88,55 @@ final class FakeCredentialDB
         $this->rollbackCalls++;
     }
 
-    public function request(array $query): ArrayObject
+    public function request(array $query): FakeCredentialDBResult
     {
-        if (($query['SELECT'] ?? []) === ['plugin_credentials_credentials_id']) {
-            return new ArrayObject([['plugin_credentials_credentials_id' => 17]]);
+        // Normal SELECTs keep the REPEATABLE READ snapshot created by first read.
+        $this->consistentSnapshot ??= $this->links;
+        $rows = $this->consistentSnapshot;
+        foreach (($query['WHERE'] ?? []) as $field => $expected) {
+            $rows = array_values(array_filter($rows, static function (array $row) use ($field, $expected): bool {
+                return (string) ($row[$field] ?? null) === (string) $expected;
+            }));
         }
-        if (!$this->linksDeleted) {
-            return new ArrayObject([['id' => 9]]);
+        $select = $query['SELECT'] ?? '*';
+        if (is_array($select)) {
+            $rows = array_map(static fn(array $row): array => array_intersect_key($row, array_flip($select)), $rows);
         }
-        return new ArrayObject();
+        return new FakeCredentialDBResult($rows);
     }
+
+    public function doQuery(string $query): FakeCredentialDBResult
+    {
+        if (!str_contains($query, 'FOR UPDATE')
+            || !preg_match("/plugin_credentials_credentials_id\\s*=\\s*'([0-9]+)'/i", $query, $match)
+        ) {
+            throw new RuntimeException('Purge must use a current locking read scoped to one credential.');
+        }
+        $credentialId = (int) $match[1];
+        $rows = array_values(array_filter(
+            $this->links,
+            static fn(array $row): bool => (int) $row['plugin_credentials_credentials_id'] === $credentialId
+        ));
+        $rows = array_map(static fn(array $row): array => [
+            'itemtype' => $row['itemtype'],
+            'items_id' => $row['items_id'],
+        ], $rows);
+        return new FakeCredentialDBResult($rows);
+    }
+
+    public function fetchAssoc(FakeCredentialDBResult $result): array|false { return $result->fetch_assoc(); }
+    public function freeResult(FakeCredentialDBResult $result): bool { $result->free(); return true; }
 
     public function delete(string $table, array $criteria): bool
     {
-        $this->linksDeleted = true;
+        $this->links = array_values(array_filter($this->links, static function (array $row) use ($criteria): bool {
+            foreach ($criteria as $field => $expected) {
+                if ((string) ($row[$field] ?? null) !== (string) $expected) {
+                    return true;
+                }
+            }
+            return false;
+        }));
         return true;
     }
 
@@ -92,6 +151,11 @@ final class FakeCredentialDB
             throw new RuntimeException('Credential lock/archive must target the correct GLPI credential row.');
         }
         $this->affectedRows = 1;
+        if (isset($values['link_lock_token']) && $this->afterLock !== null) {
+            $callback = $this->afterLock;
+            $this->afterLock = null;
+            $callback($this);
+        }
         return true;
     }
 }
@@ -149,6 +213,27 @@ if (count($DB->updates) !== 2
     || \GlpiPlugin\Credentials\CredentialHistory::$orphanEvents !== 1
 ) {
     throw new RuntimeException('Purge must use the GLPI DB lock API, archive the orphan and record secret-free credential history.');
+}
+
+// link_existing commits a survivor while purge waits for the credential lock.
+// The consistent snapshot stays stale; the current locking read must see the new row.
+$DB = new FakeCredentialDB();
+$DB->afterLock = static function (FakeCredentialDB $database): void {
+    $database->links[] = [
+        'id' => 2,
+        'plugin_credentials_credentials_id' => 17,
+        'itemtype' => 'DummyAsset',
+        'items_id' => 99,
+    ];
+};
+\GlpiPlugin\Credentials\CredentialHistory::$orphanEvents = 0;
+\GlpiPlugin\Credentials\CredentialItemLink::cleanupForItem('DummyAsset', 42);
+if (count($DB->links) !== 1
+    || (int) $DB->links[0]['items_id'] !== 99
+    || count($DB->updates) !== 1
+    || \GlpiPlugin\Credentials\CredentialHistory::$orphanEvents !== 0
+) {
+    throw new RuntimeException('Purge must preserve a credential with a survivor committed during its lock wait.');
 }
 
 // Failure must roll back only the plugin savepoint and leave the outer

@@ -12,9 +12,31 @@ namespace {
         public static function haveRight(...$args): bool { return true; }
     }
 
+    final class FakeCredentialLockResult
+    {
+        private int $position = 0;
+        public function __construct(private array $rows) {}
+        public function fetch_assoc(): array|false { return $this->rows[$this->position++] ?? false; }
+        public function free(): void {}
+    }
+
+    class DBmysql
+    {
+        public static function quoteName(string $name): string
+        {
+            return chr(96) . str_replace(chr(96), chr(96) . chr(96), $name) . chr(96);
+        }
+        public static function quoteValue(mixed $value): string
+        {
+            return "'" . addslashes((string) $value) . "'";
+        }
+    }
+
     final class FakeCredentialLockDB
     {
         public array $updates = [];
+        public array $locking_links = [];
+        public string $locking_query = '';
         public int $affected_rows = 1;
         public function update(string $table, array $values, array $where): bool
         {
@@ -22,6 +44,13 @@ namespace {
             return true;
         }
         public function getAffectedRows(): int { return $this->affected_rows; }
+        public function doQuery(string $query): FakeCredentialLockResult
+        {
+            $this->locking_query = $query;
+            return new FakeCredentialLockResult($this->locking_links);
+        }
+        public function fetchAssoc(FakeCredentialLockResult $result): array|false { return $result->fetch_assoc(); }
+        public function freeResult(FakeCredentialLockResult $result): bool { $result->free(); return true; }
     }
 }
 
@@ -64,10 +93,32 @@ namespace {
         throw new RuntimeException('Invalid credential IDs must not be locked.');
     }
 
-    $source = file_get_contents(__DIR__ . '/../../src/CredentialItemLink.php');
-    if (!is_string($source) || str_contains($source, 'FOR UPDATE') || str_contains($source, 'doQuery(')) {
-        throw new RuntimeException('Runtime relationship locking must not issue raw SQL.');
+    $DB->locking_links = [
+        ['itemtype' => 'Computer', 'items_id' => 31],
+        ['itemtype' => 'User', 'items_id' => 7],
+        ['itemtype' => 'User', 'items_id' => 7],
+    ];
+    $links = \GlpiPlugin\Credentials\CredentialItemLink::getLinksForCredentialForUpdate(17);
+    if ($links !== [
+        ['itemtype' => 'Computer', 'items_id' => 31],
+        ['itemtype' => 'User', 'items_id' => 7],
+    ]) {
+        throw new RuntimeException('The current locking read must return deduplicated item relationships.');
     }
-
-    echo "Credential row-lock API, active/entity guard and no-raw-SQL regression: OK\n";
+    $tick = chr(96);
+    if (!str_contains($DB->locking_query, 'FOR UPDATE')
+        || !str_contains($DB->locking_query, $tick . 'glpi_plugin_credentials_items' . $tick)
+        || !str_contains($DB->locking_query, $tick . 'plugin_credentials_credentials_id' . $tick . " = '17'")
+    ) {
+        throw new RuntimeException('The current read must quote table, key and value and include FOR UPDATE.');
+    }
+    $source = file_get_contents(__DIR__ . '/../../src/CredentialItemLink.php');
+    if (!is_string($source)
+        || !str_contains($source, 'DBmysql::quoteName')
+        || !str_contains($source, 'DBmysql::quoteValue')
+        || !str_contains($source, '$DB->doQuery($query)')
+    ) {
+        throw new RuntimeException('The current read must use GLPI DBmysql quoting and execution APIs.');
+    }
+    echo "Credential row-lock API, current-read query and active/entity guard regression: OK\n";
 }
