@@ -2,7 +2,6 @@
 
 <p align="center"><img src="logo.png" alt="Credentials logo" width="160"></p>
 
-**Version:** `0.0.27` (development build)  
 **Plugin key/directory:** `credentials`  
 **Source language:** English  
 **Catalogs:** `es_ES`, `es_MX`, `fr_FR` (no generated English PO/MO files)  
