@@ -119,3 +119,16 @@ function plugin_credentials_item_purge(CommonDBTM $item): void
     // item purge together with its credential relationship cleanup.
     CredentialItemLink::cleanupForItem($item::class, (int) $item->getID());
 }
+
+/**
+ * Keep Credentials relationships valid when GLPI moves or clones an item.
+ *
+ * GLPI invokes ITEM_TRANSFER inside the transfer transaction and supplies
+ * type, original id, newID and destination entities_id.
+ *
+ * @param array{type?:mixed,id?:mixed,newID?:mixed,entities_id?:mixed} $params
+ */
+function plugin_credentials_item_transfer(array $params): void
+{
+    \\GlpiPlugin\\Credentials\\CredentialTransfer::handle($params);
+}
