@@ -424,13 +424,16 @@ if (!is_string($transfer_source)
 
 $transfer_test = file_get_contents($root . '/tests/php/credential_transfer_test.php');
 if (!is_string($transfer_source)
-    || !str_contains($transfer_source, '!self::hasCredentialLink($credential_id, $itemtype, $source_id)')
-    || !str_contains($transfer_test, 'A source relationship removed during lock wait')
+    || !str_contains($transfer_source, '$credential_links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id)')
+    || !str_contains($transfer_source, 'self::containsLink($credential_links, $itemtype, $source_id)')
+    || !str_contains($transfer_source, 'self::containsLink($credential_links, $itemtype, $destination_id)')
+    || !str_contains($transfer_test, 'source link was concurrently removed')
+    || !str_contains($transfer_test, 'same-ID move race')
     || !str_contains((string) $credential_controller_source, 'unset($input[\'entities_id\'])')
     || !str_contains((string) $credential_controller_source, 'CredentialItem::loadReadableItem($itemtype, $items_id)')
     || !str_contains((string) $credential_controller_source, 'CredentialItemLink::exists($credential_id, $itemtype, $items_id)')
 ) {
-    $errors[] = 'Clone and edit operations must revalidate the live item relationship and entity after acquiring the credential lock.';
+    $errors[] = 'Clone, transfer and edit operations must revalidate current item relationships and entity state after acquiring the credential lock.';
 }
 
 if ($errors !== []) {
