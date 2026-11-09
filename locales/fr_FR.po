@@ -1,0 +1,376 @@
+
+msgid ""
+msgstr ""
+"Project-Id-Version: Credentials 0.0.27\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-06 06:40+0000\n"
+"PO-Revision-Date: 2026-11-05 19:50-0700\n"
+"Last-Translator: Credentials maintainers\n"
+"Language: fr_FR\n"
+"Language-Team: Français (France)\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+msgid "Credential"
+msgid_plural "Credentials"
+msgstr[0] "Identifiant"
+msgstr[1] "Identifiants"
+
+msgid ""
+"A credential can be linked to several items. You must already have access to it through another "
+"linked item."
+msgstr ""
+"Un identifiant peut être associé à plusieurs éléments. Vous devez déjà y avoir accès depuis un "
+"autre élément associé."
+
+msgid "Actions"
+msgstr "Actions"
+
+msgid "Add credential"
+msgstr "Ajouter un identifiant"
+
+msgid "Allow"
+msgstr "Autoriser"
+
+msgid "Associated item"
+msgstr "Élément associé"
+
+msgid "Back to item"
+msgstr "Retour à l’élément"
+
+msgid "Cancel"
+msgstr "Annuler"
+
+msgid "Clipboard access was denied by the browser."
+msgstr "L’accès au presse-papiers a été refusé par le navigateur."
+
+msgid "Copied"
+msgstr "Copié"
+
+msgid "Copy password"
+msgstr "Copier le mot de passe"
+
+msgid "Credential ID"
+msgstr "ID de l’identifiant"
+
+msgid "Credential data cannot be decrypted until the GLPI security key is available."
+msgstr ""
+"Les données de l’identifiant ne peuvent pas être déchiffrées tant que la clé de sécurité GLPI "
+"n’est pas disponible."
+
+msgid ""
+"Credential details and the password are encrypted with the GLPI instance security key before they"
+" are stored."
+msgstr ""
+"Les informations de l’identifiant et le mot de passe sont chiffrés avec la clé de sécurité de "
+"l’instance GLPI avant leur enregistrement."
+
+msgid "Credentials"
+msgstr "Identifiants"
+
+msgid "Credentials are protected. Open the vault to view credentials associated with this item."
+msgstr ""
+"Les identifiants sont protégés. Ouvrez le coffre-fort pour consulter ceux qui sont associés à cet"
+" élément."
+
+msgid "Delete credential"
+msgstr "Supprimer l’identifiant"
+
+msgid "Delete this credential for all linked items? This cannot be undone."
+msgstr "Supprimer cet identifiant de tous les éléments associés ? Cette action est irréversible."
+
+msgid "Edit credential"
+msgstr "Modifier l’identifiant"
+
+msgid "Hide password"
+msgstr "Masquer le mot de passe"
+
+msgid "Leave blank to keep the current password."
+msgstr "Laissez ce champ vide pour conserver le mot de passe actuel."
+
+msgid "Link"
+msgstr "Associer"
+
+msgid "Link an existing credential"
+msgstr "Associer un identifiant existant"
+
+msgid "Name"
+msgstr "Nom"
+
+msgid "Name is required."
+msgstr "Le nom est obligatoire."
+
+msgid "No credentials are associated with this item yet."
+msgstr "Aucun identifiant n’est encore associé à cet élément."
+
+msgid "Notes"
+msgstr "Notes"
+
+msgid "One or more fields exceed their maximum allowed length."
+msgstr "Un ou plusieurs champs dépassent la longueur maximale autorisée."
+
+msgid "Open credentials"
+msgstr "Ouvrir les identifiants"
+
+msgid "Password"
+msgstr "Mot de passe"
+
+msgid "Password is required."
+msgstr "Le mot de passe est obligatoire."
+
+msgid "Password is too long. The maximum supported length is 48,000 bytes."
+msgstr "Le mot de passe est trop long. La longueur maximale prise en charge est de 48 000 octets."
+
+msgid "Password revealed"
+msgstr "Mot de passe affiché"
+
+msgid "Reveal password"
+msgstr "Afficher le mot de passe"
+
+msgid "Reveal credential passwords"
+msgstr "Afficher les mots de passe des identifiants"
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid ""
+"Stored credential details could not be decrypted. Editing is disabled to prevent accidental data "
+"loss."
+msgstr ""
+"Impossible de déchiffrer les informations de l’identifiant enregistré. La modification est "
+"désactivée afin d’éviter toute perte accidentelle de données."
+
+msgid ""
+"The GLPI security key is not configured or cannot be read. Ask your administrator to configure "
+"GLPI's security key before saving credentials."
+msgstr ""
+"La clé de sécurité GLPI n’est pas configurée ou ne peut pas être lue. Demandez à votre "
+"administrateur de la configurer avant d’enregistrer des identifiants."
+
+msgid "The GLPI security key is unavailable or invalid. Contact your GLPI administrator."
+msgstr "La clé de sécurité GLPI est indisponible ou invalide. Contactez votre administrateur GLPI."
+
+msgid ""
+"The access could not be audited, so the password was not revealed. Contact your GLPI "
+"administrator."
+msgstr ""
+"L’accès n’a pas pu être consigné dans le journal d’audit ; le mot de passe n’a donc pas été "
+"affiché. Contactez votre administrateur GLPI."
+
+msgid "The credential could not be created and audited. No credential was saved."
+msgstr ""
+"L’identifiant n’a pas pu être créé ni consigné dans le journal d’audit. Aucun identifiant n’a été"
+" enregistré."
+
+msgid "The credential could not be deleted. No changes were saved."
+msgstr "L’identifiant n’a pas pu être supprimé. Aucune modification n’a été enregistrée."
+
+msgid "The credential could not be linked. No changes were saved."
+msgstr "L’identifiant n’a pas pu être associé. Aucune modification n’a été enregistrée."
+
+msgid "The credential could not be unlinked. No changes were saved."
+msgstr "L’identifiant n’a pas pu être dissocié. Aucune modification n’a été enregistrée."
+
+msgid "The credential could not be updated and audited. No changes were saved."
+msgstr ""
+"L’identifiant n’a pas pu être mis à jour et consigné dans le journal d’audit. Aucune modification"
+" n’a été enregistrée."
+
+msgid "The password is encrypted with the GLPI instance security key before it is stored."
+msgstr "Le mot de passe est chiffré avec la clé de sécurité de l’instance GLPI avant son enregistrement."
+
+msgid "The selected credential is not available to your account."
+msgstr "L’identifiant sélectionné n’est pas accessible avec votre compte."
+
+msgid "The stored password could not be decrypted. Contact your GLPI administrator."
+msgstr "Impossible de déchiffrer le mot de passe enregistré. Contactez votre administrateur GLPI."
+
+msgid "URL"
+msgstr "URL"
+
+msgid "URL must be a valid HTTP or HTTPS address and must not contain embedded credentials."
+msgstr "L’URL doit être une adresse HTTP ou HTTPS valide et ne doit pas contenir d’identifiants intégrés."
+
+msgid "Unable to encrypt credential details with the GLPI security key."
+msgstr "Impossible de chiffrer les informations de l’identifiant avec la clé de sécurité GLPI."
+
+msgid "Unable to encrypt the password with the GLPI security key."
+msgstr "Impossible de chiffrer le mot de passe avec la clé de sécurité GLPI."
+
+msgid "Unlink"
+msgstr "Dissocier"
+
+msgid "Unlink this credential from the current item?"
+msgstr "Dissocier cet identifiant de l’élément actuel ?"
+
+msgid "Username"
+msgstr "Nom d’utilisateur"
+
+msgid "Associated with"
+msgstr "Associé à"
+
+msgid "Authenticate and view all ticket credentials"
+msgstr "Se réauthentifier et afficher tous les identifiants du ticket"
+
+msgid "Back to ticket"
+msgstr "Retour au ticket"
+
+msgid "Credential details"
+msgstr "Détails de l’identifiant"
+
+msgid "Credential names are listed here. Open an entry to view protected details."
+msgstr ""
+"Les noms des identifiants sont répertoriés ici. Ouvrez une entrée pour consulter ses détails "
+"protégés."
+
+msgid "Credentials linked to requester users and associated ticket items are shown here."
+msgstr "Les identifiants associés aux demandeurs et aux éléments liés au ticket sont affichés ici."
+
+msgid "GLPI could not write the access event to the item history, so the password was not revealed."
+msgstr ""
+"GLPI n’a pas pu inscrire l’événement d’accès dans l’historique de l’élément ; le mot de passe n’a"
+" donc pas été révélé."
+
+msgid "Last update"
+msgstr "Dernière modification"
+
+msgid "No credentials were found for the ticket requesters or associated items."
+msgstr "Aucun identifiant associé aux demandeurs ou aux éléments du ticket n’a été trouvé."
+
+msgid "Password is hidden until you request it."
+msgstr "Le mot de passe reste masqué jusqu’à ce que vous demandiez son affichage."
+
+msgid "Requester"
+msgstr "Demandeur"
+
+msgid ""
+"Some credentials for requester users or ticket items require native GLPI re-authentication before"
+" they can be listed."
+msgstr ""
+"Certains identifiants des demandeurs ou des éléments du ticket nécessitent une réauthentification"
+" native de GLPI avant de pouvoir être affichés."
+
+msgid ""
+"Some requester users or ticket items remain unavailable after re-authentication because your "
+"profile cannot read them."
+msgstr ""
+"Certains demandeurs ou éléments du ticket restent inaccessibles après la réauthentification, car "
+"votre profil ne dispose pas du droit de les consulter."
+
+msgid "The credential could not be created or recorded in GLPI history. No credential was saved."
+msgstr ""
+"L’identifiant n’a pas pu être créé ou enregistré dans l’historique de GLPI. Aucun identifiant n’a"
+" été enregistré."
+
+msgid "The credential could not be deleted or recorded in GLPI history. No changes were saved."
+msgstr ""
+"L’identifiant n’a pas pu être supprimé ou enregistré dans l’historique de GLPI. Aucune "
+"modification n’a été enregistrée."
+
+msgid "The credential could not be linked or recorded in GLPI history. No changes were saved."
+msgstr ""
+"L’identifiant n’a pas pu être associé ou enregistré dans l’historique de GLPI. Aucune "
+"modification n’a été enregistrée."
+
+msgid "The credential could not be unlinked or recorded in GLPI history. No changes were saved."
+msgstr ""
+"L’association de l’identifiant n’a pas pu être supprimée ou enregistrée dans l’historique de "
+"GLPI. Aucune modification n’a été enregistrée."
+
+msgid "The credential could not be updated or recorded in GLPI history. No changes were saved."
+msgstr ""
+"L’identifiant n’a pas pu être mis à jour ou enregistré dans l’historique de GLPI. Aucune "
+"modification n’a été enregistrée."
+
+msgid "Ticket credentials"
+msgstr "Identifiants du ticket"
+
+msgid "Ticket item"
+msgstr "Élément du ticket"
+
+msgid "View details"
+msgstr "Afficher les détails"
+
+msgid "Close"
+msgstr "Fermer"
+msgid "Linked items"
+msgstr "Éléments associés"
+
+msgid "This credential has only one linked item. It cannot be unlinked because credentials must always belong to at least one item. Delete the credential instead, if you have permission."
+msgstr "Cet identifiant est associé à un seul élément. Il ne peut pas être dissocié, car un identifiant doit toujours être associé à au moins un élément. Supprimez plutôt l’identifiant si vous en avez l’autorisation."
+
+msgid "Cannot unlink the last linked item. Delete the credential instead."
+msgstr "Impossible de dissocier le dernier élément associé. Supprimez plutôt l’identifiant."
+
+msgid "Use the ID shown in the credentials list to link an existing entry."
+msgstr "Utilisez l’ID affiché dans la liste des identifiants pour associer une entrée existante."
+
+msgid "The password could not be revealed. Please reauthenticate and try again."
+msgstr "Le mot de passe n’a pas pu être affiché. Réauthentifiez-vous puis réessayez."
+
+msgid "Requesting password…"
+msgstr "Récupération du mot de passe…"
+
+msgid "Password revealed."
+msgstr "Mot de passe affiché."
+
+msgid "Password hidden."
+msgstr "Mot de passe masqué."
+
+msgid "Password copied to clipboard."
+msgstr "Mot de passe copié dans le presse-papiers."
+
+msgid "Reveal the password before copying it."
+msgstr "Affichez le mot de passe avant de le copier."
+
+msgid "Clipboard access is unavailable. Select the password and copy it manually."
+msgstr "L’accès au presse-papiers est indisponible. Sélectionnez le mot de passe et copiez-le manuellement."
+
+msgid "Clipboard access was denied. Select the password and copy it manually."
+msgstr "L’accès au presse-papiers a été refusé. Sélectionnez le mot de passe et copiez-le manuellement."
+
+msgid "Revealed password"
+msgstr "Mot de passe affiché"
+
+msgid "You do not have permission to reveal this password."
+msgstr "Vous n’avez pas l’autorisation d’afficher ce mot de passe."
+
+
+msgid "Current item"
+msgstr "Élément actuel"
+
+msgid "No linked items are available to display."
+msgstr "Aucun élément lié n’est disponible à afficher."
+
+msgid "Some linked items are hidden because you do not have permission to read them."
+msgstr "Certains éléments liés sont masqués car vous ne disposez pas des droits nécessaires pour les consulter."
+
+msgid "Show linked items for credential"
+msgstr "Afficher les éléments liés à l’identifiant"
+
+msgid "Back to credential"
+msgstr "Retour à l’identifiant"
+
+msgid "Item type"
+msgstr "Type d’élément"
+
+msgid "Item ID"
+msgstr "ID de l’élément"
+
+msgid "Item name"
+msgstr "Nom de l’élément"
+
+msgid "Relationship"
+msgstr "Relation"
+
+msgid "Credential updated successfully."
+msgstr "Les identifiants ont été mis à jour."
+
+msgid "visible linked items"
+msgstr "éléments liés visibles"
+
+msgid "linked items are hidden because you do not have permission to read them."
+msgstr "éléments liés sont masqués car vous ne disposez pas du droit de les consulter."
