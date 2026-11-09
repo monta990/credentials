@@ -1,12 +1,20 @@
-# HANDOFF — Credentials 0.0.27
+# HANDOFF — Credentials 0.0.29
 
 ## Estado actual
 
-La versión `0.0.27` conserva los flujos funcionales introducidos en `0.0.26`: la contraseña revelada se muestra en un `<input type="text" readonly>` seleccionable, con `color` y `-webkit-text-fill-color` explícitos; copiar y ocultar leen y limpian `input.value`. Después de guardar una credencial desde el modal, el helper externo `public/js/credential-frame.js` solicita la navegación completa del padre mediante `postMessage` same-origin validado. Cancelar sigue siendo independiente y no envía el formulario.
+La versión `0.0.29` conserva los flujos funcionales de la versión `0.0.28`: la contraseña revelada se muestra en un `<input type="text" readonly>` seleccionable; copiar y ocultar leen y limpian `input.value`. Después de guardar desde el modal, `public/js/credential-frame.js` solicita la navegación completa del padre mediante `postMessage` same-origin validado. Cancelar sigue siendo independiente y no envía el formulario.
 
-Esta remediación reemplaza el `SELECT ... FOR UPDATE` de ejecución por un `UPDATE` de bloqueo a través de la API de base de datos GLPI, con token aleatorio por credencial. La condición de actualización valida de manera atómica el ID, la entidad esperada y el estado activo; las operaciones de vincular, desvincular y eliminar vuelven a cargar y validar la credencial después de obtener el bloqueo. La migración agrega `link_lock_token` sin reescribir ni eliminar credenciales o relaciones existentes. La purga registra un evento de historial sin secretos cuando una credencial queda huérfana.
+El bloqueo principal por credencial sigue usando un `UPDATE` con token aleatorio a través de la API de base de datos GLPI. Además, las decisiones de transferencia y purga usan una lectura bloqueante actual de las relaciones (`SELECT ... FOR UPDATE`) después de obtener ese bloqueo. Esto evita usar una vista consistente anterior de InnoDB `REPEATABLE READ` después de esperar por una operación concurrente. La consulta se ejecuta mediante `DBmysql::doQuery()` y cita tabla, columnas y valores con `DBmysql::quoteName()`/`quoteValue()`; no acepta fragmentos SQL del usuario.
 
 En este entorno se ejecutó la batería PHP en PHP 8.4.24, incluida la prueba nueva del bloqueo y la regresión de transacciones/savepoints; también pasaron todos los tests JavaScript, `node --check` sobre los scripts públicos, la comprobación PO/MO y `tools/validate-package.php`. `credentials.xml` se validó como XML bien formado mediante Python ElementTree porque el PHP local no tiene habilitada la extensión DOM (CI sí la instala). No se dispone de Composer/PHPCS ni de una instancia GLPI real conectada al entorno, así que el estándar oficial y las pruebas dinámicas de actualización, concurrencia, cifrado y navegador siguen requiriendo CI/staging. El manifiesto permanece en `development`: las URLs públicas y capturas requeridas no se deben inventar.
+
+## Cambios de 0.0.29
+
+- La transferencia con ID conservado vuelve a consultar los vínculos mediante una lectura actual bloqueante después de adquirir el bloqueo de la credencial. Si el vínculo de origen se eliminó mientras esperaba, se omite sin abortar la transferencia de GLPI.
+- La clonación valida el vínculo exacto mediante la lectura actual y no restablece una relación a partir de una lista obsoleta.
+- La purga consulta los vínculos sobrevivientes con una lectura actual bloqueante antes de archivar. Un vínculo agregado durante la espera impide marcar erróneamente la credencial como huérfana.
+- La lectura especial usa `DBmysql::doQuery()` con identificadores/valores citados por GLPI. El token `link_lock_token` continúa siendo el mecanismo principal para serializar las mutaciones de una credencial.
+- Las regresiones simulan una vista consistente anterior y cambios confirmados durante la espera del bloqueo.
 
 ## Cambios de 0.0.27
 
@@ -37,6 +45,14 @@ En este entorno se ejecutó la batería PHP en PHP 8.4.24, incluida la prueba nu
 6. La acción de eliminación de detalles usa `btn-outline-danger` y CSS con borde visible.
 7. Se añadieron `tests/js/modal_parent_message_test.js` y `tests/php/form_navigation_contract_test.php`; se ajustaron los tests de contraseña y modal para ejecutar y comprobar los contratos reales de los scripts y plantillas. CI y el validador del paquete exigen estas regresiones.
 8. PHP 8.6 permanece como matriz obligatoria de CLI/CI junto con PHP 8.3, 8.4 y 8.5.
+
+## Validación de 0.0.29
+
+- `tests/php/credential_lock_test.php` verifica la lectura actual `FOR UPDATE`, la deduplicación y el uso de identificadores/valores citados por GLPI DBmysql.
+- `tests/php/credential_transfer_test.php` simula una vista consistente antigua y comprueba que vínculos retirados no se restauran ni abortan una transferencia con el mismo ID.
+- `tests/php/transaction_savepoint_test.php` simula que `link_existing` confirma un vínculo durante la espera de la purga; esta debe conservar activa la credencial cuando todavía tiene relaciones.
+- El validador exige el uso de la lectura actual en las rutas de transferencia y purga.
+- Las pruebas contra GLPI real/staging, PHPCS y la aceptación Marketplace siguen pendientes; no se declaran como ejecutadas.
 
 ## Validación de 0.0.27
 
@@ -84,7 +100,7 @@ En este entorno se ejecutó la batería PHP en PHP 8.4.24, incluida la prueba nu
 
 - **Plugin:** Credentials
 - **Clave / carpeta:** `credentials`
-- **Versión:** `0.0.27` (compilación de remediación; no estable)
+- **Versión:** `0.0.29` (compilación de remediación; no estable)
 - **GLPI soportado:** `12.0.x` (`~12.0.0` en el manifiesto; `12.0.0`–`12.0.99` en `setup.php`)
 - **PHP mínimo declarado:** `8.3`
 - **Idioma fuente:** inglés
@@ -198,7 +214,7 @@ Estas comprobaciones son estáticas. No equivalen a pruebas de integración, pen
 
 ## Procedimiento para continuar
 
-- La siguiente modificación incrementa el plugin a `0.0.28` en `setup.php`, `credentials.xml`, encabezados PO, CHANGELOG, README/HANDOFF y validadores.
+- La siguiente modificación incrementa el plugin a `0.0.30` en `setup.php`, `credentials.xml`, encabezados PO, CHANGELOG, README/HANDOFF y validadores.
 - No crear catálogos ingleses: inglés es idioma fuente.
 - No cambiar el uso de GLPIKey ni quitar `Hooks::SECURED_FIELDS`.
 - No migrar datos existentes ni eliminar tablas como parte de una actualización.
