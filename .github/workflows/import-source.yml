@@ -22,15 +22,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode credentials-source-0.0.27.zip.b64 > /tmp/credentials-source.zip
-          echo "32cdacce51198332d538d562e821f1a9ef6729b516f15be2ea1eb00b7033824d  /tmp/credentials-source.zip" | sha256sum --check
-          unzip -t /tmp/credentials-source.zip
+          base64 --decode credentials-source-0.0.27.tar.xz.b64 > /tmp/credentials-source.tar.xz
+          echo "784ad24a82d02bbbc035087dfb9caf6be4753a6a0e7c6f6c669d5e5fa857d44f  /tmp/credentials-source.tar.xz" | sha256sum --check
           mkdir -p /tmp/credentials-source
-          unzip -q /tmp/credentials-source.zip -d /tmp/credentials-source
+          tar -xJf /tmp/credentials-source.tar.xz -C /tmp/credentials-source
           test -f /tmp/credentials-source/credentials/credentials.xml
           test -f /tmp/credentials-source/credentials/tools/run-cli-tests.sh
           cp -a /tmp/credentials-source/credentials/. .
-          rm -f credentials-source-0.0.27.zip.b64 example.txt ci-bootstrap.txt .github/workflows/import-source.yml
+          rm -f credentials-source-0.0.27.tar.xz.b64 example.txt ci-bootstrap.txt .github/workflows/import-source.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all
