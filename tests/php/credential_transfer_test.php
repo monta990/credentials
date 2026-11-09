@@ -85,13 +85,11 @@ namespace {
 
         public function insert(string $table, array $values): bool
         {
-            $this->last_insert_id++;
+            $key = $table === 'glpi_plugin_credentials_credentials' ? 'credentials' : 'links';
+            $existing_ids = array_map(static fn(array $row): int => (int) ($row['id'] ?? 0), $this->{$key});
+            $this->last_insert_id = max($existing_ids, default: 0) + 1;
             $values['id'] = $this->last_insert_id;
-            if ($table === 'glpi_plugin_credentials_credentials') {
-                $this->credentials[] = $values;
-            } else {
-                $this->links[] = $values;
-            }
+            $this->{$key}[] = $values;
             $this->affected_rows = 1;
             return true;
         }
@@ -238,7 +236,7 @@ namespace {
     transferAssert(count($DB->credentials) === 2, 'A shared credential must be split across entities.');
     transferAssert((int) $DB->credentials[0]['entities_id'] === 1 && (int) $DB->credentials[1]['entities_id'] === 2, 'The original and copied credentials must remain in their respective entities.');
     transferAssert($DB->credentials[1]['password'] === $DB->credentials[0]['password'], 'Ciphertext must be copied byte-for-byte without decryption.');
-    transferAssert((int) $DB->links[0]['plugin_credentials_credentials_id'] === 2, 'Only the transferred item link must point to the destination copy.');
+    transferAssert((int) $DB->links[0]['plugin_credentials_credentials_id'] === (int) $DB->credentials[1]['id'], 'Only the transferred item link must point to the destination copy.');
     transferAssert((int) $DB->links[1]['plugin_credentials_credentials_id'] === 10, 'Other source-entity links must remain unchanged.');
 
     $DB = new FakeCredentialTransferDB();
@@ -257,7 +255,7 @@ namespace {
     transferAssert(count($DB->credentials) === 2, 'A cross-entity item clone must receive a separate credential copy.');
     transferAssert(count($DB->links) === 2, 'The original and cloned items must both retain a credential relationship.');
     transferAssert((int) $DB->links[0]['items_id'] === 300 && (int) $DB->links[0]['plugin_credentials_credentials_id'] === 20, 'The source relationship must not be modified.');
-    transferAssert((int) $DB->links[1]['items_id'] === 301 && (int) $DB->links[1]['plugin_credentials_credentials_id'] === 2, 'The cloned item must link to the destination credential copy.');
+    transferAssert((int) $DB->links[1]['items_id'] === 301 && (int) $DB->links[1]['plugin_credentials_credentials_id'] === (int) $DB->credentials[1]['id'], 'The cloned item must link to the destination credential copy.');
 
     $DB = new FakeCredentialTransferDB();
     $TRANSFER_ITEMS = [FakeAsset::class => [
