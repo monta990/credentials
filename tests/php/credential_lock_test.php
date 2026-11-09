@@ -36,7 +36,9 @@ namespace {
     {
         public array $updates = [];
         public array $locking_links = [];
+        public array $locking_credential = [];
         public string $locking_query = '';
+        public string $credential_locking_query = '';
         public int $affected_rows = 1;
         public function update(string $table, array $values, array $where): bool
         {
@@ -46,6 +48,10 @@ namespace {
         public function getAffectedRows(): int { return $this->affected_rows; }
         public function doQuery(string $query): FakeCredentialLockResult
         {
+            if (str_contains($query, '`glpi_plugin_credentials_credentials`')) {
+                $this->credential_locking_query = $query;
+                return new FakeCredentialLockResult($this->locking_credential === [] ? [] : [$this->locking_credential]);
+            }
             $this->locking_query = $query;
             return new FakeCredentialLockResult($this->locking_links);
         }
@@ -112,6 +118,36 @@ namespace {
     ) {
         throw new RuntimeException('The current read must quote table, key and value and include FOR UPDATE.');
     }
+    $DB->locking_credential = [
+        'id' => 17,
+        'name' => 'Database access',
+        'entities_id' => 4,
+        'login' => 'glpikey-login-ciphertext-current',
+        'password' => 'glpikey-password-ciphertext-current',
+        'url' => 'glpikey-url-ciphertext-current',
+        'notes' => 'glpikey-notes-ciphertext-current',
+        'users_id' => 7,
+        'date_creation' => '2026-11-01 10:00:00',
+        'date_mod' => '2026-11-09 10:00:00',
+        'is_deleted' => 0,
+    ];
+    $credential = \GlpiPlugin\Credentials\CredentialItemLink::getCredentialForUpdate(17);
+    if (!is_array($credential)
+        || ($credential['password'] ?? null) !== 'glpikey-password-ciphertext-current'
+        || ($credential['login'] ?? null) !== 'glpikey-login-ciphertext-current'
+    ) {
+        throw new RuntimeException('The current locking read must return the latest encrypted credential fields.');
+    }
+    $tick = chr(96);
+    if (!str_contains($DB->credential_locking_query, 'FOR UPDATE')
+        || !str_contains($DB->credential_locking_query, $tick . 'glpi_plugin_credentials_credentials' . $tick)
+        || !str_contains($DB->credential_locking_query, $tick . 'password' . $tick)
+        || !str_contains($DB->credential_locking_query, $tick . 'login' . $tick)
+        || !str_contains($DB->credential_locking_query, $tick . 'id' . $tick . " = '17'")
+    ) {
+        throw new RuntimeException('Credential fields must be selected with a quoted, ID-scoped current locking read.');
+    }
+
     $source = file_get_contents(__DIR__ . '/../../src/CredentialItemLink.php');
     if (!is_string($source)
         || !str_contains($source, 'DBmysql::quoteName')
