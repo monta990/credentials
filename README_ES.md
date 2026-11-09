@@ -2,7 +2,7 @@
 
 <p align="center"><img src="logo.png" alt="Logotipo de Credentials" width="160"></p>
 
-**Versión:** `0.0.30` (compilación de desarrollo)  
+**Versión:** `0.0.31` (compilación de desarrollo)  
 **Clave/directorio:** `credentials`  
 **Idioma fuente:** inglés  
 **Catálogos:** `es_ES`, `es_MX`, `fr_FR` (no se generan archivos PO/MO en inglés)  
@@ -49,7 +49,7 @@ El flujo de CI ejecuta la revisión de sintaxis PHP y todas las pruebas de regre
 
 ## Estado de desarrollo y publicación
 
-`0.0.27` es una compilación de desarrollo/remediación. Cancelar alta/edición cierra el modal actual (o vuelve a los detalles cuando se edita desde esa vista), mientras que Guardar solicita al padre GLPI una navegación same-origin validada hacia la ficha principal para realizar una actualización completa. Los títulos de los modales reciben iconos Tabler validados mediante un puente same-origin (llave para detalles, más para alta, lápiz para edición y enlace para elementos asociados). Revelar contraseña utiliza un POST HTML interactivo dentro del iframe para que GLPI 12 pueda mostrar y reproducir su reautenticación nativa; la contraseña solo se renderiza después de validar permisos y registrar el acceso, en una respuesta no-cache, dentro de un campo de texto de solo lectura y seleccionable con contraste forzado para temas GLPI. Copiar/ocultar leen y limpian el valor del campo dentro del iframe de detalles. Las operaciones de vincular, desvincular, eliminar y purgar se serializan mediante la API de actualización de base de datos de GLPI; después del bloqueo se vuelve a validar el estado activo, la entidad y los permisos, y el archivado huérfano queda registrado en el historial de la credencial. CI sigue exigiendo PHP 8.3, 8.4, 8.5 y 8.6. Los archivos PHP antiguos de `front/` permanecen únicamente como redirecciones de compatibilidad.
+`0.0.31` es una compilación de desarrollo/remediación. Cancelar alta/edición cierra el modal actual (o vuelve a los detalles cuando se edita desde esa vista), mientras que Guardar solicita al padre GLPI una navegación same-origin validada hacia la ficha principal para realizar una actualización completa. Los títulos de los modales reciben iconos Tabler validados mediante un puente same-origin (llave para detalles, más para alta, lápiz para edición y enlace para elementos asociados). Revelar contraseña utiliza un POST HTML interactivo dentro del iframe para que GLPI 12 pueda mostrar y reproducir su reautenticación nativa; la contraseña solo se renderiza después de validar permisos y registrar el acceso, en una respuesta no-cache, dentro de un campo de texto de solo lectura y seleccionable con contraste forzado para temas GLPI. Copiar/ocultar leen y limpian el valor del campo dentro del iframe de detalles. Las operaciones de vincular, desvincular, eliminar y purgar se serializan mediante la API de actualización de base de datos de GLPI; después del bloqueo se vuelve a validar el estado activo, la entidad y los permisos, y el archivado huérfano queda registrado en el historial de la credencial. CI sigue exigiendo PHP 8.3, 8.4, 8.5 y 8.6. Los archivos PHP antiguos de `front/` permanecen únicamente como redirecciones de compatibilidad.
 
 Este paquete no afirma tener aprobación de Marketplace y conserva `<state>development</state>`. Antes de completar el manifiesto público se deben proporcionar URLs reales del repositorio, incidencias, documentación y descarga inmutable de la versión. No se inventan esas direcciones.
 

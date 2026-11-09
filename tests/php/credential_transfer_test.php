@@ -31,6 +31,8 @@ namespace {
         public int $last_insert_id = 0;
         public int $affected_rows = 0;
         public ?\Closure $afterLock = null;
+        public ?\Closure $beforeLock = null;
+        public bool $forceNextLockFailure = false;
         private ?array $snapshot = null;
         private ?array $transaction_read_snapshot = null;
         private bool $in_transaction = false;
@@ -106,6 +108,15 @@ namespace {
 
         public function insertId(): int { return $this->last_insert_id; }
         public function getAffectedRows(): int { return $this->affected_rows; }
+        public function runBeforeLock(): void
+        {
+            if ($this->beforeLock !== null) {
+                $callback = $this->beforeLock;
+                $this->beforeLock = null;
+                $callback($this);
+            }
+        }
+
         public function runAfterLock(): void
         {
             if ($this->afterLock !== null) {
@@ -193,6 +204,11 @@ namespace GlpiPlugin\Credentials {
             }
             if ($active) {
                 $where['is_deleted'] = 0;
+            }
+            $DB->runBeforeLock();
+            if ($DB->forceNextLockFailure) {
+                $DB->forceNextLockFailure = false;
+                return false;
             }
             $ok = $DB->update(Credential::getTable(), ['link_lock_token' => bin2hex(random_bytes(16))], $where);
             $locked = $ok !== false && $DB->getAffectedRows() === 1;
@@ -414,6 +430,71 @@ namespace {
     transferAssert($copied['password'] === 'glpikey-password-ciphertext-v2', 'A transfer must copy the latest committed password ciphertext.');
     transferAssert($copied['url'] === 'glpikey-url-ciphertext-v2', 'A transfer must copy the latest committed URL ciphertext.');
     transferAssert($copied['notes'] === 'glpikey-notes-ciphertext-v2', 'A transfer must copy the latest committed notes ciphertext.');
+
+
+    // Concurrent archive while the transfer waits: the initial ID list is
+    // stale when the conditional is_deleted=0 UPDATE eventually executes.
+    $DB = new FakeCredentialTransferDB();
+    $TRANSFER_ITEMS = [FakeAsset::class => [
+        800 => ['id' => 800, 'entities_id' => 2],
+        801 => ['id' => 801, 'entities_id' => 1],
+    ]];
+    $DB->credentials = [transferCredential(70, 1)];
+    $DB->links = [
+        ['id' => 1, 'plugin_credentials_credentials_id' => 70, 'itemtype' => 'FakeAsset', 'items_id' => 800],
+    ];
+    $DB->beforeLock = static function (FakeCredentialTransferDB $database): void {
+        $database->credentials[0]['is_deleted'] = 1;
+        $database->links = [];
+    };
+    \GlpiPlugin\Credentials\CredentialHistory::$events = [];
+    \GlpiPlugin\Credentials\CredentialTransfer::handle([
+        'type' => 'FakeAsset', 'id' => 800, 'newID' => 800, 'entities_id' => 2,
+    ]);
+    transferAssert((int) $DB->credentials[0]['is_deleted'] === 1, 'A concurrent archive must remain untouched.');
+    transferAssert($DB->links === [], 'A concurrently removed source link must not be recreated.');
+
+    // Clone path must also skip an archived source credential while waiting.
+    $DB = new FakeCredentialTransferDB();
+    $TRANSFER_ITEMS = [FakeAsset::class => [
+        820 => ['id' => 820, 'entities_id' => 1],
+        821 => ['id' => 821, 'entities_id' => 2],
+    ]];
+    $DB->credentials = [transferCredential(72, 1)];
+    $DB->links = [
+        ['id' => 1, 'plugin_credentials_credentials_id' => 72, 'itemtype' => 'FakeAsset', 'items_id' => 820],
+    ];
+    $DB->beforeLock = static function (FakeCredentialTransferDB $database): void {
+        $database->credentials[0]['is_deleted'] = 1;
+        $database->links = [];
+    };
+    \GlpiPlugin\Credentials\CredentialTransfer::handle([
+        'type' => 'FakeAsset', 'id' => 820, 'newID' => 821, 'entities_id' => 2,
+    ]);
+    transferAssert(count($DB->credentials) === 1, 'A clone must not create a destination copy of a concurrently archived credential.');
+    transferAssert($DB->links === [], 'A clone must not recreate a relationship for an archived source credential.');
+
+    // An unexpected lock failure on a still-active credential with its exact
+    // source relation intact must remain an explicit error.
+    $DB = new FakeCredentialTransferDB();
+    $TRANSFER_ITEMS = [FakeAsset::class => [
+        830 => ['id' => 830, 'entities_id' => 2],
+        831 => ['id' => 831, 'entities_id' => 1],
+    ]];
+    $DB->credentials = [transferCredential(73, 1)];
+    $DB->links = [
+        ['id' => 1, 'plugin_credentials_credentials_id' => 73, 'itemtype' => 'FakeAsset', 'items_id' => 830],
+    ];
+    $DB->forceNextLockFailure = true;
+    $thrown = false;
+    try {
+        \GlpiPlugin\Credentials\CredentialTransfer::handle([
+            'type' => 'FakeAsset', 'id' => 830, 'newID' => 830, 'entities_id' => 2,
+        ]);
+    } catch (\RuntimeException $exception) {
+        $thrown = str_contains($exception->getMessage(), 'Unable to lock active credential');
+    }
+    transferAssert($thrown, 'A failed lock on a still-active linked credential must remain an explicit failure.');
 
     echo "Credential entity transfer regression tests: OK\n";
 }
