@@ -30,6 +30,7 @@ namespace {
         public array $links = [];
         public int $last_insert_id = 0;
         public int $affected_rows = 0;
+        public ?\\Closure $afterLock = null;
         private ?array $snapshot = null;
 
         public function request(array $query): FakeCredentialTransferIterator
@@ -96,6 +97,14 @@ namespace {
 
         public function insertId(): int { return $this->last_insert_id; }
         public function getAffectedRows(): int { return $this->affected_rows; }
+        public function runAfterLock(): void
+        {
+            if ($this->afterLock !== null) {
+                $callback = $this->afterLock;
+                $this->afterLock = null;
+                $callback($this);
+            }
+        }
 
         public function beginTransaction(): void
         {
@@ -150,7 +159,11 @@ namespace GlpiPlugin\Credentials {
                 $where['is_deleted'] = 0;
             }
             $ok = $DB->update(Credential::getTable(), ['link_lock_token' => bin2hex(random_bytes(16))], $where);
-            return $ok !== false && $DB->getAffectedRows() === 1;
+            $locked = $ok !== false && $DB->getAffectedRows() === 1;
+            if ($locked) {
+                $DB->runAfterLock();
+            }
+            return $locked;
         }
         public static function countForCredential(int $id): int
         {
@@ -272,6 +285,28 @@ namespace {
     ]);
     transferAssert(count($DB->credentials) === 1, 'A same-entity clone must not duplicate the credential record.');
     transferAssert(count($DB->links) === 2 && (int) $DB->links[1]['plugin_credentials_credentials_id'] === 30, 'A same-entity clone must reuse the existing credential.');
+
+
+    // A stale source ID list must not recreate a relationship that was removed
+    // while the clone operation was waiting for the credential row lock.
+    $DB = new FakeCredentialTransferDB();
+    $TRANSFER_ITEMS = [FakeAsset::class => [
+        500 => ['id' => 500, 'entities_id' => 1],
+        501 => ['id' => 501, 'entities_id' => 2],
+    ]];
+    $DB->credentials = [transferCredential(40, 1)];
+    $DB->links = [
+        ['id' => 1, 'plugin_credentials_credentials_id' => 40, 'itemtype' => 'FakeAsset', 'items_id' => 500],
+    ];
+    $DB->afterLock = static function (FakeCredentialTransferDB $database): void {
+        $database->links = [];
+    };
+    \\GlpiPlugin\\Credentials\\CredentialHistory::$events = [];
+    \\GlpiPlugin\\Credentials\\CredentialTransfer::handle([
+        'type' => 'FakeAsset', 'id' => 500, 'newID' => 501, 'entities_id' => 2,
+    ]);
+    transferAssert(count($DB->credentials) === 1, 'A source relationship removed during lock wait must not create a destination credential copy.');
+    transferAssert($DB->links === [], 'A source relationship removed during lock wait must not be recreated on the cloned item.');
 
     echo "Credential entity transfer regression tests: OK\n";
 }
