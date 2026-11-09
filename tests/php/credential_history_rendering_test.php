@@ -18,7 +18,7 @@ if ($method_start === false || $history_start === false || $history_end === fals
 }
 
 $arguments = substr($source, $history_start, $history_end - $history_start);
-$expected = "            Credential::class,\n            Log::HISTORY_PLUGIN + $action,";
+$expected = '            Credential::class,' . PHP_EOL . '            Log::HISTORY_PLUGIN + $action,';
 if (!str_contains($arguments, $expected)) {
     throw new RuntimeException('Credential lifecycle history must pass Credential::class as itemtype_link for native GLPI rendering.');
 }
