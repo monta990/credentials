@@ -17,10 +17,10 @@ namespace {
         }
     }
 
-    final class FakeCredentialTransferIterator implements \\IteratorAggregate, \\Countable
+    final class FakeCredentialTransferIterator implements \IteratorAggregate, \Countable
     {
         public function __construct(private array $rows) {}
-        public function getIterator(): \\Traversable { return new \\ArrayIterator($this->rows); }
+        public function getIterator(): \Traversable { return new \ArrayIterator($this->rows); }
         public function count(): int { return count($this->rows); }
     }
 
@@ -118,7 +118,7 @@ namespace {
     }
 }
 
-namespace GlpiPlugin\\Credentials {
+namespace GlpiPlugin\Credentials {
     final class Credential
     {
         public const HISTORY_CREATED = 1;
@@ -130,7 +130,7 @@ namespace GlpiPlugin\\Credentials {
     final class CredentialItem
     {
         public static function isSupportedItemtype(string $itemtype): bool { return $itemtype === 'FakeAsset'; }
-        public static function resolveParentEntityID(\\CommonDBTM $item): int
+        public static function resolveParentEntityID(\CommonDBTM $item): int
         {
             return (int) ($item->fields['entities_id'] ?? 0);
         }
@@ -180,7 +180,7 @@ namespace {
     function transferAssert(bool $condition, string $message): void
     {
         if (!$condition) {
-            throw new \\RuntimeException($message);
+            throw new \RuntimeException($message);
         }
     }
 
@@ -211,13 +211,13 @@ namespace {
     $DB->links = [
         ['id' => 1, 'plugin_credentials_credentials_id' => 10, 'itemtype' => 'FakeAsset', 'items_id' => 100],
     ];
-    \\GlpiPlugin\\Credentials\\CredentialHistory::$events = [];
-    \\GlpiPlugin\\Credentials\\CredentialTransfer::handle([
+    \GlpiPlugin\Credentials\CredentialHistory::$events = [];
+    \GlpiPlugin\Credentials\CredentialTransfer::handle([
         'type' => 'FakeAsset', 'id' => 100, 'newID' => 100, 'entities_id' => 2,
     ]);
     transferAssert((int) $DB->credentials[0]['entities_id'] === 2, 'A sole relationship must move its credential to the destination entity.');
     transferAssert((int) $DB->links[0]['plugin_credentials_credentials_id'] === 10, 'A sole relationship must retain its credential link.');
-    transferAssert(count(\\GlpiPlugin\\Credentials\\CredentialHistory::$events) === 1, 'A direct entity move must be audited.');
+    transferAssert(count(\GlpiPlugin\Credentials\CredentialHistory::$events) === 1, 'A direct entity move must be audited.');
 
     $DB = new FakeCredentialTransferDB();
     $TRANSFER_ITEMS = [FakeAsset::class => [
@@ -229,8 +229,8 @@ namespace {
         ['id' => 1, 'plugin_credentials_credentials_id' => 10, 'itemtype' => 'FakeAsset', 'items_id' => 100],
         ['id' => 2, 'plugin_credentials_credentials_id' => 10, 'itemtype' => 'FakeAsset', 'items_id' => 200],
     ];
-    \\GlpiPlugin\\Credentials\\CredentialHistory::$events = [];
-    \\GlpiPlugin\\Credentials\\CredentialTransfer::handle([
+    \GlpiPlugin\Credentials\CredentialHistory::$events = [];
+    \GlpiPlugin\Credentials\CredentialTransfer::handle([
         'type' => 'FakeAsset', 'id' => 100, 'newID' => 100, 'entities_id' => 2,
     ]);
     transferAssert(count($DB->credentials) === 2, 'A shared credential must be split across entities.');
@@ -248,8 +248,8 @@ namespace {
     $DB->links = [
         ['id' => 1, 'plugin_credentials_credentials_id' => 20, 'itemtype' => 'FakeAsset', 'items_id' => 300],
     ];
-    \\GlpiPlugin\\Credentials\\CredentialHistory::$events = [];
-    \\GlpiPlugin\\Credentials\\CredentialTransfer::handle([
+    \GlpiPlugin\Credentials\CredentialHistory::$events = [];
+    \GlpiPlugin\Credentials\CredentialTransfer::handle([
         'type' => 'FakeAsset', 'id' => 300, 'newID' => 301, 'entities_id' => 2,
     ]);
     transferAssert(count($DB->credentials) === 2, 'A cross-entity item clone must receive a separate credential copy.');
@@ -266,12 +266,12 @@ namespace {
     $DB->links = [
         ['id' => 1, 'plugin_credentials_credentials_id' => 30, 'itemtype' => 'FakeAsset', 'items_id' => 400],
     ];
-    \\GlpiPlugin\\Credentials\\CredentialHistory::$events = [];
-    \\GlpiPlugin\\Credentials\\CredentialTransfer::handle([
+    \GlpiPlugin\Credentials\CredentialHistory::$events = [];
+    \GlpiPlugin\Credentials\CredentialTransfer::handle([
         'type' => 'FakeAsset', 'id' => 400, 'newID' => 401, 'entities_id' => 1,
     ]);
     transferAssert(count($DB->credentials) === 1, 'A same-entity clone must not duplicate the credential record.');
     transferAssert(count($DB->links) === 2 && (int) $DB->links[1]['plugin_credentials_credentials_id'] === 30, 'A same-entity clone must reuse the existing credential.');
 
-    echo "Credential entity transfer regression tests: OK\\n";
+    echo "Credential entity transfer regression tests: OK\n";
 }
