@@ -160,9 +160,6 @@ namespace GlpiPlugin\Credentials {
             }
             $ok = $DB->update(Credential::getTable(), ['link_lock_token' => bin2hex(random_bytes(16))], $where);
             $locked = $ok !== false && $DB->getAffectedRows() === 1;
-            if ($locked) {
-                $DB->runAfterLock();
-            }
             return $locked;
         }
         public static function countForCredential(int $id): int
