@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-namespace GlpiPlugin\\Credentials;
+namespace GlpiPlugin\Credentials;
 
 /**
  * Keeps credential relationships aligned with GLPI entity transfers.
@@ -43,14 +43,14 @@ final class CredentialTransfer
         }
 
         $source_item = getItemForItemtype($itemtype);
-        if (!$source_item instanceof \\CommonDBTM || !$source_item->getFromDB($item_id)) {
+        if (!$source_item instanceof \CommonDBTM || !$source_item->getFromDB($item_id)) {
             return;
         }
 
         $source_entity = CredentialItem::resolveParentEntityID($source_item);
         if ($item_id === $new_id) {
             if ($source_entity !== $destination_entity) {
-                throw new \\RuntimeException('Transferred item entity does not match the destination entity.');
+                throw new \RuntimeException('Transferred item entity does not match the destination entity.');
             }
             self::moveItemRelationships($itemtype, $item_id, $destination_entity);
             return;
@@ -58,18 +58,18 @@ final class CredentialTransfer
 
         $destination_item = getItemForItemtype($itemtype);
         if (
-            !$destination_item instanceof \\CommonDBTM
+            !$destination_item instanceof \CommonDBTM
             || !$destination_item->getFromDB($new_id)
             || CredentialItem::resolveParentEntityID($destination_item) !== $destination_entity
         ) {
-            throw new \\RuntimeException('Cloned item entity does not match the destination entity.');
+            throw new \RuntimeException('Cloned item entity does not match the destination entity.');
         }
 
         $DB->beginTransaction();
         try {
             self::copyItemRelationships($itemtype, $item_id, $new_id, $source_entity, $destination_entity);
             $DB->commit();
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             $DB->rollBack();
             throw $exception;
         }
@@ -109,10 +109,10 @@ final class CredentialTransfer
                         'is_deleted' => 0,
                     ]);
                     if ($updated === false || $DB->getAffectedRows() !== 1) {
-                        throw new \\RuntimeException('Unable to move the credential to the destination entity.');
+                        throw new \RuntimeException('Unable to move the credential to the destination entity.');
                     }
                     if (!CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_UPDATED)) {
-                        throw new \\RuntimeException('Unable to record the credential entity transfer.');
+                        throw new \RuntimeException('Unable to record the credential entity transfer.');
                     }
                     continue;
                 }
@@ -128,19 +128,19 @@ final class CredentialTransfer
                     'items_id' => $items_id,
                 ]);
                 if ($moved === false || $DB->getAffectedRows() !== 1) {
-                    throw new \\RuntimeException('Unable to move the credential relationship to its entity copy.');
+                    throw new \RuntimeException('Unable to move the credential relationship to its entity copy.');
                 }
 
                 if (
                     !CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_UPDATED)
                     || !CredentialHistory::recordForCredential($new_credential_id, Credential::HISTORY_CREATED)
                 ) {
-                    throw new \\RuntimeException('Unable to record the split credential transfer.');
+                    throw new \RuntimeException('Unable to record the split credential transfer.');
                 }
             }
 
             $DB->commit();
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             $DB->rollBack();
             throw $exception;
         }
@@ -183,14 +183,14 @@ final class CredentialTransfer
                 'date_creation' => self::currentTime(),
             ]);
             if ($inserted === false) {
-                throw new \\RuntimeException('Unable to link the credential to the cloned item.');
+                throw new \RuntimeException('Unable to link the credential to the cloned item.');
             }
 
             $action = $new_credential_id === $credential_id
                 ? Credential::HISTORY_LINKED
                 : Credential::HISTORY_CREATED;
             if (!CredentialHistory::recordForCredential($new_credential_id, $action)) {
-                throw new \\RuntimeException('Unable to record the credential link created by the transfer.');
+                throw new \RuntimeException('Unable to record the credential link created by the transfer.');
             }
         }
     }
@@ -239,7 +239,7 @@ final class CredentialTransfer
 
         $expected_entity = (int) $row['entities_id'];
         if (!CredentialItemLink::lockCredential($credential_id, $expected_entity, true)) {
-            throw new \\RuntimeException('Unable to lock credential during entity transfer.');
+            throw new \RuntimeException('Unable to lock credential during entity transfer.');
         }
 
         $row = self::readCredential($credential_id);
@@ -248,7 +248,7 @@ final class CredentialTransfer
             || (int) $row['is_deleted'] !== 0
             || (int) $row['entities_id'] !== $expected_entity
         ) {
-            throw new \\RuntimeException('Credential changed while its entity transfer was being prepared.');
+            throw new \RuntimeException('Credential changed while its entity transfer was being prepared.');
         }
 
         return $row;
@@ -308,12 +308,12 @@ final class CredentialTransfer
             'is_deleted' => 0,
         ]);
         if ($inserted === false) {
-            throw new \\RuntimeException('Unable to create a credential copy in the destination entity.');
+            throw new \RuntimeException('Unable to create a credential copy in the destination entity.');
         }
 
         $new_id = (int) $DB->insertId();
         if ($new_id <= 0) {
-            throw new \\RuntimeException('Unable to determine the ID of the copied credential.');
+            throw new \RuntimeException('Unable to determine the ID of the copied credential.');
         }
 
         return $new_id;
