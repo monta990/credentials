@@ -130,5 +130,5 @@ function plugin_credentials_item_purge(CommonDBTM $item): void
  */
 function plugin_credentials_item_transfer(array $params): void
 {
-    \\GlpiPlugin\\Credentials\\CredentialTransfer::handle($params);
+    \GlpiPlugin\Credentials\CredentialTransfer::handle($params);
 }
