@@ -30,7 +30,7 @@ namespace {
         public array $links = [];
         public int $last_insert_id = 0;
         public int $affected_rows = 0;
-        public ?\\Closure $afterLock = null;
+        public ?\Closure $afterLock = null;
         private ?array $snapshot = null;
 
         public function request(array $query): FakeCredentialTransferIterator
