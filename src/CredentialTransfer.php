@@ -161,7 +161,11 @@ final class CredentialTransfer
 
         foreach (self::getCredentialIDsForItem($itemtype, $source_id) as $credential_id) {
             $credential = self::lockAndReadCredential($credential_id);
-            if ($credential === null || (int) $credential['entities_id'] !== $source_entity) {
+            if (
+                $credential === null
+                || (int) $credential['entities_id'] !== $source_entity
+                || !self::hasCredentialLink($credential_id, $itemtype, $source_id)
+            ) {
                 // A stale cross-entity relationship must never be copied into a
                 // destination where the source credential is not owned.
                 continue;
