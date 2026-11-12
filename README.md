@@ -122,7 +122,7 @@ Credentials can create a password-protected backup containing credentials and th
 
 When exporting, choose a backup password with at least 12 characters and keep it somewhere safe. The password is required to import the file later and cannot be recovered if lost.
 
-Importing a backup creates new credential records; it does not overwrite existing records. Linked users and assets must be present in the destination GLPI instance and match the item information in the backup. Credentials that cannot be safely matched are skipped. Imported passwords and protected details are encrypted again with the destination GLPI instance security key.
+Importing a backup creates new credential records; it does not overwrite existing records. Linked users and assets are reconnected when the destination GLPI instance contains an item with the same type, ID, name and entity. If no destination item can be matched, the credential is still imported into the GLPI trash so its protected information is not lost; an administrator can later restore it by linking it to an available item. Invalid entries are skipped. Imported passwords and protected details are encrypted again with the destination GLPI instance security key.
 
 The backup can include archived credentials. Archived entries remain archived after import until an administrator restores them by linking them to an available item.
 
