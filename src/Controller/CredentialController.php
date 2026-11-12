@@ -10,6 +10,8 @@ namespace GlpiPlugin\Credentials\Controller;
 
 use Glpi\Controller\AbstractController;
 use GlpiPlugin\Credentials\Credential;
+use GlpiPlugin\Credentials\CredentialCategory;
+use GlpiPlugin\Credentials\CredentialStatus;
 use GlpiPlugin\Credentials\CredentialHistory;
 use GlpiPlugin\Credentials\CredentialItem;
 use GlpiPlugin\Credentials\CredentialItemLink;
@@ -844,7 +846,7 @@ final class CredentialController extends AbstractController
         if ($users_id <= 0) {
             return true;
         }
-        $user = new \\User();
+        $user = new \User();
         return $user->getFromDB($users_id)
             && (int) ($user->fields['is_deleted'] ?? 0) === 0
             && Session::haveAccessToEntity((int) ($user->fields['entities_id'] ?? 0))
@@ -859,7 +861,7 @@ final class CredentialController extends AbstractController
         if (Session::haveRight('user', READ)) {
             $iterator = $DB->request([
                 'SELECT' => ['id', 'name', 'realname', 'firstname', 'entities_id'],
-                'FROM' => \\User::getTable(),
+                'FROM' => \User::getTable(),
                 'WHERE' => ['is_deleted' => 0],
                 'ORDER' => ['name'],
                 'LIMIT' => 250,
@@ -891,7 +893,7 @@ final class CredentialController extends AbstractController
         if ($users_id <= 0) {
             return '';
         }
-        $user = new \\User();
+        $user = new \User();
         if (!$user->getFromDB($users_id) || (int) ($user->fields['is_deleted'] ?? 0) !== 0) {
             return '';
         }
