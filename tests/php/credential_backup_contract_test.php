@@ -18,7 +18,7 @@ $checks = [
     'Import creates new credentials rather than updating existing records' => str_contains($backup, '$credential->add([') && !str_contains($backup, '$credential->update('),
     'Destination entity is checked' => str_contains($backup, 'Session::haveAccessToEntity($entities_id)'),
     'Imported item type is allowlisted' => str_contains($backup, 'CredentialItem::isSupportedItemtype($itemtype)'),
-    'Imported item must match its exported name' => str_contains($backup, "trim((string) $item->getName()) !== trim((string) ($candidate['item_name'] ?? ''))"),
+    'Imported item must match its exported name' => str_contains($backup, 'trim((string) $item->getName()) !== trim((string) ($candidate[\'item_name\'] ?? \'\'))'),
     'Controller requires a dedicated backup right' => str_contains($controller, 'Session::checkRight(Credential::RIGHT_BACKUP, READ)'),
     'Import checks upload size' => str_contains($controller, '$file->getSize() > 20_000_000'),
     'Backup download uses no-store headers' => str_contains($controller, "'Cache-Control' => 'private, no-store, max-age=0'"),
