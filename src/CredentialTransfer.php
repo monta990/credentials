@@ -394,7 +394,7 @@ final class CredentialTransfer
 
         $mapped = CredentialCategory::findOrCreateByName($category['name'], $destination_entity);
         if ($mapped <= 0) {
-            throw new \\RuntimeException('Unable to create or find the destination credential category during item transfer.');
+            throw new \RuntimeException('Unable to create or find the destination credential category during item transfer.');
         }
         return $mapped;
     }
