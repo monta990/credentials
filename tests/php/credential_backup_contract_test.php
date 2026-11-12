@@ -17,6 +17,7 @@ $checks = [
     'Imported data is encrypted with destination GLPIKey' => str_contains($backup, 'Credential::encryptValue($entry[$field])'),
     'Import creates new credentials rather than updating existing records' => str_contains($backup, '$credential->add([') && !str_contains($backup, '$credential->update('),
     'Destination entity is checked' => str_contains($backup, 'Session::haveAccessToEntity($entities_id)'),
+    'Imported review responsible user must be visible in an accessible entity' => str_contains($backup, "Session::haveAccessToEntity((int) ($reviewer['entities_id'] ?? -1))"),
     'Imported item type is allowlisted' => str_contains($backup, 'CredentialItem::isSupportedItemtype($itemtype)'),
     'Imported item must match its exported name' => str_contains($backup, 'trim((string) $item->getName()) !== trim((string) ($candidate[\'item_name\'] ?? \'\'))'),
     'Controller requires a dedicated backup right' => str_contains($controller, 'Session::checkRight(Credential::RIGHT_BACKUP, READ)'),
