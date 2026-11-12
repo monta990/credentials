@@ -35,11 +35,19 @@ function plugin_credentials_install(): bool
         `date_creation` TIMESTAMP NULL DEFAULT NULL,
         `date_mod` TIMESTAMP NULL DEFAULT NULL,
         `link_lock_token` VARCHAR(255) NOT NULL DEFAULT '',
+        `plugin_credentials_categories_id` INT UNSIGNED NOT NULL DEFAULT 0,
+        `date_expires` DATE DEFAULT NULL,
+        `date_last_review` DATE DEFAULT NULL,
+        `date_next_review` DATE DEFAULT NULL,
+        `reviewer_users_id` INT UNSIGNED NOT NULL DEFAULT 0,
         `is_deleted` TINYINT NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         KEY `name` (`name`),
         KEY `entities_id` (`entities_id`),
-        KEY `is_deleted` (`is_deleted`)
+        KEY `is_deleted` (`is_deleted`),
+        KEY `date_expires` (`date_expires`),
+        KEY `date_next_review` (`date_next_review`),
+        KEY `category` (`plugin_credentials_categories_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
 
     $links_created = $DB->doQuery("CREATE TABLE IF NOT EXISTS `glpi_plugin_credentials_items` (
@@ -54,7 +62,20 @@ function plugin_credentials_install(): bool
         KEY `credential` (`plugin_credentials_credentials_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
 
-    if ($credentials_created === false || $links_created === false) {
+    $categories_created = $DB->doQuery("CREATE TABLE IF NOT EXISTS `glpi_plugin_credentials_categories` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        `name` VARCHAR(255) NOT NULL,
+        `entities_id` INT UNSIGNED NOT NULL DEFAULT 0,
+        `comment` TEXT DEFAULT NULL,
+        `date_creation` TIMESTAMP NULL DEFAULT NULL,
+        `date_mod` TIMESTAMP NULL DEFAULT NULL,
+        `is_deleted` TINYINT NOT NULL DEFAULT 0,
+        PRIMARY KEY (`id`),
+        KEY `entity_name` (`entities_id`, `name`),
+        KEY `is_deleted` (`is_deleted`)
+    ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+
+    if ($credentials_created === false || $links_created === false || $categories_created === false) {
         return false;
     }
 
@@ -71,8 +92,14 @@ function plugin_credentials_install(): bool
         'string',
         ['value' => '']
     );
+    $migration->addField(Credential::getTable(), 'plugin_credentials_categories_id', 'integer', ['value' => 0]);
+    $migration->addField(Credential::getTable(), 'date_expires', 'date');
+    $migration->addField(Credential::getTable(), 'date_last_review', 'date');
+    $migration->addField(Credential::getTable(), 'date_next_review', 'date');
+    $migration->addField(Credential::getTable(), 'reviewer_users_id', 'integer', ['value' => 0]);
     $migration->addRight(Credential::$rightname, ALLSTANDARDRIGHT, ['config' => READ | UPDATE]);
     $migration->addRight(Credential::RIGHT_REVEAL, READ, ['config' => READ | UPDATE]);
+    $migration->addRight(Credential::RIGHT_BACKUP, READ, ['config' => READ | UPDATE]);
     $migration->executeMigration();
     Profile::initProfile();
 
@@ -90,11 +117,16 @@ function plugin_credentials_uninstall(): bool
     global $DB;
 
     Profile::removeRightsFromSession();
-    if ($DB->delete('glpi_profilerights', ['name' => [Credential::$rightname, Credential::RIGHT_REVEAL]]) === false) {
+    if ($DB->delete('glpi_profilerights', ['name' => [Credential::$rightname, Credential::RIGHT_REVEAL, Credential::RIGHT_BACKUP]]) === false) {
         return false;
     }
     if ($DB->tableExists('glpi_plugin_credentials_items')
         && $DB->doQuery('DROP TABLE `glpi_plugin_credentials_items`') === false
+    ) {
+        return false;
+    }
+    if ($DB->tableExists('glpi_plugin_credentials_categories')
+        && $DB->doQuery('DROP TABLE `glpi_plugin_credentials_categories`') === false
     ) {
         return false;
     }
