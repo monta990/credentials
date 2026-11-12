@@ -183,6 +183,22 @@ namespace GlpiPlugin\Credentials {
         public static function getTable(): string { return 'glpi_plugin_credentials_credentials'; }
     }
 
+    final class CredentialCategory
+    {
+        public static array $categories = [];
+        public static int $mappedId = 90;
+
+        public static function getById(int $id): ?array
+        {
+            return self::$categories[$id] ?? null;
+        }
+
+        public static function findOrCreateByName(string $name, int $entity): int
+        {
+            return self::$mappedId;
+        }
+    }
+
     final class CredentialItem
     {
         public static function isSupportedItemtype(string $itemtype): bool { return $itemtype === 'FakeAsset'; }
@@ -272,6 +288,11 @@ namespace {
             'users_id' => 7,
             'date_creation' => '2026-11-01 10:00:00',
             'date_mod' => '2026-11-01 10:00:00',
+            'plugin_credentials_categories_id' => 0,
+            'date_expires' => '2026-12-31',
+            'date_last_review' => '2026-11-01',
+            'date_next_review' => '2026-12-01',
+            'reviewer_users_id' => 19,
             'link_lock_token' => 'old-token',
             'is_deleted' => 0,
         ];
@@ -292,6 +313,10 @@ namespace {
     ]);
     transferAssert((int) $DB->credentials[0]['entities_id'] === 2, 'A sole relationship must move its credential to the destination entity.');
     transferAssert((int) $DB->links[0]['plugin_credentials_credentials_id'] === 10, 'A sole relationship must retain its credential link.');
+    transferAssert($DB->credentials[0]['date_expires'] === '2026-12-31', 'A same-ID entity move must retain the expiration date.');
+    transferAssert($DB->credentials[0]['date_last_review'] === '2026-11-01', 'A same-ID entity move must retain the last review date.');
+    transferAssert($DB->credentials[0]['date_next_review'] === '2026-12-01', 'A same-ID entity move must retain the next review date.');
+    transferAssert((int) $DB->credentials[0]['reviewer_users_id'] === 19, 'A same-ID entity move must retain the review responsible user.');
     transferAssert(count(\GlpiPlugin\Credentials\CredentialHistory::$events) === 1, 'A direct entity move must be audited.');
 
     $DB = new FakeCredentialTransferDB();
@@ -311,6 +336,10 @@ namespace {
     transferAssert(count($DB->credentials) === 2, 'A shared credential must be split across entities.');
     transferAssert((int) $DB->credentials[0]['entities_id'] === 1 && (int) $DB->credentials[1]['entities_id'] === 2, 'The original and copied credentials must remain in their respective entities.');
     transferAssert($DB->credentials[1]['password'] === $DB->credentials[0]['password'], 'Ciphertext must be copied byte-for-byte without decryption.');
+    transferAssert($DB->credentials[1]['date_expires'] === '2026-12-31', 'A split credential must retain its expiration date.');
+    transferAssert($DB->credentials[1]['date_last_review'] === '2026-11-01', 'A split credential must retain its last review date.');
+    transferAssert($DB->credentials[1]['date_next_review'] === '2026-12-01', 'A split credential must retain its next review date.');
+    transferAssert((int) $DB->credentials[1]['reviewer_users_id'] === 19, 'A split credential must retain its review responsible user.');
     transferAssert((int) $DB->links[0]['plugin_credentials_credentials_id'] === (int) $DB->credentials[1]['id'], 'Only the transferred item link must point to the destination copy.');
     transferAssert((int) $DB->links[1]['plugin_credentials_credentials_id'] === 10, 'Other source-entity links must remain unchanged.');
 
@@ -455,6 +484,34 @@ namespace {
     transferAssert($DB->links === [], 'A concurrently removed source link must not be recreated.');
 
     // Clone path must also skip an archived source credential while waiting.
+    // A category scoped to the source entity is recreated in the destination
+    // and the credential copy must point to that destination category.
+    $DB = new FakeCredentialTransferDB();
+    $TRANSFER_ITEMS = [FakeAsset::class => [
+        710 => ['id' => 710, 'entities_id' => 1],
+        711 => ['id' => 711, 'entities_id' => 2],
+    ]];
+    \\GlpiPlugin\\Credentials\\CredentialCategory::$categories = [
+        15 => ['id' => 15, 'name' => 'ERP', 'entities_id' => 1, 'comment' => ''],
+    ];
+    \\GlpiPlugin\\Credentials\\CredentialCategory::$mappedId = 91;
+    $category_credential = transferCredential(74, 1);
+    $category_credential['plugin_credentials_categories_id'] = 15;
+    $DB->credentials = [$category_credential];
+    $DB->links = [
+        ['id' => 1, 'plugin_credentials_credentials_id' => 74, 'itemtype' => 'FakeAsset', 'items_id' => 710],
+    ];
+    \\GlpiPlugin\\Credentials\\CredentialHistory::$events = [];
+    \\GlpiPlugin\\Credentials\\CredentialTransfer::handle([
+        'type' => 'FakeAsset', 'id' => 710, 'newID' => 711, 'entities_id' => 2,
+    ]);
+    transferAssert(count($DB->credentials) === 2, 'A category-aware cross-entity clone must create one destination credential.');
+    transferAssert((int) $DB->credentials[1]['plugin_credentials_categories_id'] === 91, 'A cross-entity clone must use the destination-entity category.');
+    transferAssert($DB->credentials[1]['date_expires'] === '2026-12-31', 'A cross-entity clone must preserve the expiration date.');
+    transferAssert($DB->credentials[1]['date_last_review'] === '2026-11-01', 'A cross-entity clone must preserve the last review date.');
+    transferAssert($DB->credentials[1]['date_next_review'] === '2026-12-01', 'A cross-entity clone must preserve the next review date.');
+    transferAssert((int) $DB->credentials[1]['reviewer_users_id'] === 19, 'A cross-entity clone must preserve the review responsible user.');
+
     $DB = new FakeCredentialTransferDB();
     $TRANSFER_ITEMS = [FakeAsset::class => [
         820 => ['id' => 820, 'entities_id' => 1],
