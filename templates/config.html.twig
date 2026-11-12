@@ -124,7 +124,9 @@
         <div class="card-header"><h3 class="card-title mb-0"><i class="ti ti-calendar-clock me-2" aria-hidden="true"></i>{{ __('Expiration and review follow-up', 'credentials') }}</h3></div>
         <div class="card-body">
             <p class="text-muted">{{ __('Credentials with an expired date or a review date within the next 30 days are listed here. Maintain the dates and responsible person in the credential itself.', 'credentials') }}</p>
-            {% if dashboard.attention %}
+            {% if not dashboard.can_read_credentials %}
+                <div class="alert alert-info mb-0">{{ __('Your profile does not have permission to view individual credentials.', 'credentials') }}</div>
+            {% elseif dashboard.attention %}
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead><tr><th>{{ __('Credential', 'credentials') }}</th><th>{{ __('Status', 'credentials') }}</th><th>{{ __('Expiration date', 'credentials') }}</th><th>{{ __('Next review', 'credentials') }}</th><th class="text-end">{{ __('ID', 'credentials') }}</th></tr></thead>
@@ -157,7 +159,9 @@
         <div class="card-header"><h3 class="card-title mb-0"><i class="ti ti-history me-2" aria-hidden="true"></i>{{ __('Credential activity history', 'credentials') }}</h3></div>
         <div class="card-body">
             <p class="text-muted">{{ __('Recent credential actions recorded in GLPI history. Passwords and protected values are never displayed here.', 'credentials') }}</p>
-            {% if dashboard.audit %}
+            {% if not dashboard.can_read_credentials %}
+                <div class="alert alert-info mb-0">{{ __('Your profile does not have permission to view credential activity.', 'credentials') }}</div>
+            {% elseif dashboard.audit %}
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead><tr><th>{{ __('Date', 'credentials') }}</th><th>{{ __('User', 'credentials') }}</th><th>{{ __('Action', 'credentials') }}</th><th>{{ __('Related item', 'credentials') }}</th><th>{{ __('Credential ID', 'credentials') }}</th></tr></thead>
@@ -194,7 +198,9 @@
                 <div class="col-md-3"><button class="btn btn-primary" type="submit">{{ __('Save retention settings', 'credentials') }}</button></div>
                 <div class="col-md-5 text-muted small">{{ __('Eligible for permanent deletion', 'credentials') }}: <strong>{{ dashboard.purge_eligible }}</strong></div>
             </form>
-            {% if dashboard.archived %}
+            {% if not dashboard.can_read_credentials %}
+                <div class="alert alert-info mb-3">{{ __('Your profile does not have permission to view archived credential details.', 'credentials') }}</div>
+            {% elseif dashboard.archived %}
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead><tr><th>{{ __('Credential', 'credentials') }}</th><th>{{ __('Archived / modified', 'credentials') }}</th><th>{{ __('Retention', 'credentials') }}</th><th>{{ __('Restore by linking to an item', 'credentials') }}</th></tr></thead>
