@@ -25,7 +25,7 @@ $checks = [
     'Archived credential restoration' => str_contains($admin, 'public static function restore('),
     'Restore uses a current locking read to check existing links' => str_contains($admin, 'CredentialItemLink::getLinksForCredentialForUpdate($credential_id) !== []'),
     'Retention-based permanent deletion' => str_contains($admin, 'public static function purgeEligible('),
-    'Permanent deletion requires credential READ and DELETE rights' => str_contains($admin, "Session::haveRight(Credential::$rightname, DELETE)"),
+    'Permanent deletion requires credential READ and DELETE rights' => str_contains($admin, 'Session::haveRight(Credential::$rightname, DELETE)'),
     'Credential details are hidden from profiles without credential READ' => str_contains($admin, '$can_read_credentials ? self::recentAuditEvents(50) : []'),
     'Dashboard does not return individual rows without credential READ' => str_contains($admin, '$can_read_credentials && count($attention) < 25') && str_contains($admin, '$can_read_credentials && count($archived) < 25'),
     'Archived records must be unlinked before permanent deletion' => str_contains($admin, 'getLinksForCredentialForUpdate($id) !== []'),
