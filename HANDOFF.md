@@ -1,4 +1,62 @@
-# HANDOFF — Credentials 0.0.31
+# HANDOFF — Credentials 0.0.32
+
+## Estado de implementación
+
+La rama feature/admin-center-export-import contiene la ampliación administrativa para GLPI 12.0.x. La versión del plugin se incrementó a 0.0.32. Esta rama todavía requiere CI completo y aceptación en una instancia GLPI real antes de fusionarse o publicarse.
+
+## Funcionalidad incorporada
+
+- Página independiente registrada mediante Hooks::CONFIG_PAGE, con ruta Symfony /config.
+- Comprobador de versiones estables de GitHub en src/Service/UpdateChecker.php, con caché de seis horas y estados diferenciados para actualización disponible, versión actual, ausencia de releases y error de conexión.
+- Catálogo de categorías por entidad en glpi_plugin_credentials_categories.
+- Campos adicionales en la tabla de credenciales: plugin_credentials_categories_id, date_expires, date_last_review, date_next_review y reviewer_users_id.
+- Indicadores de vigencia y revisión: vencida, por vencer, revisión atrasada, revisión próxima y vigente.
+- Panel administrativo con conteos, elementos que requieren atención, categorías, auditoría, archivados, conservación y estado de la clave GLPI.
+- Restauración de credenciales archivadas mediante asociación explícita con un elemento disponible de la misma entidad.
+- Eliminación definitiva manual de credenciales archivadas que superen el periodo de retención y no tengan relaciones remanentes.
+- Derecho adicional plugin_credentials_backup, independiente de los derechos de lectura, edición y revelación de contraseñas.
+- Exportación protegida con contraseña mediante Argon2id y XChaCha20-Poly1305 autenticado; importación valida entidades y asociaciones y vuelve a cifrar secretos con GLPIKey de destino.
+- Importar crea IDs nuevos; no sobrescribe credenciales existentes. Asociaciones que no coinciden con tipo, ID, nombre y entidad del elemento destino se omiten.
+- Catálogos PO/MO actualizados para es_MX, es_ES y fr_FR.
+
+## Seguridad y límites deliberados
+
+- Las credenciales siguen utilizando GLPIKey para username, password, URL y notas.
+- Los archivos de respaldo no contienen contraseñas legibles. La contraseña del respaldo es distinta de glpicrypt.key.
+- La importación exige permiso de configuración, permiso dedicado de respaldo y derecho de creación de credenciales.
+- La exportación exige permiso de configuración y el permiso dedicado de respaldo.
+- Los reportes de actividad no muestran contraseñas ni valores protegidos y deben limitarse a entidades y elementos legibles.
+- Las restauraciones y purgas son acciones administrativas explícitas; no hay borrado automático por cron.
+- La política de retención con valor 0 conserva indefinidamente los registros archivados y desactiva la purga manual.
+- El comprobador de GitHub nunca instala actualizaciones automáticamente.
+- Las fechas de vencimiento y revisión son recordatorios, no un mecanismo automático de rotación de contraseñas.
+- La importación tiene límite de 20 MB, 2,000 entradas y 250 relaciones por credencial. La exportación también valida que el archivo final no supere el límite de importación.
+
+## Validación pendiente
+
+- Ejecutar CI completo en PHP 8.3, 8.4, 8.5 y 8.6 y revisar la construcción del ZIP instalable.
+- Probar instalación limpia y actualización desde 0.0.31 en una copia de GLPI 12.0.x.
+- Verificar migración aditiva de campos y creación de la tabla de categorías sin perder datos previos.
+- Probar perfiles sin permisos, con permisos parciales y con alcance de entidades múltiples.
+- Probar exportación e importación con contraseña correcta/incorrecta, respaldo alterado, elementos inexistentes, IDs coincidentes con nombres diferentes, entidades no accesibles, archivados y archivos grandes.
+- Probar migración entre dos instancias GLPI usando claves GLPIKey diferentes y confirmar que los secretos importados se pueden revelar en el destino.
+- Probar restauración y purga con registros archivados con/sin enlaces y fechas de modificación anteriores/posteriores al periodo de retención.
+- Revisar el panel administrativo con administrador y perfiles restringidos.
+- Ejecutar PHPCS GLPI Standard y aceptación manual en navegador. CI cubre pruebas CLI y contratos estáticos/simulados; no sustituye una instancia GLPI viva.
+
+## Notas de despliegue
+
+- Versión esperada del plugin: 0.0.32.
+- GLPI: 12.0.x.
+- PHP mínimo declarado: 8.3.
+- La extensión PHP Sodium es necesaria para exportar/importar respaldos protegidos. Si no está disponible, las demás funciones siguen utilizables.
+- El manifiesto de Marketplace permanece en estado development hasta completar URLs públicas, aceptación real y evidencia de release.
+
+## Historial anterior
+
+Consulta CHANGELOG.md para el historial completo.
+
+---
 
 ## Estado actual
 
