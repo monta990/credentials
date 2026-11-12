@@ -1,3 +1,15 @@
+## 0.0.32 — 2026-11-12
+
+- Added an independent GLPI configuration page for Credentials, keeping the user, asset and ticket tabs focused on day-to-day credential work.
+- Added a GitHub stable-release checker with a six-hour cache, manual refresh and clear states for update available, up to date, no published release and GitHub unavailable.
+- Added entity-aware credential categories and fields for expiration date, last review, next review and review responsible person.
+- Added a dashboard summary for active/archived records, expiring credentials and overdue/upcoming reviews.
+- Added a recent activity view based on GLPI credential history events, scoped to items the current profile can read and excluding protected values.
+- Added archived credential review, restore by linking to a valid item, configurable retention and an explicit permanent-deletion action for eligible unlinked records.
+- Added a separate profile permission for credential backup export/import.
+- Added password-protected backup files using Argon2id key derivation and authenticated XChaCha20-Poly1305 encryption. Import validates destination entities and item associations, creates new records only, and re-encrypts protected values with the destination GLPI security key.
+- Added regression checks for lifecycle statuses, administrative controls and encrypted backup contracts. Updated Spanish (Mexico), Spanish (Spain) and French translations.
+
 ## 0.0.31 — 2026-11-09
 
 - La transferencia ahora trata como obsoletos los IDs de credencial cuyo registro fue archivado, cambió de entidad o perdió el vínculo exacto de origen mientras se esperaba el bloqueo. La decisión se basa en lecturas actuales bloqueantes, no en el snapshot anterior de InnoDB.
