@@ -163,6 +163,11 @@ final class CredentialItemLink extends CommonDBTM
             'users_id',
             'date_creation',
             'date_mod',
+            'plugin_credentials_categories_id',
+            'date_expires',
+            'date_last_review',
+            'date_next_review',
+            'reviewer_users_id',
             'is_deleted',
         ];
         $select = implode(', ', array_map(
