@@ -9,6 +9,7 @@
 namespace GlpiPlugin\Credentials\Controller;
 
 use Glpi\Controller\AbstractController;
+use GlpiPlugin\Credentials\AdminSettings;
 use GlpiPlugin\Credentials\Credential;
 use GlpiPlugin\Credentials\CredentialHistory;
 use GlpiPlugin\Credentials\CredentialItem;
@@ -231,14 +232,19 @@ final class CredentialController extends AbstractController
                             return false;
                         }
 
-                        if ($DB->delete(CredentialItemLink::getTable(), [
-                            'plugin_credentials_credentials_id' => $credential_id,
-                        ]) === false) {
+                        // Archive rather than detach and destroy the relationships.
+                        // This keeps the record recoverable from the administration page.
+                        $now = (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s'));
+                        if ($DB->update(Credential::getTable(), [
+                            'archived_at' => $now,
+                            'archived_by' => (int) Session::getLoginUserID(),
+                            'archive_reason' => 'Archived by an authorized GLPI user',
+                        ], ['id' => $credential_id, 'is_deleted' => 0]) === false) {
                             return false;
                         }
 
-                        $deleted = (bool) $locked_credential->delete(['id' => $credential_id]);
-                        if (!$deleted) {
+                        $archived = (bool) $locked_credential->delete(['id' => $credential_id]);
+                        if (!$archived) {
                             return false;
                         }
 
@@ -251,7 +257,7 @@ final class CredentialController extends AbstractController
                             if (!CredentialHistory::recordForItem(
                                 $linked_item['itemtype'],
                                 $linked_item['items_id'],
-                                Credential::HISTORY_DELETED,
+                                Credential::HISTORY_ARCHIVED,
                                 $credential_id,
                             )) {
                                 return false;
@@ -355,6 +361,10 @@ final class CredentialController extends AbstractController
             'modal_title' => __('Credential details', 'credentials') . ($credential_id > 0 ? ' — ' . (string) $credential->fields['name'] : ''),
             'credential_id' => $credential_id,
             'credential_name' => $credential_id > 0 ? (string) $credential->fields['name'] : '',
+            'category' => $credential_id > 0 ? (string) ($credential->fields['category'] ?? 'General') : 'General',
+            'expires_at' => $credential_id > 0 ? (string) ($credential->fields['expires_at'] ?? '') : '',
+            'review_interval_days' => $credential_id > 0 ? (int) ($credential->fields['review_interval_days'] ?? 90) : 90,
+            'last_reviewed_at' => $credential_id > 0 ? (string) ($credential->fields['last_reviewed_at'] ?? '') : '',
             'link_count' => $link_count,
             'linked_items_url' => $linked_items_url,
             'detail_js_url' => PLUGIN_CREDENTIALS_WEBDIR . '/js/credential-details.js?v=' . PLUGIN_CREDENTIALS_VERSION,
@@ -534,10 +544,13 @@ final class CredentialController extends AbstractController
         if (!Credential::isEncryptionReady()) {
             $errors[] = __('The GLPI security key is unavailable or invalid. Contact your GLPI administrator.', 'credentials');
         }
-        $values = ['name' => '', 'login' => '', 'url' => '', 'notes' => ''];
+        $values = ['name' => '', 'login' => '', 'url' => '', 'notes' => '', 'category' => 'General', 'expires_at' => '', 'review_interval_days' => 90];
 
         if ($is_update) {
             $values['name'] = (string) $credential->fields['name'];
+            $values['category'] = (string) ($credential->fields['category'] ?? 'General');
+            $values['expires_at'] = (string) ($credential->fields['expires_at'] ?? '');
+            $values['review_interval_days'] = (int) ($credential->fields['review_interval_days'] ?? 90);
             foreach (['login', 'url', 'notes'] as $field) {
                 $ciphertext = (string) ($credential->fields[$field] ?? '');
                 $plaintext_value = Credential::decryptValue($ciphertext);
@@ -555,12 +568,28 @@ final class CredentialController extends AbstractController
                 'login' => trim($request->request->getString('login')),
                 'url' => trim($request->request->getString('url')),
                 'notes' => trim($request->request->getString('notes')),
+                'category' => trim($request->request->getString('category')),
+                'expires_at' => trim($request->request->getString('expires_at')),
+                'review_interval_days' => $request->request->getInt('review_interval_days', 90),
             ];
             // Never repopulate the password control after a failed POST.
             $plaintext = (string) $request->request->get('password', '');
 
             if ($values['name'] === '') {
                 $errors[] = __('Name is required.', 'credentials');
+            }
+            $allowed_categories = array_map('mb_strtolower', AdminSettings::categories());
+            if ($values['category'] === '' || !in_array(mb_strtolower($values['category']), $allowed_categories, true) || mb_strlen($values['category']) > 100) {
+                $errors[] = __('Select a valid credential category.', 'credentials');
+            }
+            if (!in_array($values['review_interval_days'], [0, 30, 60, 90, 180, 365], true)) {
+                $errors[] = __('Select a valid review interval.', 'credentials');
+            }
+            if ($values['expires_at'] !== '') {
+                $expiry = \DateTimeImmutable::createFromFormat('!Y-m-d', $values['expires_at']);
+                if (!$expiry instanceof \DateTimeImmutable || $expiry->format('Y-m-d') !== $values['expires_at']) {
+                    $errors[] = __('Enter a valid expiration date.', 'credentials');
+                }
             }
             if (!$is_update && $plaintext === '') {
                 $errors[] = __('Password is required.', 'credentials');
@@ -609,10 +638,15 @@ final class CredentialController extends AbstractController
                     'login' => $encrypted_login,
                     'url' => $encrypted_url,
                     'notes' => $encrypted_notes,
+                    'category' => $values['category'],
+                    'expires_at' => $values['expires_at'] !== '' ? $values['expires_at'] : null,
+                    'review_interval_days' => $values['review_interval_days'],
                     'entities_id' => CredentialItem::resolveParentEntityID($parent),
                 ];
                 if (!$is_update) {
                     $input['users_id'] = (int) Session::getLoginUserID();
+                    $input['last_reviewed_at'] = date('Y-m-d');
+                    $input['last_reviewed_by'] = (int) Session::getLoginUserID();
                 }
                 if (!$is_update || $plaintext !== '') {
                     $encrypted_password = Credential::encryptPassword($plaintext);
@@ -733,6 +767,7 @@ final class CredentialController extends AbstractController
                 'form_url' => $form_url,
                 'cancel_url' => $cancel_url,
                 'encryption_ready' => Credential::isEncryptionReady(),
+                'categories' => AdminSettings::categories(),
             ],
         );
     }
