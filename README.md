@@ -31,6 +31,10 @@ Instead of keeping the same information in separate places, your team can find i
 - 👁️ **Controlled password display:** Only authorized team members can reveal saved passwords.
 - 📋 **Quick copy:** Copy a password when access is needed.
 - 🧾 **Activity history:** Keep a record of important credential actions without exposing passwords.
+- 🏷️ **Categories:** Organize entries by systems, services, networks, servers or other groups defined by your team.
+- 📅 **Expiration and reviews:** Record expiration dates, last and next review dates, and the person responsible for reviewing each credential.
+- 🧭 **Administration page:** Review plugin updates, activity, upcoming reviews and archived records in one place.
+- 📦 **Protected backups:** Export and import credentials using a password-protected backup file.
 - 🌍 **Multiple languages:** English, Spanish and French translations.
 - 🔄 **Entity transfers:** Keep credential associations consistent when supported GLPI users or assets are transferred between entities.
 
@@ -94,6 +98,41 @@ The plugin provides separate permissions for:
 - **Password display:** Reveal saved passwords.
 
 Give password-display permission only to team members who need it to perform their work.
+
+
+## Administration
+
+The Credentials administration page is available from GLPI's plugin configuration area. It is separate from the Credentials tabs on users, assets and tickets, so everyday credential management remains uncluttered.
+
+Administrators can use this page to:
+
+- Check whether a newer stable version is available on GitHub.
+- Create and manage credential categories.
+- Review credentials that have expired or need a review soon.
+- See recent activity recorded in GLPI history.
+- Review archived credentials and restore them by linking them to an available item.
+- Choose how long archived credentials should be kept before they become eligible for permanent deletion.
+- Check whether the GLPI encryption key is available.
+
+Expiration and review dates are reminders. Credentials does not change or rotate passwords automatically.
+
+## Export and import
+
+Credentials can create a password-protected backup containing credentials and their related information. The backup file is encrypted and does not expose passwords as readable text.
+
+When exporting, choose a backup password with at least 12 characters and keep it somewhere safe. The password is required to import the file later and cannot be recovered if lost.
+
+Importing a backup creates new credential records; it does not overwrite existing records. Linked users and assets must be present in the destination GLPI instance and match the item information in the backup. Credentials that cannot be safely matched are skipped. Imported passwords and protected details are encrypted again with the destination GLPI instance security key.
+
+The backup can include archived credentials. Archived entries remain archived after import until an administrator restores them by linking them to an available item.
+
+Always keep the GLPI database backup together with the matching glpicrypt.key file. The backup-file password and the GLPI encryption key serve different purposes, and both must be protected.
+
+## Archived credentials
+
+When a linked user or asset is permanently removed from GLPI, a credential that has no other linked items is moved to the GLPI trash. It is not immediately erased.
+
+Administrators can review archived entries, restore them by linking them to an available item in the same entity, or permanently delete eligible archived entries according to the configured retention period. Permanent deletion cannot be undone.
 
 ## Important information
 
