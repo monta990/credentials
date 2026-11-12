@@ -819,3 +819,24 @@ msgstr "Este es el único elemento vinculado a la credencial. No se puede desvin
 
 msgid "Show linked items"
 msgstr "Mostrar elementos vinculados"
+
+msgid "Import completed: %1$d credentials created, %2$d archived, %3$d needing manual relinking, %4$d skipped."
+msgstr "Importación completada: se han creado %1$d credenciales, %2$d quedaron archivadas, %3$d necesitan vinculación manual y se omitieron %4$d."
+
+msgid "You do not have permission to permanently delete archived credentials."
+msgstr "No tienes permiso para eliminar definitivamente credenciales archivadas."
+
+msgid "Your profile does not have permission to view individual credentials."
+msgstr "Tu perfil no tiene permiso para consultar los detalles de las credenciales."
+
+msgid "Your profile does not have permission to view credential activity."
+msgstr "Tu perfil no tiene permiso para consultar la actividad de credenciales."
+
+msgid "Your profile does not have permission to view archived credential details."
+msgstr "Tu perfil no tiene permiso para consultar los detalles de credenciales archivadas."
+
+msgid "Credential details and the password are encrypted with the GLPI instance security key before they are stored."
+msgstr "Los datos de la credencial y la contraseña se cifran con la clave de seguridad de la instancia GLPI antes de almacenarse."
+
+msgid "Stored credential details could not be decrypted. Editing is disabled to prevent accidental data loss."
+msgstr "No fue posible descifrar los datos de la credencial. Se ha deshabilitado la edición para evitar la pérdida accidental de información."
