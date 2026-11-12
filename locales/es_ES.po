@@ -1,4 +1,3 @@
-
 msgid ""
 msgstr ""
 "Project-Id-Version: Credentials 0.0.32\n"
@@ -340,7 +339,6 @@ msgstr "Contraseña mostrada"
 
 msgid "You do not have permission to reveal this password."
 msgstr "No tienes permiso para mostrar esta contraseña."
-
 
 msgid "Current item"
 msgstr "Elemento actual"
@@ -818,15 +816,6 @@ msgstr "No hay una contraseña guardada para esta credencial."
 
 msgid "This is the only item linked to this credential. It cannot be unlinked because credentials must always belong to at least one item. Delete the credential instead, if you have permission."
 msgstr "Este es el único elemento vinculado a la credencial. No se puede desvincular porque toda credencial debe pertenecer al menos a un elemento. Si tienes permiso, elimina la credencial completa."
-
-msgid "Stored credential details could not be decrypted. Editing is disabled to prevent accidental data loss."
-msgstr "No se pudieron descifrar los datos de la credencial. La edición se ha deshabilitado para evitar la pérdida accidental de información."
-
-msgid "The GLPI security key is not configured or cannot be read. Ask your administrator to configure GLPI's security key before saving credentials."
-msgstr "La clave de seguridad de GLPI no está configurada o no se puede leer. Pide al administrador que la configure antes de guardar credenciales."
-
-msgid "Credential details and the password are encrypted with the GLPI instance security key before they are stored."
-msgstr "Los datos de la credencial y la contraseña se cifran con la clave de seguridad de esta instancia de GLPI antes de guardarse."
 
 msgid "Show linked items"
 msgstr "Mostrar elementos vinculados"
