@@ -35,6 +35,15 @@ function plugin_credentials_install(): bool
         `date_creation` TIMESTAMP NULL DEFAULT NULL,
         `date_mod` TIMESTAMP NULL DEFAULT NULL,
         `link_lock_token` VARCHAR(255) NOT NULL DEFAULT '',
+        `category` VARCHAR(100) NOT NULL DEFAULT 'General',
+        `expires_at` DATE DEFAULT NULL,
+        `review_interval_days` SMALLINT UNSIGNED NOT NULL DEFAULT 90,
+        `last_reviewed_at` DATE DEFAULT NULL,
+        `last_reviewed_by` INT UNSIGNED NOT NULL DEFAULT 0,
+        `archived_at` DATETIME DEFAULT NULL,
+        `archived_by` INT UNSIGNED NOT NULL DEFAULT 0,
+        `archive_reason` VARCHAR(255) NOT NULL DEFAULT '',
+        `backup_uuid` CHAR(32) NOT NULL DEFAULT '',
         `is_deleted` TINYINT NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         KEY `name` (`name`),
@@ -54,7 +63,22 @@ function plugin_credentials_install(): bool
         KEY `credential` (`plugin_credentials_credentials_id`)
     ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
 
-    if ($credentials_created === false || $links_created === false) {
+    $audit_created = $DB->doQuery("CREATE TABLE IF NOT EXISTS `glpi_plugin_credentials_audit` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        `credential_id` INT UNSIGNED NOT NULL DEFAULT 0,
+        `users_id` INT UNSIGNED NOT NULL DEFAULT 0,
+        `action` VARCHAR(40) NOT NULL,
+        `itemtype` VARCHAR(100) NOT NULL DEFAULT '',
+        `items_id` INT UNSIGNED NOT NULL DEFAULT 0,
+        `details` VARCHAR(500) NOT NULL DEFAULT '',
+        `date_creation` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (`id`),
+        KEY `credential` (`credential_id`),
+        KEY `actor` (`users_id`),
+        KEY `date_creation` (`date_creation`)
+    ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+
+    if ($credentials_created === false || $links_created === false || $audit_created === false) {
         return false;
     }
 
@@ -71,6 +95,15 @@ function plugin_credentials_install(): bool
         'string',
         ['value' => '']
     );
+    $migration->addField(Credential::getTable(), 'category', 'string', ['value' => 'General']);
+    $migration->addField(Credential::getTable(), 'expires_at', 'date', ['value' => null]);
+    $migration->addField(Credential::getTable(), 'review_interval_days', 'smallint', ['value' => 90]);
+    $migration->addField(Credential::getTable(), 'last_reviewed_at', 'date', ['value' => null]);
+    $migration->addField(Credential::getTable(), 'last_reviewed_by', 'integer', ['value' => 0]);
+    $migration->addField(Credential::getTable(), 'archived_at', 'datetime', ['value' => null]);
+    $migration->addField(Credential::getTable(), 'archived_by', 'integer', ['value' => 0]);
+    $migration->addField(Credential::getTable(), 'archive_reason', 'string', ['value' => '']);
+    $migration->addField(Credential::getTable(), 'backup_uuid', 'string', ['value' => '']);
     $migration->addRight(Credential::$rightname, ALLSTANDARDRIGHT, ['config' => READ | UPDATE]);
     $migration->addRight(Credential::RIGHT_REVEAL, READ, ['config' => READ | UPDATE]);
     $migration->executeMigration();
@@ -91,6 +124,11 @@ function plugin_credentials_uninstall(): bool
 
     Profile::removeRightsFromSession();
     if ($DB->delete('glpi_profilerights', ['name' => [Credential::$rightname, Credential::RIGHT_REVEAL]]) === false) {
+        return false;
+    }
+    if ($DB->tableExists('glpi_plugin_credentials_audit')
+        && $DB->doQuery('DROP TABLE `glpi_plugin_credentials_audit`') === false
+    ) {
         return false;
     }
     if ($DB->tableExists('glpi_plugin_credentials_items')
