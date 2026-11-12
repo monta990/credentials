@@ -67,6 +67,7 @@ function plugin_credentials_install(): bool
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `credential_id` INT UNSIGNED NOT NULL DEFAULT 0,
         `users_id` INT UNSIGNED NOT NULL DEFAULT 0,
+        `entities_id` INT UNSIGNED NOT NULL DEFAULT 0,
         `action` VARCHAR(40) NOT NULL,
         `itemtype` VARCHAR(100) NOT NULL DEFAULT '',
         `items_id` INT UNSIGNED NOT NULL DEFAULT 0,
@@ -75,6 +76,7 @@ function plugin_credentials_install(): bool
         PRIMARY KEY (`id`),
         KEY `credential` (`credential_id`),
         KEY `actor` (`users_id`),
+        KEY `entity` (`entities_id`),
         KEY `date_creation` (`date_creation`)
     ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
 
@@ -97,7 +99,8 @@ function plugin_credentials_install(): bool
     );
     $migration->addField(Credential::getTable(), 'category', 'string', ['value' => 'General']);
     $migration->addField(Credential::getTable(), 'expires_at', 'date', ['value' => null]);
-    $migration->addField(Credential::getTable(), 'review_interval_days', 'smallint', ['value' => 90]);
+    $migration->addField(Credential::getTable(), 'review_interval_days', 'integer', ['value' => 90]);
+    $migration->addField('glpi_plugin_credentials_audit', 'entities_id', 'integer', ['value' => 0]);
     $migration->addField(Credential::getTable(), 'last_reviewed_at', 'date', ['value' => null]);
     $migration->addField(Credential::getTable(), 'last_reviewed_by', 'integer', ['value' => 0]);
     $migration->addField(Credential::getTable(), 'archived_at', 'datetime', ['value' => null]);
