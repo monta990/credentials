@@ -505,6 +505,21 @@ foreach (['es_ES', 'es_MX', 'fr_FR'] as $locale) {
     }
 }
 
+$transfer_metadata_source = file_get_contents($root . '/src/CredentialTransfer.php');
+$transfer_regressions = file_get_contents($root . '/tests/php/credential_transfer_test.php');
+foreach (['plugin_credentials_categories_id', 'date_expires', 'date_last_review', 'date_next_review', 'reviewer_users_id'] as $transfer_field) {
+    if (!str_contains((string) $transfer_metadata_source, "'" . $transfer_field . "'")
+        || !str_contains((string) $transfer_regressions, $transfer_field)
+    ) {
+        $errors[] = 'Entity transfers must preserve credential lifecycle field: ' . $transfer_field;
+    }
+}
+if (!str_contains((string) $transfer_metadata_source, 'mapCategory(')
+    || !str_contains((string) $transfer_regressions, 'destination-entity category')
+) {
+    $errors[] = 'Cross-entity transfers must map entity-scoped credential categories and include regression coverage.';
+}
+
 if ($errors !== []) {
     foreach ($errors as $error) {
         fwrite(STDERR, "FAIL: {$error}\n");
