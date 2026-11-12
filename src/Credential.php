@@ -28,10 +28,12 @@ final class Credential extends CommonDBTM
     public const HISTORY_DELETED = 5;
     public const HISTORY_REVEALED = 6;
     public const HISTORY_ORPHANED = 7;
+    public const HISTORY_ARCHIVED = 8;
+    public const HISTORY_IMPORTED = 9;
 
     /** Keep change history for non-secret fields, never retain credential values in glpi_logs. */
     public bool $dohistory = true;
-    public array $history_blacklist = ['name', 'login', 'password', 'url', 'notes', 'link_lock_token'];
+    public array $history_blacklist = ['name', 'login', 'password', 'url', 'notes', 'link_lock_token', 'backup_uuid', 'archive_reason'];
 
     #[Override]
     public static function getTable($classname = null): string
@@ -82,7 +84,7 @@ final class Credential extends CommonDBTM
 
         $rows = [];
         $iterator = $DB->request([
-            'SELECT' => ['id', 'name', 'date_mod'],
+            'SELECT' => ['id', 'name', 'date_mod', 'category', 'expires_at'],
             'FROM'   => self::getTable(),
             'WHERE'  => [
                 'id'          => array_values(array_unique($ids)),
@@ -97,6 +99,8 @@ final class Credential extends CommonDBTM
                 'id'       => (int) $row['id'],
                 'name'     => (string) $row['name'],
                 'date_mod' => $row['date_mod'] !== null ? (string) $row['date_mod'] : null,
+                'category' => (string) ($row['category'] ?? 'General'),
+                'expires_at' => $row['expires_at'] !== null ? (string) $row['expires_at'] : null,
                 'link_count' => CredentialItemLink::countForCredential((int) $row['id']),
             ];
         }
@@ -180,6 +184,8 @@ final class Credential extends CommonDBTM
             self::HISTORY_DELETED  => __s('A protected credential was deleted.', 'credentials'),
             self::HISTORY_REVEALED => __s('A protected credential password was revealed.', 'credentials'),
             self::HISTORY_ORPHANED => __s('A protected credential is no longer linked to any item.', 'credentials'),
+            self::HISTORY_ARCHIVED => __s('A protected credential was archived.', 'credentials'),
+            self::HISTORY_IMPORTED => __s('A protected credential was imported.', 'credentials'),
             default                => '',
         };
     }
@@ -194,6 +200,8 @@ final class Credential extends CommonDBTM
             self::HISTORY_DELETED,
             self::HISTORY_REVEALED,
             self::HISTORY_ORPHANED,
+            self::HISTORY_ARCHIVED,
+            self::HISTORY_IMPORTED,
         ], true);
     }
 
