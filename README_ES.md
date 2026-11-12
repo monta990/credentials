@@ -1,60 +1,160 @@
-# Credentials para GLPI 12
+<p align="center">
+  <img src="https://raw.githubusercontent.com/monta990/credentials/main/logo.png" alt="Logotipo de Credentials" width="96">
+</p>
+<h1 align="center">Credentials</h1>
+<p align="center">
+  <strong>Plugin para GLPI — Mantén organizadas las credenciales de acceso de tu organización y disponibles donde tu equipo las necesita</strong>
+</p>
+<p align="center">
+  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-12.0%2B-blue" alt="Compatibilidad con GLPI"></a>
+  <a href="https://www.php.net/" target="_blank"><img src="https://img.shields.io/badge/PHP-8.3%2B-purple" alt="Requisito de PHP"></a>
+  <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank"><img src="https://img.shields.io/badge/Licencia-GPL%20v3%2B-green" alt="Licencia"></a>
+  <a href="https://github.com/monta990/credentials/releases" target="_blank"><img src="https://img.shields.io/github/downloads/monta990/credentials/total" alt="Descargas de GitHub"></a>
+</p>
 
-<p align="center"><img src="logo.png" alt="Logotipo de Credentials" width="160"></p>
+---
 
-**Versión:** `0.0.31` (compilación de desarrollo)  
-**Clave/directorio:** `credentials`  
-**Idioma fuente:** inglés  
-**Catálogos:** `es_ES`, `es_MX`, `fr_FR` (no se generan archivos PO/MO en inglés)  
-**Autor:** Edwin Elias Alvarez  
-**Licencia:** GPL-3.0-or-later  
-**Requisitos:** GLPI `12.0.x`, PHP `8.3+`
+## Descripción general
 
-Credentials permite almacenar información de acceso protegida y asociarla con usuarios y activos compatibles de GLPI. La pestaña de tickets reúne las credenciales asociadas a sus usuarios solicitantes y elementos vinculados, sin duplicar registros.
+**Credentials** ayuda al equipo de TI a mantener organizada la información de acceso dentro de GLPI. Permite guardar usuarios, contraseñas, direcciones web y notas para sistemas, servicios y equipos de la organización, y relacionarlos con los usuarios o activos correspondientes.
 
-Cada registro tiene un ID visible para facilitar su vinculación desde otros elementos, un nombre descriptivo, usuario, contraseña, URL y notas. La credencial debe permanecer vinculada al menos a un elemento: no se permite desvincular la última relación; para retirarla por completo se debe eliminar la credencial. La contraseña es obligatoria al crear; al editar, déjala vacía para conservar la actual. El usuario, la contraseña, la URL y las notas se cifran en reposo mediante `GLPIKey` nativo de GLPI. El nombre se conserva intencionalmente como etiqueta no secreta para identificar y buscar el registro.
+En lugar de guardar la misma información en distintos lugares, el equipo puede consultarla desde el registro de GLPI relacionado. También es posible compartir una credencial con otros elementos autorizados sin duplicar su información.
 
-## Modelo de seguridad
+## Características principales
 
-- Las lecturas y modificaciones sensibles se gestionan mediante controladores Symfony de GLPI 12 ubicados en `src/Controller/`.
-- Las páginas y acciones protegidas exigen la reautenticación nativa de GLPI.
-- El plugin utiliza dos permisos de perfil: `plugin_credentials` para las operaciones y `plugin_credentials_reveal` para revelar contraseñas.
-- Los cuatro campos cifrados están registrados en `Hooks::SECURED_FIELDS`, de modo que GLPI pueda volver a cifrarlos durante la rotación de la clave.
-- Las listas y contadores consultan únicamente IDs, nombres y fechas de modificación; nunca seleccionan ni descifran campos secretos.
-- Cada solicitud vuelve a comprobar los permisos sobre la credencial, el usuario/activo asociado, el límite de entidad y, cuando se proporciona, la relación exacta con el ticket de origen.
-- Revelar una contraseña exige un permiso independiente y registra primero un evento sin secretos en el historial nativo del elemento GLPI. La revelación utiliza un POST normal dentro del iframe para que GLPI 12 pueda mostrar y reproducir su reautenticación nativa; la respuesta HTML no se almacena en caché. Ocultar borra el secreto del DOM y copiar informa si se completó o falló.
-- Las respuestas y redirecciones que pueden contener secretos utilizan `Cache-Control: no-store` y `Referrer-Policy: no-referrer`; el campo de contraseña nunca se repuebla después de un envío fallido. Las acciones de desvincular/eliminar requieren confirmación explícita del navegador. La última asociación no se puede quitar; el sistema avisa y exige eliminar la credencial completa para no dejar registros huérfanos.
-- El acceso a datos en tiempo de ejecución utiliza el constructor de consultas de GLPI. Las sentencias estáticas `CREATE TABLE` se ejecutan únicamente en el hook de instalación mediante el patrón documentado `$DB->doQuery()` de GLPI; los permisos de perfil y futuras migraciones incrementales utilizan `Migration::executeMigration()`. La desinstalación elimina únicamente las tablas propias del plugin.
-- Las vistas utilizan autoescape de Twig. Solo se trata como HTML confiable el marcado generado por el helper nativo de modales de GLPI.
-- La protección CSRF de los POST depende del mecanismo Fetch Metadata / `CheckCsrfListener` de GLPI 12. El plugin no introduce una implementación CSRF paralela.
+- 🔐 **Información protegida:** Guarda usuarios, contraseñas, direcciones web y notas de manera segura.
+- 👤 **Relación con usuarios:** Consulta las credenciales asociadas a un usuario de GLPI.
+- 🖥️ **Relación con activos:** Mantén la información de acceso junto al equipo o activo correspondiente.
+- 🎫 **Consulta desde tickets:** Encuentra las credenciales relacionadas con los solicitantes y los activos de un ticket.
+- 🔗 **Reutilización:** Relaciona una credencial existente con otro usuario o activo sin crear duplicados.
+- 🔢 **Identificación sencilla:** Cada credencial cuenta con un ID propio para localizarla y compartirla.
+- 👁️ **Visualización controlada:** Solo el personal autorizado puede mostrar las contraseñas guardadas.
+- 📋 **Copia rápida:** Copia una contraseña cuando sea necesario.
+- 🧾 **Historial de actividad:** Conserva un registro de las acciones importantes sin mostrar contraseñas.
+- 🏷️ **Categorías:** Organiza las credenciales por sistemas, servicios, redes, servidores u otros grupos definidos por tu equipo.
+- 📅 **Vigencia y revisiones:** Registra vencimientos, última y próxima revisión, y la persona responsable.
+- 🧭 **Página de administración:** Consulta actualizaciones, actividad, revisiones pendientes y registros archivados.
+- 📦 **Respaldos protegidos:** Exporta e importa credenciales mediante un archivo protegido con contraseña.
+- 🌍 **Idiomas:** Inglés, español y francés.
 
-Respalda juntos la base de datos y el archivo `glpicrypt.key`. Una copia de la base sin la clave correspondiente no podrá descifrar los valores. Mantén el plugin habilitado durante `security:change_key` para que GLPI procese `SECURED_FIELDS`.
+## Requisitos
 
-## Instalación y actualización
+| Componente | Versión |
+|-----------|---------|
+| GLPI | 12.0.x |
+| PHP | 8.3 o superior |
 
-1. Respalda la base de datos y el directorio de configuración de GLPI, incluido `glpicrypt.key`.
-2. Instala el directorio `credentials` en la carpeta de plugins de GLPI, o mediante Marketplace cuando exista una publicación pública.
-3. Confirma GLPI `12.0.x`, PHP `8.3+` y que el proceso PHP pueda leer un `glpicrypt.key` válido.
-4. Instala o actualiza el plugin desde **Configuración → Complementos** y habilítalo.
-5. Revisa los permisos `plugin_credentials` y `plugin_credentials_reveal` en los perfiles correspondientes. Concede revelación de contraseñas solo a quienes la necesiten.
-6. Prueba con datos de ejemplo no productivos en un usuario, activo compatible y ticket con varios solicitantes/elementos.
+## Instalación
 
-Los recursos CSS y JavaScript del plugin se distribuyen bajo `public/css/` y `public/js/`, como espera el cargador de recursos de GLPI 12. No muevas esos archivos a carpetas raíz `css/` o `js/`: los hooks `add_css` y `add_javascript` resuelven sus rutas relativas desde `public/`.
+1. Descarga el ZIP de la versión disponible.
+2. Extrae el archivo dentro del directorio de plugins de GLPI. La carpeta debe llamarse **credentials**.
+3. En GLPI, abre **Configuración → Plugins**.
+4. Busca **Credentials**, selecciona **Instalar** y después **Habilitar**.
+5. Configura los permisos de los perfiles que utilizarán el plugin.
 
-Para actualizar, sustituye los archivos del plugin y ejecuta la acción **Actualizar**. No lo desinstales para actualizar: la desinstalación elimina las tablas propias del plugin.
+## Cómo utilizarlo
 
-## Pruebas CLI y compatibilidad de PHP
+### Administrar credenciales desde usuarios y activos
 
-El flujo de CI ejecuta la revisión de sintaxis PHP y todas las pruebas de regresión mediante CLI con PHP 8.3, 8.4, 8.5 y 8.6. PHP 8.6 es una ejecución obligatoria de compatibilidad y realiza las mismas pruebas CLI no opcionales que las demás versiones de la matriz; esto no cambia la versión mínima declarada para producción ni constituye una certificación de GLPI 12. Para ejecutar localmente la misma batería CLI, coloca primero en `PATH` el binario PHP deseado y ejecuta `bash tools/run-cli-tests.sh 8.6` (o la versión minor correspondiente).
+Abre un usuario o activo compatible de GLPI y selecciona la pestaña **Credentials**.
 
-## Estado de desarrollo y publicación
+Desde ahí, el personal autorizado puede agregar una credencial, consultar sus datos, abrir sus detalles o relacionar una credencial que ya exista.
 
-`0.0.31` es una compilación de desarrollo/remediación. Cancelar alta/edición cierra el modal actual (o vuelve a los detalles cuando se edita desde esa vista), mientras que Guardar solicita al padre GLPI una navegación same-origin validada hacia la ficha principal para realizar una actualización completa. Los títulos de los modales reciben iconos Tabler validados mediante un puente same-origin (llave para detalles, más para alta, lápiz para edición y enlace para elementos asociados). Revelar contraseña utiliza un POST HTML interactivo dentro del iframe para que GLPI 12 pueda mostrar y reproducir su reautenticación nativa; la contraseña solo se renderiza después de validar permisos y registrar el acceso, en una respuesta no-cache, dentro de un campo de texto de solo lectura y seleccionable con contraste forzado para temas GLPI. Copiar/ocultar leen y limpian el valor del campo dentro del iframe de detalles. Las operaciones de vincular, desvincular, eliminar y purgar se serializan mediante la API de actualización de base de datos de GLPI; después del bloqueo se vuelve a validar el estado activo, la entidad y los permisos, y el archivado huérfano queda registrado en el historial de la credencial. CI sigue exigiendo PHP 8.3, 8.4, 8.5 y 8.6. Los archivos PHP antiguos de `front/` permanecen únicamente como redirecciones de compatibilidad.
+Cada registro incluye nombre, usuario, contraseña, dirección web y notas. La contraseña es obligatoria al crear una credencial. Al editarla, deja el campo de contraseña vacío para conservar la contraseña actual.
 
-Este paquete no afirma tener aprobación de Marketplace y conserva `<state>development</state>`. Antes de completar el manifiesto público se deben proporcionar URLs reales del repositorio, incidencias, documentación y descarga inmutable de la versión. No se inventan esas direcciones.
+### Consultar credenciales desde un ticket
 
-Consulta [`HANDOFF.md`](HANDOFF.md) para conocer la arquitectura, las validaciones y las pruebas reales pendientes. La matriz de aceptación previa a una publicación estable está en [`tests/SECURITY_REGRESSION.md`](tests/SECURITY_REGRESSION.md).
+Abre un ticket y selecciona la pestaña **Credentials**.
 
-## Retención de credenciales archivadas
+El plugin reúne las credenciales relacionadas con los usuarios solicitantes y los activos vinculados al ticket. Así, el personal de soporte puede localizar más fácilmente la información de acceso relacionada con el problema.
 
-Cuando GLPI purga permanentemente un usuario o activo vinculado, Credentials elimina esa relación. Si no queda otro elemento asociado, la credencial se mueve a la papelera de GLPI (`is_deleted = 1`) y se registra un evento `HISTORY_ORPHANED` sin secretos en el historial propio de la credencial. Es un **archivo lógico**: los campos cifrados permanecen en la base de datos para permitir recuperación y no se borran criptográficamente de forma automática. El plugin no define un plazo de retención ni ejecuta un borrado criptográfico automático. El administrador debe incluir estos registros y el `glpicrypt.key` correspondiente en la política de retención, respaldo y restauración de la organización.
+Una misma credencial solo se muestra una vez, aunque esté relacionada con más de un elemento del ticket.
+
+### Mostrar y copiar contraseñas
+
+El personal autorizado puede mostrar la contraseña desde los detalles de la credencial. También puede copiarla cuando la necesite y ocultarla nuevamente al terminar.
+
+El permiso para mostrar contraseñas es independiente del permiso general para consultar y administrar credenciales. Esto permite que el administrador decida qué perfiles pueden ver las contraseñas guardadas.
+
+### Relacionar y quitar credenciales
+
+Una credencial existente puede relacionarse con varios usuarios o activos compatibles. Quitar una relación solo desconecta el elemento seleccionado; no elimina la credencial ni sus demás relaciones.
+
+Para evitar registros activos sin elementos relacionados, no se permite quitar la última relación. Cuando una credencial ya no se necesite, debe eliminarse la credencial completa.
+
+## Administración
+
+La página de administración de **Credentials** se encuentra en el área de configuración de plugins de GLPI. Es independiente de las pestañas de usuarios, activos y tickets, por lo que no afecta el trabajo cotidiano del personal de soporte.
+
+Desde esa página, los administradores pueden:
+
+- Consultar si existe una versión estable más reciente en GitHub.
+- Crear y administrar categorías.
+- Revisar credenciales vencidas o próximas a revisión.
+- Consultar la actividad reciente registrada en el historial de GLPI.
+- Revisar credenciales archivadas y restaurarlas al vincularlas con un elemento disponible.
+- Definir durante cuánto tiempo se conservan los registros archivados antes de que puedan eliminarse definitivamente.
+- Consultar si la clave de cifrado de GLPI está disponible.
+
+Las fechas de vencimiento y revisión son recordatorios administrativos. Credentials no cambia ni rota contraseñas automáticamente.
+
+## Exportar e importar credenciales
+
+Credentials permite generar un **respaldo protegido con contraseña** que contiene las credenciales y su información relacionada. El archivo se cifra y no expone las contraseñas como texto legible.
+
+Al exportar, elige una contraseña de respaldo de al menos 12 caracteres y guárdala en un lugar seguro. Necesitarás esa misma contraseña para importar el archivo; no es posible recuperarla si la pierdes.
+
+La importación crea registros nuevos y no sobrescribe credenciales existentes. Los usuarios y activos relacionados deben existir en la instancia de GLPI de destino y coincidir con la información del respaldo. Los elementos que no puedan validarse de forma segura se omiten. Las contraseñas y los datos protegidos se vuelven a cifrar con la clave de seguridad de la instancia GLPI de destino.
+
+El respaldo puede incluir credenciales archivadas. Después de importarlas, estas permanecen archivadas hasta que un administrador las restaure vinculándolas con un elemento disponible.
+
+Conserva siempre juntos el respaldo de la base de datos de GLPI y el archivo glpicrypt.key correspondiente. La contraseña del archivo de respaldo y la clave de cifrado de GLPI cumplen funciones diferentes; ambas deben protegerse.
+
+## Credenciales archivadas
+
+Cuando un usuario o activo relacionado se elimina permanentemente de GLPI, una credencial que ya no tenga otros elementos relacionados se mueve a la papelera de GLPI. No se elimina inmediatamente.
+
+Los administradores pueden consultar los registros archivados, restaurarlos vinculándolos con un elemento disponible de la misma entidad o eliminar definitivamente los que hayan cumplido el periodo de conservación configurado. La eliminación definitiva no se puede deshacer.
+
+## Permisos
+
+Los administradores pueden controlar el acceso desde los perfiles de GLPI.
+
+El plugin ofrece permisos independientes para:
+
+- **Administrar credenciales:** consultar y administrar registros según los permisos asignados al perfil.
+- **Mostrar contraseñas:** revelar las contraseñas guardadas.
+- **Exportar e importar:** crear respaldos protegidos y restaurar credenciales desde ellos.
+
+Concede el permiso para mostrar contraseñas y el de respaldos únicamente al personal que realmente los necesite.
+
+## Información importante
+
+- Limita el acceso a Credentials al personal autorizado.
+- Conserva un respaldo de la base de datos de GLPI junto con el archivo glpicrypt.key correspondiente. Ambos son necesarios para recuperar la información protegida.
+- Una credencial archivada conserva sus datos protegidos hasta que se elimine definitivamente.
+- Para actualizar el plugin, utiliza la acción **Actualizar** desde GLPI. No lo desinstales para realizar una actualización, porque la desinstalación elimina los datos del plugin.
+
+## Historial de cambios
+
+Consulta [CHANGELOG.md](CHANGELOG.md) para revisar el historial de versiones.
+
+---
+
+## Autor
+
+Edwin Elias Alvarez — [GitHub](https://github.com/monta990)
+
+## Licencia
+
+GPL v3+ — consulta [LICENSE](LICENSE).
+
+## Soporte
+
+Reporta errores o solicita nuevas funciones en el [rastreador de incidencias de GitHub](https://github.com/monta990/credentials/issues).
+
+---
+
+<p align="center">
+  <sub>Credentials — Plugin para GLPI</sub>
+</p>
