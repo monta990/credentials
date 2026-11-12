@@ -834,9 +834,3 @@ msgstr "Tu perfil no tiene permiso para consultar la actividad de credenciales."
 
 msgid "Your profile does not have permission to view archived credential details."
 msgstr "Tu perfil no tiene permiso para consultar los detalles de credenciales archivadas."
-
-msgid "Credential details and the password are encrypted with the GLPI instance security key before they are stored."
-msgstr "Los datos de la credencial y la contraseña se cifran con la clave de seguridad de la instancia GLPI antes de almacenarse."
-
-msgid "Stored credential details could not be decrypted. Editing is disabled to prevent accidental data loss."
-msgstr "No fue posible descifrar los datos de la credencial. Se ha deshabilitado la edición para evitar la pérdida accidental de información."
