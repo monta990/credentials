@@ -136,10 +136,15 @@ final class ConfigController extends AbstractController
             'retention_days' => $retention_days,
             'item_types' => $item_types,
             'backup_available' => CredentialBackupService::isAvailable()
-                && Session::haveRight(Credential::RIGHT_BACKUP, READ),
-            'can_backup' => Session::haveRight(Credential::RIGHT_BACKUP, READ),
+                && Session::haveRight(Credential::RIGHT_BACKUP, READ)
+                && Session::haveRight(Credential::$rightname, READ),
+            'can_backup' => Session::haveRight(Credential::RIGHT_BACKUP, READ)
+                && Session::haveRight(Credential::$rightname, READ),
             'can_import' => Session::haveRight(Credential::RIGHT_BACKUP, READ)
+                && Session::haveRight(Credential::$rightname, READ)
                 && Session::haveRight(Credential::$rightname, CREATE),
+            'can_purge' => Session::haveRight(Credential::$rightname, READ)
+                && Session::haveRight(Credential::$rightname, DELETE),
             'encryption_ready' => Credential::isEncryptionReady(),
             'active_entity' => (int) ($_SESSION['glpiactive_entity'] ?? 0),
             'admin_user' => (string) ($_SESSION['glpiname'] ?? ''),
@@ -217,12 +222,14 @@ final class ConfigController extends AbstractController
             );
             Session::addMessageAfterRedirect(
                 sprintf(
-                    __('Import completed: %1$d credentials created, %2$d entries skipped.', 'credentials'),
+                    __('Import completed: %1$d credentials created, %2$d archived, %3$d needing manual relinking, %4$d skipped.', 'credentials'),
                     $result['imported'],
+                    $result['archived'],
+                    $result['needs_relink'],
                     $result['skipped']
                 ),
                 false,
-                $result['skipped'] > 0 ? WARNING : INFO
+                ($result['skipped'] > 0 || $result['needs_relink'] > 0) ? WARNING : INFO
             );
         } catch (\RuntimeException $exception) {
             Session::addMessageAfterRedirect($exception->getMessage(), false, ERROR);
