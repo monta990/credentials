@@ -17,7 +17,7 @@ La rama feature/admin-center-export-import contiene la ampliación administrativ
 - Derecho adicional plugin_credentials_backup, independiente de los derechos de lectura, edición y revelación de contraseñas.
 - Exportación protegida con contraseña mediante Argon2id y XChaCha20-Poly1305 autenticado; importación valida entidades y asociaciones y vuelve a cifrar secretos con GLPIKey de destino.
 - Importar crea IDs nuevos; no sobrescribe credenciales existentes. Asociaciones que no coinciden con tipo, ID, nombre y entidad del elemento destino se omiten.
-- Catálogos PO/MO actualizados para es_MX, es_ES y fr_FR.
+- Transferencias entre entidades conservan fechas y responsable de revisión; las categorías específicas de la entidad se recrean en el destino y las credenciales clonadas apuntan a la categoría de destino.\n- Catálogos PO/MO actualizados para es_MX, es_ES y fr_FR.
 
 ## Seguridad y límites deliberados
 
