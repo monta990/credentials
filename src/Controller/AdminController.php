@@ -41,7 +41,6 @@ final class AdminController extends AbstractController
             $action = $request->request->getString('action');
             if ($action === 'check_updates') {
                 $force_check = true;
-                Session::addMessageAfterRedirect(__('GitHub update check requested.', 'credentials'), false, INFO);
             } elseif ($action === 'save_settings') {
                 $this->saveSettings($request);
             } elseif ($action === 'mark_reviewed') {
@@ -81,6 +80,9 @@ final class AdminController extends AbstractController
         return $this->renderPage($request, [
             'installed_version' => $installed,
             'update' => $update,
+            'config_url' => Paths::routeUrl('config'),
+            'export_url' => Paths::routeUrl('config/export'),
+            'import_url' => Paths::routeUrl('config/import'),
             'categories_text' => implode("\n", AdminSettings::categories()),
             'retention_days' => AdminSettings::retentionDays(),
             'stats' => $data['stats'],
@@ -394,25 +396,24 @@ final class AdminController extends AbstractController
                     throw new \RuntimeException(__('A credential could not be imported. The import was rolled back.', 'credentials'));
                 }
 
-                if (!$archived) {
-                    foreach ($resolved_links as $link_data) {
-                        $link = new CredentialItemLink();
-                        if (!$link->add([
-                            'plugin_credentials_credentials_id' => $credential_id,
-                            'itemtype' => $link_data['itemtype'],
-                            'items_id' => $link_data['items_id'],
-                            'date_creation' => $now,
-                        ])) {
-                            throw new \RuntimeException(__('A credential relationship could not be imported. The import was rolled back.', 'credentials'));
-                        }
-                        CredentialHistory::recordForItem(
-                            $link_data['itemtype'],
-                            $link_data['items_id'],
-                            Credential::HISTORY_IMPORTED,
-                            $credential_id,
-                        );
+                foreach ($resolved_links as $link_data) {
+                    $link = new CredentialItemLink();
+                    if (!$link->add([
+                        'plugin_credentials_credentials_id' => $credential_id,
+                        'itemtype' => $link_data['itemtype'],
+                        'items_id' => $link_data['items_id'],
+                        'date_creation' => $now,
+                    ])) {
+                        throw new \RuntimeException(__('A credential relationship could not be imported. The import was rolled back.', 'credentials'));
                     }
-                } else {
+                    CredentialHistory::recordForItem(
+                        $link_data['itemtype'],
+                        $link_data['items_id'],
+                        Credential::HISTORY_IMPORTED,
+                        $credential_id,
+                    );
+                }
+                if ($archived) {
                     $counts['archived']++;
                 }
 
