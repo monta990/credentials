@@ -39,7 +39,7 @@
                     {% endif %}
                 </div>
                 <div class="col-md-5 d-flex flex-wrap gap-2 justify-content-md-end">
-                    <form method="post" action="{{ constant('PLUGIN_CREDENTIALS_WEBDIR') }}/config">
+                    <form method="post" action="{{ config_url }}">
                         <input type="hidden" name="action" value="check_updates">
                         <button class="btn btn-primary" type="submit"><i class="ti ti-refresh me-1" aria-hidden="true"></i>{{ __('Check for updates', 'credentials') }}</button>
                     </form>
@@ -78,7 +78,7 @@
         <div class="card-header"><h3 class="card-title mb-0"><i class="ti ti-tags me-2" aria-hidden="true"></i>{{ __('Credential categories', 'credentials') }}</h3></div>
         <div class="card-body">
             <p class="text-muted">{{ __('Create categories to help your team organize credentials, such as Network, ERP, Email, Cloud services or Servers.', 'credentials') }}</p>
-            <form method="post" action="{{ constant('PLUGIN_CREDENTIALS_WEBDIR') }}/config" class="row g-2 align-items-end mb-4">
+            <form method="post" action="{{ config_url }}" class="row g-2 align-items-end mb-4">
                 <input type="hidden" name="action" value="add_category">
                 <div class="col-md-4">
                     <label class="form-label" for="credentials-category-name">{{ __('Category name', 'credentials') }}</label>
@@ -103,7 +103,7 @@
                                 <td>{{ category.comment }}</td>
                                 <td><span class="text-muted small">{% if category.entities_id == 0 %}{{ __('Global', 'credentials') }}{% else %}{{ __('Current entity', 'credentials') }}{% endif %}</span></td>
                                 <td class="text-end">
-                                    <form method="post" action="{{ constant('PLUGIN_CREDENTIALS_WEBDIR') }}/config" class="d-inline" data-credentials-confirm="{{ __('Delete this category? Categories used by credentials cannot be deleted.', 'credentials')|e('html_attr') }}">
+                                    <form method="post" action="{{ config_url }}" class="d-inline" data-credentials-confirm="{{ __('Delete this category? Categories used by credentials cannot be deleted.', 'credentials')|e('html_attr') }}">
                                         <input type="hidden" name="action" value="delete_category">
                                         <input type="hidden" name="category_id" value="{{ category.id }}">
                                         <button class="btn btn-sm btn-outline-danger" type="submit"><i class="ti ti-trash me-1" aria-hidden="true"></i>{{ __('Delete', 'credentials') }}</button>
@@ -184,7 +184,7 @@
         <div class="card-header"><h3 class="card-title mb-0"><i class="ti ti-archive me-2" aria-hidden="true"></i>{{ __('Archived credentials and retention', 'credentials') }}</h3></div>
         <div class="card-body">
             <p class="text-muted">{{ __('Archived records are kept in the GLPI trash. They are not automatically erased. Configure how long they should be retained before an administrator can permanently delete eligible records.', 'credentials') }}</p>
-            <form method="post" action="{{ constant('PLUGIN_CREDENTIALS_WEBDIR') }}/config" class="row g-2 align-items-end mb-3">
+            <form method="post" action="{{ config_url }}" class="row g-2 align-items-end mb-3">
                 <input type="hidden" name="action" value="save_retention">
                 <div class="col-md-4">
                     <label class="form-label" for="credentials-retention">{{ __('Retention period (days)', 'credentials') }}</label>
@@ -205,7 +205,7 @@
                                 <td>{{ row.date_mod ?: '—' }}</td>
                                 <td>{% if row.purge_eligible %}<span class="badge bg-warning text-dark">{{ __('Eligible', 'credentials') }}</span>{% else %}<span class="badge bg-secondary">{{ __('Retained', 'credentials') }}</span>{% endif %}</td>
                                 <td>
-                                    <form method="post" action="{{ constant('PLUGIN_CREDENTIALS_WEBDIR') }}/config" class="d-flex flex-wrap gap-2">
+                                    <form method="post" action="{{ config_url }}" class="d-flex flex-wrap gap-2">
                                         <input type="hidden" name="action" value="restore">
                                         <input type="hidden" name="credential_id" value="{{ row.id }}">
                                         <select class="form-select form-select-sm" name="itemtype" required aria-label="{{ __('Item type', 'credentials') }}">
@@ -224,7 +224,7 @@
             {% else %}
                 <div class="alert alert-info mb-3">{{ __('There are no archived credentials in the current entity scope.', 'credentials') }}</div>
             {% endif %}
-            <form method="post" action="{{ constant('PLUGIN_CREDENTIALS_WEBDIR') }}/config" data-credentials-confirm="{{ __('This permanently deletes archived credentials older than the retention period. This cannot be undone. Continue?', 'credentials')|e('html_attr') }}">
+            <form method="post" action="{{ config_url }}" data-credentials-confirm="{{ __('This permanently deletes archived credentials older than the retention period. This cannot be undone. Continue?', 'credentials')|e('html_attr') }}">
                 <input type="hidden" name="action" value="purge_archived">
                 <button class="btn btn-danger" type="submit" {% if retention_days == 0 or dashboard.purge_eligible == 0 %}disabled{% endif %}><i class="ti ti-trash me-1" aria-hidden="true"></i>{{ __('Permanently delete eligible archived credentials', 'credentials') }}</button>
             </form>
