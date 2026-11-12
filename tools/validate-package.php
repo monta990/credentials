@@ -448,6 +448,8 @@ if (!is_string($transfer_source)
 $admin_controller = file_get_contents($root . '/src/Controller/ConfigController.php');
 $admin_service = file_get_contents($root . '/src/Service/CredentialAdminService.php');
 $backup_service = file_get_contents($root . '/src/Service/CredentialBackupService.php');
+$credential_source = file_get_contents($root . '/src/Credential.php');
+$profile_source = file_get_contents($root . '/src/Profile.php');
 $category_model = file_get_contents($root . '/src/CredentialCategory.php');
 if (!str_contains((string) $setup, "Hooks::CONFIG_PAGE]['credentials'] = 'config'")
     || !is_file($root . '/src/Controller/ConfigController.php')
@@ -487,7 +489,7 @@ if (!str_contains((string) $hook, 'glpi_plugin_credentials_categories')
 ) {
     $errors[] = 'Categories, expiration/review metadata and safe archived-record lifecycle handling must be present.';
 }
-if (!str_contains((string) $credential, 'RIGHT_BACKUP')
+if (!str_contains((string) $credential_source, 'RIGHT_BACKUP')
     || !str_contains((string) $profile_source, 'Credential::RIGHT_BACKUP')
     || !str_contains((string) $backup_service, 'sodium_crypto_aead_xchacha20poly1305_ietf_encrypt')
     || !str_contains((string) $backup_service, 'sodium_crypto_aead_xchacha20poly1305_ietf_decrypt')
