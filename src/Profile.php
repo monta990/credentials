@@ -65,6 +65,12 @@ final class Profile extends \Profile
                 'field'    => Credential::RIGHT_REVEAL,
                 'rights'   => [READ => __('Allow', 'credentials')],
             ],
+            [
+                'itemtype' => Credential::class,
+                'label'    => __('Export and import credentials', 'credentials'),
+                'field'    => Credential::RIGHT_BACKUP,
+                'rights'   => [READ => __('Allow', 'credentials')],
+            ],
         ];
     }
 
@@ -118,7 +124,7 @@ final class Profile extends \Profile
             'FROM'   => 'glpi_profilerights',
             'WHERE'  => [
                 'profiles_id' => $profiles_id,
-                'name'        => [Credential::$rightname, Credential::RIGHT_REVEAL],
+                'name'        => [Credential::$rightname, Credential::RIGHT_REVEAL, Credential::RIGHT_BACKUP],
             ],
         ]);
         foreach ($rights as $right) {
