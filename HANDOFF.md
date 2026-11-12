@@ -16,15 +16,16 @@ La rama feature/admin-center-export-import contiene la ampliación administrativ
 - Eliminación definitiva manual de credenciales archivadas que superen el periodo de retención y no tengan relaciones remanentes.
 - Derecho adicional plugin_credentials_backup, independiente de los derechos de lectura, edición y revelación de contraseñas.
 - Exportación protegida con contraseña mediante Argon2id y XChaCha20-Poly1305 autenticado; importación valida entidades y asociaciones y vuelve a cifrar secretos con GLPIKey de destino.
-- Importar crea IDs nuevos; no sobrescribe credenciales existentes. Asociaciones que no coinciden con tipo, ID, nombre y entidad del elemento destino se omiten.
+- Importar crea IDs nuevos; no sobrescribe credenciales existentes. Las asociaciones se restablecen cuando coinciden tipo, ID, nombre y entidad. Si no hay una coincidencia, la credencial se importa archivada para permitir una vinculación manual posterior.
 - Transferencias entre entidades conservan fechas y responsable de revisión; las categorías específicas de la entidad se recrean en el destino y las credenciales clonadas apuntan a la categoría de destino.\n- Catálogos PO/MO actualizados para es_MX, es_ES y fr_FR.
 
 ## Seguridad y límites deliberados
 
 - Las credenciales siguen utilizando GLPIKey para username, password, URL y notas.
 - Los archivos de respaldo no contienen contraseñas legibles. La contraseña del respaldo es distinta de glpicrypt.key.
-- La importación exige permiso de configuración, permiso dedicado de respaldo y derecho de creación de credenciales.
-- La exportación exige permiso de configuración y el permiso dedicado de respaldo.
+- La importación exige permiso de configuración, permiso dedicado de respaldo y derechos de lectura y creación de credenciales.
+- La exportación exige permiso de configuración, permiso dedicado de respaldo y derecho de lectura de credenciales.
+- La purga definitiva exige además derechos de lectura y eliminación de Credentials; tener acceso a la configuración no basta.
 - Los reportes de actividad no muestran contraseñas ni valores protegidos y deben limitarse a entidades y elementos legibles.
 - Las restauraciones y purgas son acciones administrativas explícitas; no hay borrado automático por cron.
 - La política de retención con valor 0 conserva indefinidamente los registros archivados y desactiva la purga manual.
