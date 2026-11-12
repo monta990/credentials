@@ -142,7 +142,7 @@ final class CredentialBackupService
             'entries' => $entries,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if (strlen($payload) > self::MAX_FILE_BYTES) {
-            throw new \\RuntimeException(__('The encrypted backup would exceed the 20 MB download limit. Export fewer credentials at a time.', 'credentials'));
+            throw new \RuntimeException(__('The encrypted backup would exceed the 20 MB download limit. Export fewer credentials at a time.', 'credentials'));
         }
 
         $salt = random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
@@ -179,7 +179,7 @@ final class CredentialBackupService
             'ciphertext' => base64_encode($ciphertext),
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         if (strlen($envelope) > self::MAX_FILE_BYTES) {
-            throw new \\RuntimeException(__('The encrypted backup would exceed the 20 MB download limit. Export fewer credentials at a time.', 'credentials'));
+            throw new \RuntimeException(__('The encrypted backup would exceed the 20 MB download limit. Export fewer credentials at a time.', 'credentials'));
         }
         return $envelope;
     }
