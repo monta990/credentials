@@ -846,6 +846,9 @@ final class CredentialController extends AbstractController
         if ($users_id <= 0) {
             return true;
         }
+        if (!Session::haveRight('user', READ)) {
+            return false;
+        }
         $user = new \User();
         return $user->getFromDB($users_id)
             && (int) ($user->fields['is_deleted'] ?? 0) === 0
@@ -890,7 +893,7 @@ final class CredentialController extends AbstractController
 
     private function reviewerName(int $users_id): string
     {
-        if ($users_id <= 0) {
+        if ($users_id <= 0 || !Session::haveRight('user', READ)) {
             return '';
         }
         $user = new \User();
