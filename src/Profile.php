@@ -134,7 +134,7 @@ final class Profile extends \Profile
 
     public static function removeRightsFromSession(): void
     {
-        foreach ([Credential::$rightname, Credential::RIGHT_REVEAL] as $right) {
+        foreach ([Credential::$rightname, Credential::RIGHT_REVEAL, Credential::RIGHT_BACKUP] as $right) {
             if (isset($_SESSION['glpiactiveprofile'][$right])) {
                 unset($_SESSION['glpiactiveprofile'][$right]);
             }
