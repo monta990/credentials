@@ -444,6 +444,65 @@ if (!is_string($transfer_source)
     $errors[] = 'Clone, transfer and edit operations must revalidate current item relationships and entity state after acquiring the credential lock.';
 }
 
+// Administrative center, lifecycle metadata and encrypted backup contracts.
+$admin_controller = file_get_contents($root . '/src/Controller/ConfigController.php');
+$admin_service = file_get_contents($root . '/src/Service/CredentialAdminService.php');
+$backup_service = file_get_contents($root . '/src/Service/CredentialBackupService.php');
+$category_model = file_get_contents($root . '/src/CredentialCategory.php');
+if (!str_contains((string) $setup, "Hooks::CONFIG_PAGE]['credentials'] = 'config'")
+    || !is_file($root . '/src/Controller/ConfigController.php')
+    || !str_contains((string) $admin_controller, "#[Route('/config'")
+    || !is_file($root . '/templates/config.html.twig')
+    || !str_contains((string) $admin_controller, "Session::checkRight('config', UPDATE)")
+    || !str_contains((string) $admin_controller, 'Credential::RIGHT_BACKUP')
+    || !is_file($root . '/src/Service/UpdateChecker.php')
+    || !str_contains((string) file_get_contents($root . '/src/Service/UpdateChecker.php'), 'releases/latest')
+) {
+    $errors[] = 'The independent Credentials administration page and stable-release checker are required.';
+}
+foreach ([
+    'src/CredentialCategory.php',
+    'src/CredentialStatus.php',
+    'src/Service/CredentialAdminService.php',
+    'src/Service/CredentialBackupService.php',
+    'tests/php/credential_status_test.php',
+    'tests/php/credential_admin_contract_test.php',
+    'tests/php/credential_backup_contract_test.php',
+    'templates/config.html.twig',
+] as $required_admin_file) {
+    if (!is_file($root . '/' . $required_admin_file)) {
+        $errors[] = 'Administrative functionality file is missing: ' . $required_admin_file;
+    }
+}
+if (!str_contains((string) $hook, 'glpi_plugin_credentials_categories')
+    || !str_contains((string) $hook, "'date_expires'")
+    || !str_contains((string) $hook, "'date_last_review'")
+    || !str_contains((string) $hook, "'date_next_review'")
+    || !str_contains((string) $hook, "'reviewer_users_id'")
+    || !str_contains((string) $credential_controller_source, 'CredentialCategory::getOptions($entity_id)')
+    || !str_contains((string) $credential_controller_source, 'CredentialStatus::fromDates(')
+    || !str_contains((string) $category_model, 'deleteIfUnused(')
+    || !str_contains((string) $admin_service, 'purgeEligible(')
+    || !str_contains((string) $admin_service, 'getLinksForCredentialForUpdate($id) !== []')
+) {
+    $errors[] = 'Categories, expiration/review metadata and safe archived-record lifecycle handling must be present.';
+}
+if (!str_contains((string) $credential, 'RIGHT_BACKUP')
+    || !str_contains((string) $profile_source, 'Credential::RIGHT_BACKUP')
+    || !str_contains((string) $backup_service, 'sodium_crypto_aead_xchacha20poly1305_ietf_encrypt')
+    || !str_contains((string) $backup_service, 'sodium_crypto_aead_xchacha20poly1305_ietf_decrypt')
+    || !str_contains((string) $backup_service, 'Credential::encryptValue($entry[$field])')
+    || !str_contains((string) $admin_controller, "Route('/config/export'")
+    || !str_contains((string) $admin_controller, "Route('/config/import'")
+) {
+    $errors[] = 'Encrypted credential export/import must require a separate profile right and re-encrypt secrets on import.';
+}
+foreach (['es_ES', 'es_MX', 'fr_FR'] as $locale) {
+    if (!is_file($root . '/locales/' . $locale . '.po') || !is_file($root . '/locales/' . $locale . '.mo')) {
+        $errors[] = 'All supported translations must include updated PO and MO catalogs: ' . $locale;
+    }
+}
+
 if ($errors !== []) {
     foreach ($errors as $error) {
         fwrite(STDERR, "FAIL: {$error}\n");
