@@ -75,3 +75,37 @@ jobs:
       - name: Verify no generated English catalogs
         run: |
           ! find locales -maxdepth 1 -type f \( -name 'en_*.po' -o -name 'en_*.mo' \) | grep .
+
+  package:
+    name: Build installable test package
+    needs: static-validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Prepare plugin package
+        id: metadata
+        run: |
+          VERSION=$(sed -n "s/.*PLUGIN_CREDENTIALS_VERSION', '\\([^']*\\)'.*/\\1/p" setup.php)
+          if [ -z "$VERSION" ]; then
+            echo "Could not read plugin version from setup.php"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          mkdir -p dist/credentials
+          cp -a front locales public src templates dist/credentials/
+          cp credentials.xml setup.php hook.php logo.png LICENSE COPYRIGHT README.md CHANGELOG.md dist/credentials/
+          (cd dist && zip -qr "../credentials-$VERSION.zip" credentials)
+          sha256sum "credentials-$VERSION.zip" > "credentials-$VERSION.zip.sha256"
+
+      - name: Upload installable test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: credentials-${{ steps.metadata.outputs.version }}-installable
+          path: |
+            credentials-${{ steps.metadata.outputs.version }}.zip
+            credentials-${{ steps.metadata.outputs.version }}.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
