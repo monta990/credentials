@@ -14,7 +14,7 @@ use GlpiPlugin\Credentials\CredentialItem;
 use GlpiPlugin\Credentials\CredentialTicketTab;
 use GlpiPlugin\Credentials\Profile;
 
-define('PLUGIN_CREDENTIALS_VERSION', '0.0.31');
+define('PLUGIN_CREDENTIALS_VERSION', '0.0.32');
 define('PLUGIN_CREDENTIALS_MIN_GLPI', '12.0.0');
 define('PLUGIN_CREDENTIALS_MAX_GLPI', '12.0.99');
 
@@ -43,6 +43,9 @@ function plugin_init_credentials(): void
     if (!Session::getLoginUserID() || !Plugin::isPluginActive('credentials')) {
         return;
     }
+
+    // GLPI configuration entry for the independent administration page.
+    $PLUGIN_HOOKS[Hooks::CONFIG_PAGE]['credentials'] = 'config';
 
     // Core assets plus GLPI 12 custom asset itemtypes exposed through asset_types.
     // Registration is repeated at POST_INIT so dynamically registered asset classes
