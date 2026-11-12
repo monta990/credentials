@@ -491,18 +491,18 @@ namespace {
         710 => ['id' => 710, 'entities_id' => 1],
         711 => ['id' => 711, 'entities_id' => 2],
     ]];
-    \\GlpiPlugin\\Credentials\\CredentialCategory::$categories = [
+    \GlpiPlugin\Credentials\CredentialCategory::$categories = [
         15 => ['id' => 15, 'name' => 'ERP', 'entities_id' => 1, 'comment' => ''],
     ];
-    \\GlpiPlugin\\Credentials\\CredentialCategory::$mappedId = 91;
+    \GlpiPlugin\Credentials\CredentialCategory::$mappedId = 91;
     $category_credential = transferCredential(74, 1);
     $category_credential['plugin_credentials_categories_id'] = 15;
     $DB->credentials = [$category_credential];
     $DB->links = [
         ['id' => 1, 'plugin_credentials_credentials_id' => 74, 'itemtype' => 'FakeAsset', 'items_id' => 710],
     ];
-    \\GlpiPlugin\\Credentials\\CredentialHistory::$events = [];
-    \\GlpiPlugin\\Credentials\\CredentialTransfer::handle([
+    \GlpiPlugin\Credentials\CredentialHistory::$events = [];
+    \GlpiPlugin\Credentials\CredentialTransfer::handle([
         'type' => 'FakeAsset', 'id' => 710, 'newID' => 711, 'entities_id' => 2,
     ]);
     transferAssert(count($DB->credentials) === 2, 'A category-aware cross-entity clone must create one destination credential.');
