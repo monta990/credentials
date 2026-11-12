@@ -93,7 +93,7 @@ Attach the CI run, GLPI version/PHP matrix, sanitized screenshots of the three m
 - [ ] Audit view shows only currently readable source items and credential records; no activity from inaccessible entities is exposed.
 - [ ] Restore requires credential update permission, same-entity item update permission, archived state and no existing links; successful restore creates a link and secret-free history.
 - [ ] Retention value 0 disables permanent deletion and retains archived records indefinitely.
-- [ ] Purge only deletes archived records older than the configured period, after row locking and confirming there are no relationships; history is recorded before deletion.
+- [ ] Purge requires Credential READ and DELETE rights in addition to configuration access. It only deletes archived records older than the configured period, after row locking and confirming there are no relationships; history is recorded before deletion.
 - [ ] Uninstall removes the new profile right and category table; upgrade does not remove existing credentials.
 
 ## Encrypted export/import (0.0.32)
@@ -107,6 +107,6 @@ Attach the CI run, GLPI version/PHP matrix, sanitized screenshots of the three m
 - [ ] Import creates new credential IDs and never updates existing credential rows.
 - [ ] All imported protected values are re-encrypted with the destination GLPIKey; test with a destination instance using a different glpicrypt.key.
 - [ ] Invalid entries are skipped with non-sensitive messages; failed encryption, database insert, association or audit causes the transaction to roll back.
-- [ ] Import does not restore archived entries as active; an explicit later restore is required.
+- [ ] Import does not restore archived entries as active; an explicit later restore is required. Active source entries whose linked items cannot be matched in the destination are imported as archived so their protected data is retained for manual relinking.
 - [ ] No passphrase, plaintext password, ciphertext or protected notes appear in logs, redirects, query strings or error messages.
 - [ ] Backups include archived data only when the administrator selects the option; imported archived entries remain archived.
