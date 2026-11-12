@@ -23,6 +23,7 @@ $checks = [
     'Unused category protection' => str_contains($category, 'public static function deleteIfUnused('),
     'Lifecycle summary' => str_contains($admin, "'review_overdue'"),
     'Archived credential restoration' => str_contains($admin, 'public static function restore('),
+    'Restore uses a current locking read to check existing links' => str_contains($admin, 'CredentialItemLink::getLinksForCredentialForUpdate($credential_id) !== []'),
     'Retention-based permanent deletion' => str_contains($admin, 'public static function purgeEligible('),
     'Archived records must be unlinked before permanent deletion' => str_contains($admin, 'getLinksForCredentialForUpdate($id) !== []'),
     'GitHub update checker' => is_file($root . '/src/Service/UpdateChecker.php'),
