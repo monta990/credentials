@@ -1,4 +1,3 @@
-
 msgid ""
 msgstr ""
 "Project-Id-Version: Credentials 0.0.32\n"
@@ -337,7 +336,6 @@ msgstr "Mot de passe affiché"
 
 msgid "You do not have permission to reveal this password."
 msgstr "Vous n’avez pas l’autorisation d’afficher ce mot de passe."
-
 
 msgid "Current item"
 msgstr "Élément actuel"
@@ -815,15 +813,6 @@ msgstr "Aucun mot de passe n’est enregistré pour cet identifiant."
 
 msgid "This is the only item linked to this credential. It cannot be unlinked because credentials must always belong to at least one item. Delete the credential instead, if you have permission."
 msgstr "Il s’agit du seul élément associé à cet identifiant. Il ne peut pas être dissocié, car chaque identifiant doit être associé à au moins un élément. Si vous y êtes autorisé, supprimez l’identifiant complet."
-
-msgid "Stored credential details could not be decrypted. Editing is disabled to prevent accidental data loss."
-msgstr "Les détails de l’identifiant n’ont pas pu être déchiffrés. La modification est désactivée afin d’éviter toute perte accidentelle de données."
-
-msgid "The GLPI security key is not configured or cannot be read. Ask your administrator to configure GLPI's security key before saving credentials."
-msgstr "La clé de sécurité GLPI n’est pas configurée ou ne peut pas être lue. Demandez à votre administrateur de la configurer avant d’enregistrer des identifiants."
-
-msgid "Credential details and the password are encrypted with the GLPI instance security key before they are stored."
-msgstr "Les informations de l’identifiant et le mot de passe sont chiffrés avec la clé de sécurité de cette instance GLPI avant leur stockage."
 
 msgid "Show linked items"
 msgstr "Afficher les éléments associés"
