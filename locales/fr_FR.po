@@ -831,9 +831,3 @@ msgstr "Votre profil ne permet pas de consulter l’activité des identifiants."
 
 msgid "Your profile does not have permission to view archived credential details."
 msgstr "Votre profil ne permet pas de consulter les détails des identifiants archivés."
-
-msgid "Credential details and the password are encrypted with the GLPI instance security key before they are stored."
-msgstr "Les informations de l’identifiant et le mot de passe sont chiffrés avec la clé de sécurité de l’instance GLPI avant leur stockage."
-
-msgid "Stored credential details could not be decrypted. Editing is disabled to prevent accidental data loss."
-msgstr "Les informations de l’identifiant n’ont pas pu être déchiffrées. La modification est désactivée pour éviter toute perte accidentelle de données."
