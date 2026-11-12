@@ -79,3 +79,34 @@ Attach the CI run, GLPI version/PHP matrix, sanitized screenshots of the three m
 - [ ] Parent accepts modal title/close messages only from same-origin modal iframes.
 - [ ] Password reveal submits an interactive same-origin HTML POST within the iframe, lets GLPI 12 prompt/replay native re-authentication, shows an in-progress state, and renders plaintext only in a no-store response.
 - [ ] Delete credential has a solid red fill, white text and visible hover/focus states on light and dark themes.
+
+
+## Administrative center, categories and lifecycle (0.0.32)
+
+- [ ] Configuration page is available only to profiles with GLPI configuration update permission.
+- [ ] GitHub checker reports update available, up to date, no published stable release, stale cached result and network unavailable without breaking credential tabs.
+- [ ] Release checker ignores drafts and prereleases, accepts only valid version tags, validates release URLs and reuses its six-hour cache.
+- [ ] Category creation rejects empty, oversized and duplicate names and respects the active entity. A category in use cannot be deleted.
+- [ ] Credential form validates category entity, date values and review-responsible user access; failed edits do not lose the current password.
+- [ ] Expiration and review indicators correctly classify dates before, within and beyond the 30-day attention window.
+- [ ] Dashboard totals and attention rows include only entities visible to the current profile.
+- [ ] Audit view shows only currently readable source items and credential records; no activity from inaccessible entities is exposed.
+- [ ] Restore requires credential update permission, same-entity item update permission, archived state and no existing links; successful restore creates a link and secret-free history.
+- [ ] Retention value 0 disables permanent deletion and retains archived records indefinitely.
+- [ ] Purge only deletes archived records older than the configured period, after row locking and confirming there are no relationships; history is recorded before deletion.
+- [ ] Uninstall removes the new profile right and category table; upgrade does not remove existing credentials.
+
+## Encrypted export/import (0.0.32)
+
+- [ ] Export/import require the dedicated backup profile right; import additionally requires credential create permission.
+- [ ] Backup export asks for a matching passphrase of at least 12 characters and downloads a no-store encrypted file.
+- [ ] Backup file uses Argon2id key derivation and authenticated XChaCha20-Poly1305 encryption; tampering and an incorrect password fail closed.
+- [ ] Export never includes records outside accessible entities or associations to unreadable items.
+- [ ] Export output and import input stay within the 20 MB limit; maximum entries and links per entry are enforced.
+- [ ] Import validates format/version/KDF parameters, entity path, allowed item types, exact item ID/name/entity and user access before creating records.
+- [ ] Import creates new credential IDs and never updates existing credential rows.
+- [ ] All imported protected values are re-encrypted with the destination GLPIKey; test with a destination instance using a different glpicrypt.key.
+- [ ] Invalid entries are skipped with non-sensitive messages; failed encryption, database insert, association or audit causes the transaction to roll back.
+- [ ] Import does not restore archived entries as active; an explicit later restore is required.
+- [ ] No passphrase, plaintext password, ciphertext or protected notes appear in logs, redirects, query strings or error messages.
+- [ ] Backups include archived data only when the administrator selects the option; imported archived entries remain archived.
