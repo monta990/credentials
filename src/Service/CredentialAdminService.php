@@ -25,6 +25,7 @@ final class CredentialAdminService
     {
         global $DB;
 
+        $can_read_credentials = Session::haveRight(Credential::$rightname, READ);
         $today = substr((string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d')), 0, 10);
         $rows = $DB->request([
             'SELECT' => [
@@ -63,7 +64,7 @@ final class CredentialAdminService
                 if ($eligible) {
                     $purge_eligible++;
                 }
-                if (count($archived) < 25) {
+                if ($can_read_credentials && count($archived) < 25) {
                     $archived[] = [
                         'id' => $id,
                         'name' => (string) $row['name'],
@@ -86,7 +87,7 @@ final class CredentialAdminService
                     $counts[$flag]++;
                 }
             }
-            if ($status['key'] !== 'current' && count($attention) < 25) {
+            if ($can_read_credentials && $status['key'] !== 'current' && count($attention) < 25) {
                 $attention[] = [
                     'id' => $id,
                     'name' => (string) $row['name'],
@@ -105,7 +106,7 @@ final class CredentialAdminService
             'archived' => $archived,
             'purge_eligible' => $purge_eligible,
             'categories' => $category_rows,
-            'audit' => self::recentAuditEvents(50),
+            'audit' => $can_read_credentials ? self::recentAuditEvents(50) : [],
         ];
     }
 
@@ -113,6 +114,10 @@ final class CredentialAdminService
     public static function recentAuditEvents(int $limit = 50): array
     {
         global $DB;
+
+        if (!Session::haveRight(Credential::$rightname, READ)) {
+            return [];
+        }
 
         $events = [];
         $iterator = $DB->request([
@@ -252,6 +257,11 @@ final class CredentialAdminService
     {
         global $DB;
 
+        if (!Session::haveRight(Credential::$rightname, READ)
+            || !Session::haveRight(Credential::$rightname, DELETE)
+        ) {
+            throw new \RuntimeException(__('You do not have permission to permanently delete archived credentials.', 'credentials'));
+        }
         if ($retention_days <= 0) {
             return 0;
         }
