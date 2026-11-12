@@ -38,13 +38,15 @@ final class CredentialHistory
             return false;
         }
 
-        return (bool) Log::history(
+        $logged = (bool) Log::history(
             $items_id,
             $itemtype,
             [0, (string) $credential_id, ''],
             Credential::class,
             Log::HISTORY_PLUGIN + $action,
         );
+
+        return $logged && self::recordAudit($credential_id, self::actionName($action), $itemtype, $items_id);
     }
 
     /**
@@ -63,12 +65,58 @@ final class CredentialHistory
             return false;
         }
 
-        return (bool) Log::history(
+        $logged = (bool) Log::history(
             $credential_id,
             Credential::class,
             [0, (string) $credential_id, ''],
             Credential::class,
             Log::HISTORY_PLUGIN + $action,
         );
+
+        return $logged && self::recordAudit($credential_id, self::actionName($action), '', 0);
+    }
+    /**
+     * Store secret-free administrative activity in a dedicated history table.
+     * Details are restricted to non-sensitive event context; callers must never
+     * pass usernames, passwords, URLs, notes, ciphertext or backup passphrases.
+     */
+    public static function recordAudit(
+        int $credential_id,
+        string $action,
+        string $itemtype = '',
+        int $items_id = 0,
+        string $details = '',
+    ): bool {
+        global $DB;
+
+        if (!preg_match('/^[A-Z_]{2,40}$/', $action)) {
+            return false;
+        }
+
+        return $DB->insert('glpi_plugin_credentials_audit', [
+            'credential_id' => max(0, $credential_id),
+            'users_id' => (int) \Session::getLoginUserID(),
+            'action' => $action,
+            'itemtype' => mb_substr($itemtype, 0, 100),
+            'items_id' => max(0, $items_id),
+            'details' => mb_substr($details, 0, 500),
+            'date_creation' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
+        ]) !== false;
+    }
+
+    private static function actionName(int $action): string
+    {
+        return match ($action) {
+            Credential::HISTORY_CREATED => 'CREATED',
+            Credential::HISTORY_UPDATED => 'UPDATED',
+            Credential::HISTORY_LINKED => 'LINKED',
+            Credential::HISTORY_UNLINKED => 'UNLINKED',
+            Credential::HISTORY_DELETED => 'DELETED',
+            Credential::HISTORY_REVEALED => 'REVEALED',
+            Credential::HISTORY_ORPHANED => 'ORPHANED',
+            Credential::HISTORY_ARCHIVED => 'ARCHIVED',
+            Credential::HISTORY_IMPORTED => 'IMPORTED',
+            default => 'UNKNOWN',
+        };
     }
 }
