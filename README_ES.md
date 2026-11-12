@@ -104,7 +104,7 @@ Credentials permite generar un **respaldo protegido con contraseña** que contie
 
 Al exportar, elige una contraseña de respaldo de al menos 12 caracteres y guárdala en un lugar seguro. Necesitarás esa misma contraseña para importar el archivo; no es posible recuperarla si la pierdes.
 
-La importación crea registros nuevos y no sobrescribe credenciales existentes. Los usuarios y activos relacionados deben existir en la instancia de GLPI de destino y coincidir con la información del respaldo. Los elementos que no puedan validarse de forma segura se omiten. Las contraseñas y los datos protegidos se vuelven a cifrar con la clave de seguridad de la instancia GLPI de destino.
+La importación crea registros nuevos y no sobrescribe credenciales existentes. Los usuarios y activos se vuelven a relacionar cuando la instancia GLPI de destino contiene un elemento con el mismo tipo, ID, nombre y entidad. Si no es posible encontrar una coincidencia, la credencial se importa en la papelera de GLPI para no perder su información protegida; después, un administrador puede restaurarla y vincularla con un elemento disponible. Los registros inválidos se omiten. Las contraseñas y los datos protegidos se vuelven a cifrar con la clave de seguridad de la instancia GLPI de destino.
 
 El respaldo puede incluir credenciales archivadas. Después de importarlas, estas permanecen archivadas hasta que un administrador las restaure vinculándolas con un elemento disponible.
 
