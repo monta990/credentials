@@ -189,7 +189,7 @@ final class CredentialBackupService
      * created with a new ID and linked only to items that match the exported type,
      * ID and name in the destination instance.
      *
-     * @return array{imported:int,skipped:int,errors:array<int,string>}
+     * @return array{imported:int,archived:int,needs_relink:int,skipped:int,errors:array<int,string>}
      */
     public static function importBackup(string $contents, string $passphrase): array
     {
