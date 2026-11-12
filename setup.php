@@ -33,7 +33,10 @@ function plugin_init_credentials(): void
     // GLPIKey::generate()/security:change_key will migrate this plugin field together
     // with GLPI's own encrypted fields. Never store a value encrypted with GLPIKey
     // without registering it here.
-    // Expose a small administrator-only page, separate from the user/asset/ticket tabs.\n    $PLUGIN_HOOKS[Hooks::CONFIG_PAGE]['credentials'] = 'config';\n\n    $PLUGIN_HOOKS[Hooks::SECURED_FIELDS]['credentials'] = [
+    // Expose a small administrator-only page, separate from the user/asset/ticket tabs.
+    $PLUGIN_HOOKS[Hooks::CONFIG_PAGE]['credentials'] = 'config';
+
+    $PLUGIN_HOOKS[Hooks::SECURED_FIELDS]['credentials'] = [
         'glpi_plugin_credentials_credentials.login',
         'glpi_plugin_credentials_credentials.password',
         'glpi_plugin_credentials_credentials.url',
@@ -80,7 +83,8 @@ function plugin_version_credentials(): array
         'name'         => __('Credentials', 'credentials'),
         'version'      => PLUGIN_CREDENTIALS_VERSION,
         'author'       => 'Edwin Elias Alvarez',
-        'license'      => 'GPL-3.0-or-later',\n        'homepage'     => 'https://github.com/monta990/credentials',
+        'license'      => 'GPL-3.0-or-later',
+        'homepage'     => 'https://github.com/monta990/credentials',
         'requirements' => [
             'glpi' => [
                 'min' => PLUGIN_CREDENTIALS_MIN_GLPI,
