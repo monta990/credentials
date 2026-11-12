@@ -21,8 +21,17 @@ final class UpdateChecker
         $cached = self::readCache($cache_file);
         $stale = $cached;
 
-        if (!$force && $cached !== null && (time() - $cached['checked_at']) < self::CACHE_TTL) {
+        if (!$force && $cached !== null
+            && $cached['checked_at'] <= time()
+            && (time() - $cached['checked_at']) < self::CACHE_TTL
+        ) {
             return self::result($cached, 'cached');
+        }
+        if (!$force && $cached === null) {
+            $no_release_checked_at = self::readNoReleaseCache($cache_file);
+            if ($no_release_checked_at !== null) {
+                return self::noReleaseResult($no_release_checked_at);
+            }
         }
 
         $context = stream_context_create([
@@ -46,20 +55,25 @@ final class UpdateChecker
         }
 
         if ($json === false || $status_code !== 200) {
+            if ($status_code === 404) {
+                $checked_at = time();
+                self::writeCache($cache_file, ['status' => 'no_release', 'checked_at' => $checked_at]);
+                return self::noReleaseResult($checked_at);
+            }
             return $stale !== null
                 ? self::result($stale, 'unavailable_cached')
-                : self::result(null, $status_code === 404 ? 'no_release' : 'unavailable');
+                : self::result(null, 'unavailable');
         }
 
         $data = json_decode($json, true);
         if (!is_array($data) || !empty($data['draft']) || !empty($data['prerelease'])) {
             return $stale !== null
                 ? self::result($stale, 'unavailable_cached')
-                : self::result(null, 'no_release');
+                : self::result(null, 'unavailable');
         }
 
         $version = preg_replace('/^[vV]/', '', trim((string) ($data['tag_name'] ?? '')));
-        if (!is_string($version) || !preg_match('/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/', $version)) {
+        if (!is_string($version) || !preg_match('/^\d+\.\d+\.\d+$/', $version)) {
             return $stale !== null
                 ? self::result($stale, 'unavailable_cached')
                 : self::result(null, 'unavailable');
@@ -77,6 +91,37 @@ final class UpdateChecker
         return self::result($release, 'available');
     }
 
+    /** Return the timestamp for a fresh cached "no stable release" result. */
+    private static function readNoReleaseCache(string $path): ?int
+    {
+        if (!is_file($path) || !is_readable($path)) {
+            return null;
+        }
+        $data = json_decode((string) @file_get_contents($path), true);
+        if (!is_array($data) || ($data['status'] ?? '') !== 'no_release') {
+            return null;
+        }
+        $checked_at = (int) ($data['checked_at'] ?? 0);
+        return $checked_at > 0
+            && $checked_at <= time()
+            && (time() - $checked_at) < self::CACHE_TTL
+            ? $checked_at
+            : null;
+    }
+
+    /** @return array{status:string,version:null,url:null,name:null,published_at:null,checked_at:int} */
+    private static function noReleaseResult(int $checked_at): array
+    {
+        return [
+            'status' => 'no_release',
+            'version' => null,
+            'url' => null,
+            'name' => null,
+            'published_at' => null,
+            'checked_at' => $checked_at,
+        ];
+    }
+
     /** @return array{version:string,url:?string,name:?string,published_at:?string,checked_at:int}|null */
     private static function readCache(string $path): ?array
     {
@@ -85,8 +130,9 @@ final class UpdateChecker
         }
         $data = json_decode((string) @file_get_contents($path), true);
         if (!is_array($data)
-            || !preg_match('/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/', (string) ($data['version'] ?? ''))
+            || !preg_match('/^\d+\.\d+\.\d+$/', (string) ($data['version'] ?? ''))
             || (int) ($data['checked_at'] ?? 0) <= 0
+            || (int) $data['checked_at'] > time()
         ) {
             return null;
         }
