@@ -137,17 +137,29 @@ final class CredentialAdminService
             }
             $itemtype = (string) ($row['itemtype'] ?? '');
             $items_id = (int) ($row['items_id'] ?? 0);
-            $credential_id = $itemtype === Credential::class
-                ? $items_id
-                : (int) trim((string) ($row['new_value'] ?? ''), "# \t\n\r\0\x0B");
 
-            if ($itemtype !== Credential::class && CredentialItem::isSupportedItemtype($itemtype)) {
-                $item = CredentialItem::loadReadableItem($itemtype, $items_id);
-                $item_name = $item !== null ? (string) $item->getName() : sprintf('%s #%d', $itemtype::getTypeName(1), $items_id);
+            // Show only events whose credential or originating GLPI item is
+            // currently readable in the active entity scope. This prevents the
+            // audit panel from revealing IDs or activity from inaccessible entities.
+            if ($itemtype === Credential::class) {
+                $credential = new Credential();
+                if (!$credential->getFromDB($items_id)
+                    || !Session::haveAccessToEntity((int) ($credential->fields['entities_id'] ?? -1))
+                ) {
+                    continue;
+                }
+                $credential_id = $items_id;
+                $item_name = (string) ($credential->fields['name'] ?? __('Credential record', 'credentials'));
             } else {
-                $item_name = $itemtype === Credential::class
-                    ? __('Credential record', 'credentials')
-                    : sprintf('%s #%d', $itemtype, $items_id);
+                if (!CredentialItem::isSupportedItemtype($itemtype)) {
+                    continue;
+                }
+                $item = CredentialItem::loadReadableItem($itemtype, $items_id);
+                if ($item === null || !Session::haveAccessToEntity(CredentialItem::resolveParentEntityID($item))) {
+                    continue;
+                }
+                $credential_id = (int) trim((string) ($row['new_value'] ?? ''), "# \\t\\n\\r\\0\\x0B");
+                $item_name = (string) $item->getName();
             }
 
             $events[] = [
