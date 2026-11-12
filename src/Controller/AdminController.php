@@ -32,6 +32,9 @@ final class AdminController extends AbstractController
     public function index(Request $request): Response
     {
         Session::checkRight('config', READ);
+        $can_manage_config = Session::haveRight('config', UPDATE);
+        $can_read_credentials = Session::haveRight(Credential::$rightname, READ);
+        $can_update_credentials = Session::haveRight(Credential::$rightname, UPDATE);
         $force_check = false;
 
         if ($request->isMethod('POST')) {
@@ -84,6 +87,8 @@ final class AdminController extends AbstractController
             'export_url' => Paths::routeUrl('config/export'),
             'import_url' => Paths::routeUrl('config/import'),
             'categories_text' => implode("\n", AdminSettings::categories()),
+            'can_manage_config' => $can_manage_config,
+            'can_update_credentials' => $can_update_credentials,
             'retention_days' => AdminSettings::retentionDays(),
             'stats' => $data['stats'],
             'review_rows' => $data['review_rows'],
@@ -91,10 +96,10 @@ final class AdminController extends AbstractController
             'audit_rows' => $data['audit_rows'],
             'supported_types' => $supported_types,
             'encryption_ready' => Credential::isEncryptionReady(),
-            'can_export' => Session::haveRight(Credential::RIGHT_REVEAL, READ)
-                && Session::haveRight(Credential::$rightname, READ),
-            'can_import' => Session::haveRight(Credential::RIGHT_REVEAL, READ)
-                && Session::haveRight(Credential::$rightname, CREATE),
+            'can_export' => $can_manage_config && $can_read_credentials
+                && Session::haveRight(Credential::RIGHT_REVEAL, READ),
+            'can_import' => $can_manage_config && Session::haveRight(Credential::$rightname, CREATE)
+                && Session::haveRight(Credential::RIGHT_REVEAL, READ),
         ]);
     }
 
@@ -665,6 +670,14 @@ final class AdminController extends AbstractController
         global $DB;
 
         $stats = ['active' => 0, 'archived' => 0, 'expired' => 0, 'review_due' => 0];
+        if (!Session::haveRight(Credential::$rightname, READ)) {
+            return [
+                'stats' => $stats,
+                'review_rows' => [],
+                'archive_rows' => [],
+                'audit_rows' => [],
+            ];
+        }
         $review_rows = [];
         $archive_rows = [];
 
