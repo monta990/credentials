@@ -7,6 +7,8 @@
 - Added a recent activity view based on GLPI credential history events, scoped to items the current profile can read and excluding protected values.
 - Added archived credential review, restore by linking to a valid item, configurable retention and an explicit permanent-deletion action for eligible unlinked records.
 - Added a separate profile permission for credential backup export/import.
+- Import now keeps credentials archived when linked destination items cannot be matched, allowing an administrator to restore and relink them manually instead of losing the credential data.
+- Administrative audit and archive details respect the Credentials read permission; permanent archive purge additionally requires the Credentials delete permission.
 - Added password-protected backup files using Argon2id key derivation and authenticated XChaCha20-Poly1305 encryption. Import validates destination entities and item associations, creates new records only, and re-encrypts protected values with the destination GLPI security key.
 - Added regression checks for lifecycle statuses, administrative controls and encrypted backup contracts. Updated Spanish (Mexico), Spanish (Spain) and French translations.
 
