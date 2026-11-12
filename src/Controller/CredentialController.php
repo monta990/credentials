@@ -748,6 +748,10 @@ final class CredentialController extends AbstractController
         $cancel_url = $is_update && (!$is_in_modal || $return_to_details)
             ? $detail_url
             : $parent->getFormURLWithID($items_id);
+        $categories = AdminSettings::categories();
+        if ($values['category'] !== '' && !in_array($values['category'], $categories, true)) {
+            array_unshift($categories, $values['category']);
+        }
 
         return $this->renderGlpiPage(
             $request,
@@ -767,7 +771,7 @@ final class CredentialController extends AbstractController
                 'form_url' => $form_url,
                 'cancel_url' => $cancel_url,
                 'encryption_ready' => Credential::isEncryptionReady(),
-                'categories' => AdminSettings::categories(),
+                'categories' => $categories,
             ],
         );
     }
