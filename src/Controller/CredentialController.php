@@ -355,6 +355,19 @@ final class CredentialController extends AbstractController
             'modal_title' => __('Credential details', 'credentials') . ($credential_id > 0 ? ' — ' . (string) $credential->fields['name'] : ''),
             'credential_id' => $credential_id,
             'credential_name' => $credential_id > 0 ? (string) $credential->fields['name'] : '',
+            'category_name' => $credential_id > 0
+                ? (CredentialCategory::getById((int) ($credential->fields['plugin_credentials_categories_id'] ?? 0))['name'] ?? '')
+                : '',
+            'date_expires' => $credential_id > 0 ? (string) ($credential->fields['date_expires'] ?? '') : '',
+            'date_last_review' => $credential_id > 0 ? (string) ($credential->fields['date_last_review'] ?? '') : '',
+            'date_next_review' => $credential_id > 0 ? (string) ($credential->fields['date_next_review'] ?? '') : '',
+            'reviewer_name' => $credential_id > 0 ? $this->reviewerName((int) ($credential->fields['reviewer_users_id'] ?? 0)) : '',
+            'credential_status' => $credential_id > 0
+                ? CredentialStatus::fromDates(
+                    (string) ($credential->fields['date_expires'] ?? ''),
+                    (string) ($credential->fields['date_next_review'] ?? '')
+                )
+                : null,
             'link_count' => $link_count,
             'linked_items_url' => $linked_items_url,
             'detail_js_url' => PLUGIN_CREDENTIALS_WEBDIR . '/js/credential-details.js?v=' . PLUGIN_CREDENTIALS_VERSION,
@@ -534,10 +547,26 @@ final class CredentialController extends AbstractController
         if (!Credential::isEncryptionReady()) {
             $errors[] = __('The GLPI security key is unavailable or invalid. Contact your GLPI administrator.', 'credentials');
         }
-        $values = ['name' => '', 'login' => '', 'url' => '', 'notes' => ''];
+        $entity_id = CredentialItem::resolveParentEntityID($parent);
+        $values = [
+            'name' => '',
+            'login' => '',
+            'url' => '',
+            'notes' => '',
+            'category_id' => 0,
+            'date_expires' => '',
+            'date_last_review' => '',
+            'date_next_review' => '',
+            'reviewer_users_id' => 0,
+        ];
 
         if ($is_update) {
             $values['name'] = (string) $credential->fields['name'];
+            $values['category_id'] = (int) ($credential->fields['plugin_credentials_categories_id'] ?? 0);
+            $values['date_expires'] = (string) ($credential->fields['date_expires'] ?? '');
+            $values['date_last_review'] = (string) ($credential->fields['date_last_review'] ?? '');
+            $values['date_next_review'] = (string) ($credential->fields['date_next_review'] ?? '');
+            $values['reviewer_users_id'] = (int) ($credential->fields['reviewer_users_id'] ?? 0);
             foreach (['login', 'url', 'notes'] as $field) {
                 $ciphertext = (string) ($credential->fields[$field] ?? '');
                 $plaintext_value = Credential::decryptValue($ciphertext);
@@ -555,6 +584,11 @@ final class CredentialController extends AbstractController
                 'login' => trim($request->request->getString('login')),
                 'url' => trim($request->request->getString('url')),
                 'notes' => trim($request->request->getString('notes')),
+                'category_id' => $request->request->getInt('category_id'),
+                'date_expires' => trim($request->request->getString('date_expires')),
+                'date_last_review' => trim($request->request->getString('date_last_review')),
+                'date_next_review' => trim($request->request->getString('date_next_review')),
+                'reviewer_users_id' => $request->request->getInt('reviewer_users_id'),
             ];
             // Never repopulate the password control after a failed POST.
             $plaintext = (string) $request->request->get('password', '');
@@ -575,6 +609,18 @@ final class CredentialController extends AbstractController
             }
             if (strlen($plaintext) > 48000) {
                 $errors[] = __('Password is too long. The maximum supported length is 48,000 bytes.', 'credentials');
+            }
+            if ($values['category_id'] > 0 && !CredentialCategory::isAvailableForEntity($values['category_id'], $entity_id)) {
+                $errors[] = __('Select a valid category for this credential entity.', 'credentials');
+            }
+            foreach (['date_expires', 'date_last_review', 'date_next_review'] as $date_field) {
+                if (!CredentialStatus::validDate($values[$date_field])) {
+                    $errors[] = __('Review and expiration dates must use a valid calendar date.', 'credentials');
+                    break;
+                }
+            }
+            if ($values['reviewer_users_id'] > 0 && !$this->validReviewer($values['reviewer_users_id'], $entity_id)) {
+                $errors[] = __('Select an available GLPI user as the review responsible person.', 'credentials');
             }
             if ($values['url'] !== '') {
                 $url_parts = parse_url($values['url']);
@@ -609,7 +655,12 @@ final class CredentialController extends AbstractController
                     'login' => $encrypted_login,
                     'url' => $encrypted_url,
                     'notes' => $encrypted_notes,
-                    'entities_id' => CredentialItem::resolveParentEntityID($parent),
+                    'entities_id' => $entity_id,
+                    'plugin_credentials_categories_id' => $values['category_id'],
+                    'date_expires' => $values['date_expires'] !== '' ? $values['date_expires'] : null,
+                    'date_last_review' => $values['date_last_review'] !== '' ? $values['date_last_review'] : null,
+                    'date_next_review' => $values['date_next_review'] !== '' ? $values['date_next_review'] : null,
+                    'reviewer_users_id' => $values['reviewer_users_id'],
                 ];
                 if (!$is_update) {
                     $input['users_id'] = (int) Session::getLoginUserID();
@@ -730,6 +781,8 @@ final class CredentialController extends AbstractController
                 'associated_item_name' => (string) $parent->getName(),
                 'errors' => $errors,
                 'values' => $values,
+                'categories' => CredentialCategory::getOptions($entity_id),
+                'reviewer_options' => $this->reviewerOptions($entity_id, (int) $values['reviewer_users_id']),
                 'form_url' => $form_url,
                 'cancel_url' => $cancel_url,
                 'encryption_ready' => Credential::isEncryptionReady(),
@@ -783,6 +836,68 @@ final class CredentialController extends AbstractController
         }
 
         return $ticket;
+    }
+
+    /** Validate a review responsible user without accepting a stale/deleted account. */
+    private function validReviewer(int $users_id, int $entities_id): bool
+    {
+        if ($users_id <= 0) {
+            return true;
+        }
+        $user = new \\User();
+        return $user->getFromDB($users_id)
+            && (int) ($user->fields['is_deleted'] ?? 0) === 0
+            && Session::haveAccessToEntity((int) ($user->fields['entities_id'] ?? 0))
+            && Session::haveAccessToEntity($entities_id);
+    }
+
+    /** @return array<int,array{id:int,label:string}> */
+    private function reviewerOptions(int $entities_id, int $selected_id = 0): array
+    {
+        global $DB;
+        $options = [];
+        if (Session::haveRight('user', READ)) {
+            $iterator = $DB->request([
+                'SELECT' => ['id', 'name', 'realname', 'firstname', 'entities_id'],
+                'FROM' => \\User::getTable(),
+                'WHERE' => ['is_deleted' => 0],
+                'ORDER' => ['name'],
+                'LIMIT' => 250,
+            ]);
+            foreach ($iterator as $row) {
+                if (!Session::haveAccessToEntity((int) $row['entities_id'])) {
+                    continue;
+                }
+                $display = trim((string) ($row['realname'] ?? '') . ' ' . (string) ($row['firstname'] ?? ''));
+                $login = (string) $row['name'];
+                $options[] = [
+                    'id' => (int) $row['id'],
+                    'label' => $display !== '' ? $display . ' (' . $login . ')' : $login,
+                ];
+            }
+        }
+
+        if ($selected_id > 0 && !array_filter($options, static fn(array $option): bool => $option['id'] === $selected_id)) {
+            $label = $this->reviewerName($selected_id);
+            if ($label !== '') {
+                $options[] = ['id' => $selected_id, 'label' => $label];
+            }
+        }
+        return $options;
+    }
+
+    private function reviewerName(int $users_id): string
+    {
+        if ($users_id <= 0) {
+            return '';
+        }
+        $user = new \\User();
+        if (!$user->getFromDB($users_id) || (int) ($user->fields['is_deleted'] ?? 0) !== 0) {
+            return '';
+        }
+        $display = trim((string) ($user->fields['realname'] ?? '') . ' ' . (string) ($user->fields['firstname'] ?? ''));
+        $login = (string) ($user->fields['name'] ?? '');
+        return $display !== '' ? $display . ' (' . $login . ')' : $login;
     }
 
     private function renderGlpiPage(
