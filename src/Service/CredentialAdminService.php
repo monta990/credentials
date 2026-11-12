@@ -206,7 +206,7 @@ final class CredentialAdminService
             if (!$credential->getFromDB($credential_id)
                 || (int) ($credential->fields['is_deleted'] ?? 0) !== 1
                 || (int) ($credential->fields['entities_id'] ?? -1) !== $entity_id
-                || CredentialItemLink::countForCredential($credential_id) > 0
+                || CredentialItemLink::getLinksForCredentialForUpdate($credential_id) !== []
             ) {
                 $DB->rollBack();
                 return false;
