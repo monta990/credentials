@@ -226,7 +226,7 @@
             {% endif %}
             <form method="post" action="{{ config_url }}" data-credentials-confirm="{{ __('This permanently deletes archived credentials older than the retention period. This cannot be undone. Continue?', 'credentials')|e('html_attr') }}">
                 <input type="hidden" name="action" value="purge_archived">
-                <button class="btn btn-danger" type="submit" {% if retention_days == 0 or dashboard.purge_eligible == 0 %}disabled{% endif %}><i class="ti ti-trash me-1" aria-hidden="true"></i>{{ __('Permanently delete eligible archived credentials', 'credentials') }}</button>
+                <button class="btn btn-danger" type="submit" {% if retention_days == 0 or dashboard.purge_eligible == 0 or not can_purge %}disabled{% endif %}><i class="ti ti-trash me-1" aria-hidden="true"></i>{{ __('Permanently delete eligible archived credentials', 'credentials') }}</button>
             </form>
         </div>
     </div>
