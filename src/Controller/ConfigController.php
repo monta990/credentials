@@ -143,6 +143,7 @@ final class ConfigController extends AbstractController
             'encryption_ready' => Credential::isEncryptionReady(),
             'active_entity' => (int) ($_SESSION['glpiactive_entity'] ?? 0),
             'admin_user' => (string) ($_SESSION['glpiname'] ?? ''),
+            'config_url' => PLUGIN_CREDENTIALS_WEBDIR . '/config',
             'export_url' => PLUGIN_CREDENTIALS_WEBDIR . '/config/export',
             'import_url' => PLUGIN_CREDENTIALS_WEBDIR . '/config/import',
         ]);
