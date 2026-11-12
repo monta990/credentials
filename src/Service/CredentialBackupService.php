@@ -141,6 +141,9 @@ final class CredentialBackupService
             'exported_at' => gmdate(DATE_ATOM),
             'entries' => $entries,
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (strlen($payload) > self::MAX_FILE_BYTES) {
+            throw new \\RuntimeException(__('The encrypted backup would exceed the 20 MB download limit. Export fewer credentials at a time.', 'credentials'));
+        }
 
         $salt = random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
         $nonce = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES);
@@ -164,7 +167,7 @@ final class CredentialBackupService
             sodium_memzero($key);
         }
 
-        return json_encode([
+        $envelope = json_encode([
             'format' => self::FORMAT,
             'format_version' => self::FORMAT_VERSION,
             'cipher' => 'xchacha20poly1305-ietf',
@@ -175,6 +178,10 @@ final class CredentialBackupService
             'nonce' => base64_encode($nonce),
             'ciphertext' => base64_encode($ciphertext),
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        if (strlen($envelope) > self::MAX_FILE_BYTES) {
+            throw new \\RuntimeException(__('The encrypted backup would exceed the 20 MB download limit. Export fewer credentials at a time.', 'credentials'));
+        }
+        return $envelope;
     }
 
     /**
@@ -305,7 +312,7 @@ final class CredentialBackupService
                     'date_next_review' => $entry['date_next_review'] ?: null,
                     'reviewer_users_id' => $entry['reviewer_users_id'],
                     'users_id' => (int) Session::getLoginUserID(),
-                    'date_creation' => $entry['date_creation'] ?: (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
+                    'date_creation' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
                 ]);
                 if ($new_id <= 0) {
                     throw new \RuntimeException(__('A credential could not be created. The import was cancelled.', 'credentials'));
@@ -314,7 +321,7 @@ final class CredentialBackupService
                 if ($entry['archived']) {
                     if ($DB->update(Credential::getTable(), [
                         'is_deleted' => 1,
-                        'date_mod' => $entry['date_mod'] ?: (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
+                        'date_mod' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
                     ], ['id' => $new_id]) === false) {
                         throw new \RuntimeException(__('An archived credential could not be restored from the backup. The import was cancelled.', 'credentials'));
                     }
@@ -480,6 +487,17 @@ final class CredentialBackupService
                 return null;
             }
             $values[$field] = $value;
+        }
+        if ($values['url'] !== '') {
+            $parts = parse_url($values['url']);
+            if (!filter_var($values['url'], FILTER_VALIDATE_URL)
+                || !is_array($parts)
+                || !in_array(strtolower((string) ($parts['scheme'] ?? '')), ['http', 'https'], true)
+                || isset($parts['user'])
+                || isset($parts['pass'])
+            ) {
+                return null;
+            }
         }
         $dates = [];
         foreach (['date_expires', 'date_last_review', 'date_next_review'] as $field) {
