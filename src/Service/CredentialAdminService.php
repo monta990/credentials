@@ -102,6 +102,7 @@ final class CredentialAdminService
         $category_rows = CredentialCategory::getOptions($entities_id);
         return [
             'counts' => $counts,
+            'can_read_credentials' => $can_read_credentials,
             'attention' => $attention,
             'archived' => $archived,
             'purge_eligible' => $purge_eligible,
