@@ -282,6 +282,8 @@ final class CredentialBackupService
         global $DB;
         $DB->beginTransaction();
         $imported = 0;
+        $archived = 0;
+        $needs_relink = 0;
         try {
             foreach ($prepared as $entry) {
                 $category_id = $entry['category'] !== ''
@@ -329,6 +331,10 @@ final class CredentialBackupService
                         throw new \RuntimeException(__('The import could not be written to GLPI history. The import was cancelled.', 'credentials'));
                     }
                     $imported++;
+                    $archived++;
+                    if ($entry['needs_relink']) {
+                        $needs_relink++;
+                    }
                     continue;
                 }
 
@@ -361,7 +367,13 @@ final class CredentialBackupService
             throw $exception;
         }
 
-        return ['imported' => $imported, 'skipped' => $skipped, 'errors' => array_slice($errors, 0, 20)];
+        return [
+            'imported' => $imported,
+            'archived' => $archived,
+            'needs_relink' => $needs_relink,
+            'skipped' => $skipped,
+            'errors' => array_slice($errors, 0, 20),
+        ];
     }
 
     private static function validatePassphrase(string $passphrase): void
@@ -386,7 +398,7 @@ final class CredentialBackupService
 
     private static function userLogin(int $users_id): string
     {
-        if ($users_id <= 0) {
+        if ($users_id <= 0 || !Session::haveRight('user', READ)) {
             return '';
         }
         $user = new \User();
@@ -435,8 +447,9 @@ final class CredentialBackupService
             return null;
         }
 
+        $source_archived = !empty($entry['archived']);
         $links = [];
-        if (empty($entry['archived'])) {
+        if (!$source_archived) {
             foreach ($entry['links'] as $candidate) {
                 if (!is_array($candidate)) {
                     continue;
@@ -460,14 +473,14 @@ final class CredentialBackupService
                     'items_id' => $items_id,
                 ];
             }
-            if ($links === []) {
-                return null;
-            }
+            // If no destination item matches exactly, keep the imported secret
+            // as an archived record so it is not lost and can be linked manually.
         }
+        $needs_relink = !$source_archived && $links === [];
 
         $reviewer_id = 0;
         $reviewer_login = trim((string) ($entry['reviewer'] ?? ''));
-        if ($reviewer_login !== '') {
+        if ($reviewer_login !== '' && Session::haveRight('user', READ)) {
             $reviewer = $DB->request([
                 'SELECT' => ['id', 'entities_id'],
                 'FROM' => 'glpi_users',
@@ -524,7 +537,8 @@ final class CredentialBackupService
             'reviewer_users_id' => $reviewer_id,
             'date_creation' => mb_substr((string) ($entry['date_creation'] ?? ''), 0, 19),
             'date_mod' => mb_substr((string) ($entry['date_mod'] ?? ''), 0, 19),
-            'archived' => !empty($entry['archived']),
+            'archived' => $source_archived || $needs_relink,
+            'needs_relink' => $needs_relink,
             'links' => $links,
         ];
     }
