@@ -469,12 +469,14 @@ final class CredentialBackupService
         $reviewer_login = trim((string) ($entry['reviewer'] ?? ''));
         if ($reviewer_login !== '') {
             $reviewer = $DB->request([
-                'SELECT' => ['id'],
+                'SELECT' => ['id', 'entities_id'],
                 'FROM' => 'glpi_users',
                 'WHERE' => ['name' => $reviewer_login, 'is_deleted' => 0],
                 'LIMIT' => 1,
             ])->current();
-            if (is_array($reviewer)) {
+            if (is_array($reviewer)
+                && Session::haveAccessToEntity((int) ($reviewer['entities_id'] ?? -1))
+            ) {
                 $reviewer_id = (int) $reviewer['id'];
             }
         }
