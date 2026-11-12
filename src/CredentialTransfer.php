@@ -107,8 +107,13 @@ final class CredentialTransfer
 
                 $date_mod = self::currentTime();
                 if (count($credential_links) <= 1) {
+                    $destination_category = self::mapCategory(
+                        (int) ($credential['plugin_credentials_categories_id'] ?? 0),
+                        $destination_entity
+                    );
                     $updated = $DB->update(Credential::getTable(), [
                         'entities_id' => $destination_entity,
+                        'plugin_credentials_categories_id' => $destination_category,
                         'date_mod' => $date_mod,
                     ], [
                         'id' => $credential_id,
@@ -307,6 +312,11 @@ final class CredentialTransfer
                 'users_id',
                 'date_creation',
                 'date_mod',
+                'plugin_credentials_categories_id',
+                'date_expires',
+                'date_last_review',
+                'date_next_review',
+                'reviewer_users_id',
                 'is_deleted',
             ],
             'FROM' => Credential::getTable(),
@@ -328,6 +338,10 @@ final class CredentialTransfer
     {
         global $DB;
 
+        $category_id = self::mapCategory(
+            (int) ($credential['plugin_credentials_categories_id'] ?? 0),
+            $destination_entity
+        );
         $inserted = $DB->insert(Credential::getTable(), [
             'name' => (string) $credential['name'],
             'entities_id' => $destination_entity,
@@ -336,6 +350,11 @@ final class CredentialTransfer
             'url' => $credential['url'],
             'notes' => $credential['notes'],
             'users_id' => (int) $credential['users_id'],
+            'plugin_credentials_categories_id' => $category_id,
+            'date_expires' => $credential['date_expires'] ?? null,
+            'date_last_review' => $credential['date_last_review'] ?? null,
+            'date_next_review' => $credential['date_next_review'] ?? null,
+            'reviewer_users_id' => (int) ($credential['reviewer_users_id'] ?? 0),
             'date_creation' => self::currentTime(),
             'date_mod' => self::currentTime(),
             'link_lock_token' => bin2hex(random_bytes(16)),
@@ -351,6 +370,33 @@ final class CredentialTransfer
         }
 
         return $new_id;
+    }
+
+    /**
+     * Map an entity-specific category to the destination entity during a transfer.
+     * Global categories can be reused; entity-specific categories are recreated by
+     * name in the destination so the credential never points to an inaccessible
+     * source-entity category after it moves or is cloned.
+     */
+    private static function mapCategory(int $category_id, int $destination_entity): int
+    {
+        if ($category_id <= 0) {
+            return 0;
+        }
+
+        $category = CredentialCategory::getById($category_id);
+        if ($category === null) {
+            return 0;
+        }
+        if ($category['entities_id'] === 0 || $category['entities_id'] === $destination_entity) {
+            return $category_id;
+        }
+
+        $mapped = CredentialCategory::findOrCreateByName($category['name'], $destination_entity);
+        if ($mapped <= 0) {
+            throw new \\RuntimeException('Unable to create or find the destination credential category during item transfer.');
+        }
+        return $mapped;
     }
 
     /**
