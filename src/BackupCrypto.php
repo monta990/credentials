@@ -28,7 +28,9 @@ final class BackupCrypto
         $key = hash_pbkdf2('sha256', $passphrase, $salt, self::ITERATIONS, 32, true);
         $tag = '';
         $ciphertext = openssl_encrypt($plaintext, self::CIPHER, $key, OPENSSL_RAW_DATA, $nonce, $tag, self::AAD, 16);
-        sodium_memzero($key);
+        if (function_exists('sodium_memzero')) {
+            sodium_memzero($key);
+        }
 
         if (!is_string($ciphertext) || strlen($tag) !== 16) {
             throw new \RuntimeException('The encrypted backup could not be created.');
@@ -76,7 +78,9 @@ final class BackupCrypto
 
         $key = hash_pbkdf2('sha256', $passphrase, $salt, self::ITERATIONS, 32, true);
         $plaintext = openssl_decrypt($ciphertext, self::CIPHER, $key, OPENSSL_RAW_DATA, $nonce, $tag, self::AAD);
-        sodium_memzero($key);
+        if (function_exists('sodium_memzero')) {
+            sodium_memzero($key);
+        }
 
         if (!is_string($plaintext)) {
             throw new \InvalidArgumentException('The password is incorrect or the backup has been altered.');
