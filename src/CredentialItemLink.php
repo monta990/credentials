@@ -331,6 +331,9 @@ final class CredentialItemLink extends CommonDBTM
                     if ($remaining === []) {
                         $updated = $DB->update(Credential::getTable(), [
                             'is_deleted' => 1,
+                            'archived_at' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
+                            'archived_by' => (int) Session::getLoginUserID(),
+                            'archive_reason' => 'Linked GLPI item permanently removed',
                             'date_mod'   => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
                         ], [
                             'id' => $credential_id,
