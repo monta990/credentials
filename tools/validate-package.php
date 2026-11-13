@@ -474,6 +474,7 @@ foreach ([
     'src/Service/CredentialLifecycleReminderService.php',
     'src/NotificationTargetCredential.php',
     'tests/php/credential_lifecycle_reminder_test.php',
+    'tests/php/credential_reminder_settings_test.php',
     'templates/config.html.twig',
 ] as $required_admin_file) {
     if (!is_file($root . '/' . $required_admin_file)) {

@@ -108,6 +108,22 @@ namespace {
     ), 'dates beyond the 30-day window should not be included');
 
     assertSameValue([
+        ['type' => 'expiry', 'date' => '2027-01-12'],
+    ], CredentialLifecycleReminderService::dueReminderTypes(
+        '2027-01-12',
+        null,
+        $today,
+        60
+    ), 'configured 60-day window should include dates beyond the default 30-day window');
+
+    assertSameValue([], CredentialLifecycleReminderService::dueReminderTypes(
+        '2027-11-14',
+        null,
+        $today,
+        365
+    ), 'dates beyond the maximum 365-day window should not be included');
+
+    assertSameValue([
         ['type' => 'expiry', 'date' => '2026-12-01'],
         ['type' => 'review', 'date' => '2026-12-01'],
     ], CredentialLifecycleReminderService::dueReminderTypes(

@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 0.0.33\n"
+"Project-Id-Version: Credentials 0.0.34\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-06 06:40+0000\n"
 "PO-Revision-Date: 2026-11-05 19:50-0700\n"
@@ -831,3 +831,43 @@ msgstr "Votre profil ne permet pas de consulter l’activité des identifiants."
 
 msgid "Your profile does not have permission to view archived credential details."
 msgstr "Votre profil ne permet pas de consulter les détails des identifiants archivés."
+
+msgid "Lifecycle email reminders"
+msgstr "Rappels de cycle de vie par e-mail"
+
+msgid "Enable lifecycle email reminders"
+msgstr "Activer les rappels de cycle de vie par e-mail"
+
+msgid "Days before expiration or review"
+msgstr "Nombre de jours avant l'expiration ou la révision"
+
+msgid "Save reminder settings"
+msgstr "Enregistrer les paramètres des rappels"
+
+msgid "Overdue dates are always included, regardless of this look-ahead period."
+msgstr "Les dates échues sont toujours incluses, quelle que soit cette période d'anticipation."
+
+msgid "GLPI email notifications are enabled."
+msgstr "Les notifications par e-mail de GLPI sont activées."
+
+msgid "GLPI email notifications are disabled. Reminders will not be queued until you enable them in GLPI."
+msgstr "Les notifications par e-mail de GLPI sont désactivées. Aucun rappel ne sera mis en file d'attente tant qu'elles ne seront pas activées dans GLPI."
+
+msgid "The Credentials automatic action is registered and enabled."
+msgstr "L'action automatique de Credentials est enregistrée et activée."
+
+msgid "The Credentials automatic action is disabled or blocked in GLPI."
+msgstr "L'action automatique de Credentials est désactivée ou bloquée dans GLPI."
+
+msgid "The Credentials automatic action is not registered."
+msgstr "L'action automatique de Credentials n'est pas enregistrée."
+
+msgid "The configured period applies to email reminders. Dashboard status indicators keep their existing 30-day definition."
+msgstr "La période configurée s'applique aux rappels par e-mail. Les indicateurs du tableau de bord conservent leur définition actuelle de 30 jours."
+
+msgid "The reminder period must be between 1 and 365 days."
+msgstr "Le délai de rappel doit être compris entre 1 et 365 jours."
+
+msgid "Lifecycle reminder settings were saved."
+msgstr "Les paramètres de rappel du cycle de vie ont été enregistrés."
+

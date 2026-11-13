@@ -98,6 +98,14 @@ Desde esa página, los administradores pueden:
 
 Las fechas de vencimiento y revisión son recordatorios administrativos. Credentials no cambia ni rota contraseñas automáticamente.
 
+### Recordatorios automáticos por correo
+
+Credentials registra una tarea automática diaria de GLPI para avisar al responsable de revisión sobre vencimientos y revisiones atrasadas o próximas. En **Configuración > Plugins > Credentials > Configuración**, el administrador puede activar o pausar los avisos y elegir una anticipación de 1 a 365 días (30 por defecto). Las fechas atrasadas siempre se incluyen.
+
+Para enviar los correos, también se debe habilitar el sistema global de notificaciones de GLPI y configurar una notificación para el tipo **Credential**, evento **Expiration and review follow-up**, destinatario **Review responsible** y una plantilla por correo. La pantalla de configuración muestra si las notificaciones globales y la tarea automática de Credentials están activas. El responsable asignado debe tener una cuenta activa, acceso a la entidad y un correo predeterminado.
+
+La deduplicación evita repetir diariamente el mismo aviso para la misma credencial, entidad, fecha y responsable. Si el vencimiento y la revisión coinciden, se genera un único aviso. El mensaje no incluye contraseñas ni otros valores protegidos.
+
 ## Exportar e importar credenciales
 
 Credentials permite generar un **respaldo protegido con contraseña** que contiene las credenciales y su información relacionada. El archivo se cifra y no expone las contraseñas como texto legible.
