@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-namespace GlpiPlugin\\Credentials;
+namespace GlpiPlugin\Credentials;
 
 /**
  * Password-encrypted portable archive. The archive password is independent
@@ -22,7 +22,7 @@ final class VaultArchive
     {
         self::assertPassphrase($passphrase);
         if (!extension_loaded('sodium')) {
-            throw new \\RuntimeException('The sodium extension is required for encrypted credential backups.');
+            throw new \RuntimeException('The sodium extension is required for encrypted credential backups.');
         }
 
         $plaintext = json_encode(
@@ -30,7 +30,7 @@ final class VaultArchive
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
         if (strlen($plaintext) > self::MAX_BYTES) {
-            throw new \\RuntimeException('The credential backup is too large.');
+            throw new \RuntimeException('The credential backup is too large.');
         }
 
         $salt = random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
@@ -70,7 +70,7 @@ final class VaultArchive
     {
         self::assertPassphrase($passphrase);
         if (!extension_loaded('sodium') || $archive === '' || strlen($archive) > self::MAX_BYTES + 8192) {
-            throw new \\RuntimeException('The selected credential backup is invalid.');
+            throw new \RuntimeException('The selected credential backup is invalid.');
         }
 
         try {
@@ -84,7 +84,7 @@ final class VaultArchive
                 || (int) ($envelope['opslimit'] ?? 0) !== SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE
                 || (int) ($envelope['memlimit'] ?? 0) !== SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE
             ) {
-                throw new \\RuntimeException('The selected credential backup is not supported.');
+                throw new \RuntimeException('The selected credential backup is not supported.');
             }
 
             $salt = base64_decode((string) ($envelope['salt'] ?? ''), true);
@@ -95,7 +95,7 @@ final class VaultArchive
                 || !is_string($nonce) || strlen($nonce) !== SODIUM_CRYPTO_SECRETBOX_NONCEBYTES
                 || !is_string($ciphertext) || strlen($ciphertext) < SODIUM_CRYPTO_SECRETBOX_MACBYTES
             ) {
-                throw new \\RuntimeException('The selected credential backup is invalid or corrupted.');
+                throw new \RuntimeException('The selected credential backup is invalid or corrupted.');
             }
 
             $key = sodium_crypto_pwhash(
@@ -113,25 +113,25 @@ final class VaultArchive
             }
 
             if (!is_string($plaintext)) {
-                throw new \\RuntimeException('The backup password is incorrect or the file was modified.');
+                throw new \RuntimeException('The backup password is incorrect or the file was modified.');
             }
 
             $payload = json_decode($plaintext, true, 64, JSON_THROW_ON_ERROR);
             sodium_memzero($plaintext);
             if (!is_array($payload) || ($payload['format'] ?? null) !== self::FORMAT || (int) ($payload['format_version'] ?? 0) !== self::FORMAT_VERSION) {
-                throw new \\RuntimeException('The credential backup contents are not supported.');
+                throw new \RuntimeException('The credential backup contents are not supported.');
             }
 
             return $payload;
-        } catch (\\JsonException $exception) {
-            throw new \\RuntimeException('The selected credential backup is invalid or corrupted.', 0, $exception);
+        } catch (\JsonException $exception) {
+            throw new \RuntimeException('The selected credential backup is invalid or corrupted.', 0, $exception);
         }
     }
 
     private static function assertPassphrase(string $passphrase): void
     {
         if (strlen($passphrase) < 12 || strlen($passphrase) > 1024) {
-            throw new \\InvalidArgumentException('Use a backup password between 12 and 1024 bytes.');
+            throw new \InvalidArgumentException('Use a backup password between 12 and 1024 bytes.');
         }
     }
 }
