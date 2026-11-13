@@ -14,7 +14,7 @@ use GlpiPlugin\Credentials\CredentialItem;
 use GlpiPlugin\Credentials\CredentialTicketTab;
 use GlpiPlugin\Credentials\Profile;
 
-define('PLUGIN_CREDENTIALS_VERSION', '0.0.32');
+define('PLUGIN_CREDENTIALS_VERSION', '0.0.33');
 define('PLUGIN_CREDENTIALS_MIN_GLPI', '12.0.0');
 define('PLUGIN_CREDENTIALS_MAX_GLPI', '12.0.99');
 
@@ -55,7 +55,7 @@ function plugin_init_credentials(): void
     // Register the CommonDBTM itemtype because GLPI's native Log history links
     // plugin events to Credential::class and resolves the linked itemtype to
     // display getHistoryEntry().
-    Plugin::registerClass(Credential::class);
+    Plugin::registerClass(Credential::class, ['notificationtemplates_types' => true]);
     Plugin::registerClass(Profile::class, ['addtabon' => \Profile::class]);
     $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['credentials'][] = 'js/credentials.js';
     $PLUGIN_HOOKS[Hooks::ADD_CSS]['credentials'][] = 'css/credentials.css?v=' . PLUGIN_CREDENTIALS_VERSION;

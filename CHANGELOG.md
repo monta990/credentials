@@ -1,3 +1,13 @@
+## 0.0.33 — 2026-11-13
+
+- Added a daily GLPI automatic action for expiration and review reminders, covering overdue dates and dates within the next 30 days.
+- Added a native GLPI notification event and a dedicated **Review responsible** recipient so reminders are delivered through the configured GLPI notification template and queue.
+- Reminders are sent only when notifications are enabled, an active event/template and reviewer recipient are configured for the credential entity, and the assigned reviewer is active, has entity access and has a default email address.
+- Added an idempotency ledger that prevents repeated reminders for the same credential, entity, due date and reviewer. Updating the due date or changing the reviewer can create a new reminder; equal expiration and review dates share one notice.
+- Notification processing selects and exposes only the credential ID, name, entity, reviewer and due dates. Login, password, URL, notes and encrypted values are not included in the notification payload or template tags.
+- Archived credential purge and plugin uninstall now clean up reminder markers and the registered automatic action.
+- Added regressions for overdue/upcoming dates, invalid dates, combined same-day reminders, recipient targeting and protected-field non-disclosure.
+
 ## 0.0.32 — 2026-11-12
 
 - Added an independent GLPI configuration page for Credentials, keeping the user, asset and ticket tabs focused on day-to-day credential work.

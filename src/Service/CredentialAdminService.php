@@ -309,7 +309,12 @@ final class CredentialAdminService
                 }
                 if ($DB->delete(CredentialItemLink::getTable(), [
                     'plugin_credentials_credentials_id' => $id,
-                ]) === false || $DB->delete(Credential::getTable(), ['id' => $id, 'is_deleted' => 1]) === false) {
+                ]) === false
+                    || $DB->delete('glpi_plugin_credentials_reminders', [
+                        'plugin_credentials_credentials_id' => $id,
+                    ]) === false
+                    || $DB->delete(Credential::getTable(), ['id' => $id, 'is_deleted' => 1]) === false
+                ) {
                     throw new \RuntimeException('Unable to permanently remove archived credential.');
                 }
                 $purged++;

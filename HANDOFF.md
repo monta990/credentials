@@ -1,8 +1,10 @@
-# HANDOFF — Credentials 0.0.32
+# HANDOFF — Credentials 0.0.33
 
 ## Estado de implementación
 
-La rama feature/admin-center-export-import contiene la ampliación administrativa para GLPI 12.0.x. La versión del plugin se incrementó a 0.0.32. Esta rama todavía requiere CI completo y aceptación en una instancia GLPI real antes de fusionarse o publicarse.
+La versión 0.0.32 y el correctivo de selección de responsables (usuarios posteriores a las primeras 250 opciones) ya están integrados en `main`. La siguiente entrega se desarrolla en la rama `feat/lifecycle-email-reminders` y se propone mediante un PR independiente; todavía requiere CI completo, revisión de Codex y aceptación en una instancia GLPI 12 real antes de fusionarse o publicarse.
+
+La versión 0.0.33 agrega recordatorios automáticos por correo para vencimientos y revisiones, utilizando el programador, el sistema de notificaciones y la cola nativos de GLPI. No implementa un servidor SMTP propio ni modifica/rota contraseñas automáticamente.
 
 ## Funcionalidad incorporada
 
@@ -18,6 +20,12 @@ La rama feature/admin-center-export-import contiene la ampliación administrativ
 - Exportación protegida con contraseña mediante Argon2id y XChaCha20-Poly1305 autenticado; importación valida entidades y asociaciones y vuelve a cifrar secretos con GLPIKey de destino.
 - Importar crea IDs nuevos; no sobrescribe credenciales existentes. Las asociaciones se restablecen cuando coinciden tipo, ID, nombre y entidad. Si no hay una coincidencia, la credencial se importa archivada para permitir una vinculación manual posterior.
 - Transferencias entre entidades conservan fechas y responsable de revisión; las categorías específicas de la entidad se recrean en el destino y las credenciales clonadas apuntan a la categoría de destino.
+- Acción automática diaria registrada en GLPI (`CredentialLifecycleReminderService::cronSendReminders`) para revisar vencimientos y revisiones atrasadas o dentro de los próximos 30 días.
+- Evento de notificación nativo `Expiration and review follow-up`, tipo de elemento `Credential`, con destinatario específico `Review responsible`; la acción automática se registra como `sendreminders` con frecuencia diaria. El administrador debe crear/activar la notificación y asignarle una plantilla de correo en GLPI.
+- Solo se consumen recordatorios cuando las notificaciones globales están habilitadas, existe una notificación activa con plantilla y destinatario del responsable para la entidad, y el responsable está activo, tiene acceso a la entidad y tiene correo predeterminado.
+- Tabla `glpi_plugin_credentials_reminders` con clave única por credencial, entidad, fecha de vencimiento/revisión y responsable. Evita correos repetidos, incluidos dos avisos por campos que vencen en la misma fecha y ejecuciones concurrentes del cron.
+- El escaneo selecciona únicamente ID, nombre, entidad, responsable y fechas. El objeto mínimo enviado al sistema de notificaciones no contiene login, password, URL, notas ni ciphertext; las plantillas exponen ID, nombre, estado, fecha y acción.
+- La purga definitiva de credenciales elimina sus marcadores de recordatorio dentro de la misma transacción; la desinstalación elimina la tabla y desregistra las acciones automáticas del plugin.
 - Catálogos PO/MO actualizados para es_MX, es_ES y fr_FR.
 
 ## Seguridad y límites deliberados
@@ -28,10 +36,10 @@ La rama feature/admin-center-export-import contiene la ampliación administrativ
 - La exportación exige permiso de configuración, permiso dedicado de respaldo y derecho de lectura de credenciales.
 - La purga definitiva exige además derechos de lectura y eliminación de Credentials; tener acceso a la configuración no basta.
 - Los reportes de actividad no muestran contraseñas ni valores protegidos y deben limitarse a entidades y elementos legibles.
-- Las restauraciones y purgas son acciones administrativas explícitas; no hay borrado automático por cron.
+- Las restauraciones y purgas siguen siendo acciones administrativas explícitas; el cron nuevo solo genera notificaciones y nunca elimina credenciales.
 - La política de retención con valor 0 conserva indefinidamente los registros archivados y desactiva la purga manual.
 - El comprobador de GitHub nunca instala actualizaciones automáticamente.
-- Las fechas de vencimiento y revisión son recordatorios, no un mecanismo automático de rotación de contraseñas.
+- Las fechas de vencimiento y revisión pueden generar correos de recordatorio, pero no activan un mecanismo automático de rotación de contraseñas.
 - La importación tiene límite de 20 MB, 2,000 entradas y 250 relaciones por credencial. La exportación también valida que el archivo final no supere el límite de importación.
 
 ## Validación pendiente
@@ -43,12 +51,15 @@ La rama feature/admin-center-export-import contiene la ampliación administrativ
 - Probar exportación e importación con contraseña correcta/incorrecta, respaldo alterado, elementos inexistentes, IDs coincidentes con nombres diferentes, entidades no accesibles, archivados y archivos grandes.
 - Probar migración entre dos instancias GLPI usando claves GLPIKey diferentes y confirmar que los secretos importados se pueden revelar en el destino.
 - Probar restauración y purga con registros archivados con/sin enlaces y fechas de modificación anteriores/posteriores al periodo de retención.
+- Configurar en GLPI una notificación para el tipo Credential, evento Expiration and review follow-up, destinatario Review responsible y una plantilla de correo; ejecutar la acción automática manualmente en staging.
+- Probar responsables sin correo, inactivos, con fechas de vigencia de cuenta, sin perfil en la entidad y con acceso recursivo; confirmar que no se consume el marcador si el destinatario no es elegible.
+- Verificar correos vencidos y próximos, deduplicación por credencial/entidad/fecha/responsable, fechas coincidentes y ejecuciones de cron concurrentes.
 - Revisar el panel administrativo con administrador y perfiles restringidos.
 - Ejecutar PHPCS GLPI Standard y aceptación manual en navegador. CI cubre pruebas CLI y contratos estáticos/simulados; no sustituye una instancia GLPI viva.
 
 ## Notas de despliegue
 
-- Versión esperada del plugin: 0.0.32.
+- Versión esperada del plugin: 0.0.33.
 - GLPI: 12.0.x.
 - PHP mínimo declarado: 8.3.
 - La extensión PHP Sodium es necesaria para exportar/importar respaldos protegidos. Si no está disponible, las demás funciones siguen utilizables.
@@ -60,7 +71,9 @@ Consulta CHANGELOG.md para el historial completo.
 
 ---
 
-## Estado actual
+## Historial técnico de versiones anteriores
+
+Los siguientes apuntes preservan decisiones y comprobaciones de versiones previas; no sustituyen el estado 0.0.33 descrito al inicio.
 
 La versión `0.0.31` conserva los flujos funcionales de la versión `0.0.28`: la contraseña revelada se muestra en un `<input type="text" readonly>` seleccionable; copiar y ocultar leen y limpian `input.value`. Después de guardar desde el modal, `public/js/credential-frame.js` solicita la navegación completa del padre mediante `postMessage` same-origin validado. Cancelar sigue siendo independiente y no envía el formulario.
 

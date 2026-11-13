@@ -32,7 +32,7 @@ Instead of keeping the same information in separate places, your team can find i
 - 📋 **Quick copy:** Copy a password when access is needed.
 - 🧾 **Activity history:** Keep a record of important credential actions without exposing passwords.
 - 🏷️ **Categories:** Organize entries by systems, services, networks, servers or other groups defined by your team.
-- 📅 **Expiration and reviews:** Record expiration dates, last and next review dates, and the person responsible for reviewing each credential.
+- 📅 **Expiration and reviews:** Record expiration dates, last and next review dates, and the person responsible for reviewing each credential. Optional email reminders notify the assigned reviewer through GLPI. Optional email reminders notify the assigned reviewer through GLPI.
 - 🧭 **Administration page:** Review plugin updates, activity, upcoming reviews and archived records in one place.
 - 📦 **Protected backups:** Export and import credentials using a password-protected backup file.
 - 🌍 **Multiple languages:** English, Spanish and French translations.
@@ -114,7 +114,23 @@ Administrators can use this page to:
 - Choose how long archived credentials should be kept before they become eligible for permanent deletion.
 - Check whether the GLPI encryption key is available.
 
-Expiration and review dates are reminders. Credentials does not change or rotate passwords automatically.
+Expiration and review dates can generate email reminders. Credentials does not change or rotate passwords automatically.
+
+### Automatic lifecycle email reminders
+
+Credentials registers a daily GLPI automatic action. It checks active credentials with an assigned review responsible person and raises a reminder for an overdue expiration/review date or a date within the next 30 days.
+
+To enable email reminders, configure a GLPI notification for the **Credential** item type and the **Expiration and review follow-up** event. Add **Review responsible** as a recipient and select an email notification template. The template can use these tags:
+
+- `##credential.id##`
+- `##credential.name##`
+- `##credential.status##`
+- `##credential.date##`
+- `##credential.action##`
+
+Then make sure GLPI notifications are enabled and the Credentials automatic action named `sendreminders` is enabled under GLPI's automatic-action settings. The assigned reviewer must be an active GLPI user with access to the credential's entity and a default email address.
+
+The plugin records reminders by credential, entity, due date and reviewer, so it does not send the same reminder every day. If expiration and review share the same date, they are covered by one notice. Changing the date or responsible person allows a new reminder. No password or other protected credential value is included in notification data.
 
 ## Export and import
 
