@@ -89,6 +89,17 @@
                     {% endif %}
                 </div>
             </div>
+            <div class="mt-3" aria-live="polite">
+                {% if notification_setup.ready %}
+                    <div class="alert alert-success mb-0" role="status">{{ __('The Credential lifecycle email notification is correctly configured for the active entity.', 'credentials') }}</div>
+                {% elseif not notification_setup.event_found %}
+                    <div class="alert alert-warning mb-0" role="status">{{ __('No active Credential lifecycle notification was found for the active entity.', 'credentials') }}</div>
+                {% elseif not notification_setup.mail_template_found %}
+                    <div class="alert alert-warning mb-0" role="status">{{ __('A lifecycle notification exists, but it does not have an email template assigned.', 'credentials') }}</div>
+                {% else %}
+                    <div class="alert alert-warning mb-0" role="status">{{ __('The email notification is present, but the Review responsible recipient is not configured.', 'credentials') }}</div>
+                {% endif %}
+            </div>
             <p class="form-hint mt-3 mb-0">{{ __('The configured period applies to email reminders. Dashboard status indicators keep their existing 30-day definition.', 'credentials') }}</p>
         </div>
     </div>

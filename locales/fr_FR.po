@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 0.0.34\n"
+"Project-Id-Version: Credentials 0.0.35\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-06 06:40+0000\n"
 "PO-Revision-Date: 2026-11-05 19:50-0700\n"
@@ -870,4 +870,16 @@ msgstr "Le délai de rappel doit être compris entre 1 et 365 jours."
 
 msgid "Lifecycle reminder settings were saved."
 msgstr "Les paramètres de rappel du cycle de vie ont été enregistrés."
+
+msgid "The Credential lifecycle email notification is correctly configured for the active entity."
+msgstr "La notification par e-mail du cycle de vie de Credential est correctement configurée pour l'entité active."
+
+msgid "No active Credential lifecycle notification was found for the active entity."
+msgstr "Aucune notification active du cycle de vie de Credential n'a été trouvée pour l'entité active."
+
+msgid "A lifecycle notification exists, but it does not have an email template assigned."
+msgstr "Une notification de cycle de vie existe, mais aucun modèle d'e-mail ne lui est associé."
+
+msgid "The email notification is present, but the Review responsible recipient is not configured."
+msgstr "La notification par e-mail existe, mais le destinataire Review responsible n'est pas configuré."
 

@@ -1,3 +1,11 @@
+## 0.0.35 — 2026-11-13
+
+- Added entity-scoped diagnostics for the complete native GLPI lifecycle notification setup, using the same event, email-template and Review responsible target checks as the reminder scheduler.
+- The Credentials configuration page now distinguishes a missing active event notification, a missing email template, a missing Review responsible recipient, and a ready configuration for the active entity.
+- Refactored the scheduler's notification eligibility check to share the same diagnostic logic, avoiding divergence between what the administration page reports and what the cron accepts.
+- Added regressions for each incomplete notification configuration state and for a fully configured email notification, including the exact reviewer-target query scope.
+- Updated administrator documentation, handoff notes and locale catalogs; this PR is stacked on PR #5 and proposes version 0.0.35.
+
 ## 0.0.34 — 2026-11-13
 
 - Added administrator controls to enable or pause lifecycle email reminders and choose a look-ahead period from 1 to 365 days; existing installations keep reminders enabled with the original 30-day default.

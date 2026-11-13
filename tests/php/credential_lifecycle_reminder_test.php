@@ -11,6 +11,30 @@ namespace {
     final class Notification
     {
         public const USER_TYPE = 1;
+        public static array $eventNotifications = [];
+
+        public static function getNotificationsByEventAndType(string $event, string $itemtype, int $entities_id): array
+        {
+            return self::$eventNotifications;
+        }
+    }
+
+    final class Notification_NotificationTemplate
+    {
+        public const MODE_MAIL = 'mail';
+    }
+
+    final class FakeReminderDB
+    {
+        public array $targetsByNotification = [];
+        public array $lastCriteria = [];
+
+        public function request(array $criteria): array
+        {
+            $this->lastCriteria = $criteria;
+            $notificationId = (int) ($criteria['WHERE']['notifications_id'] ?? 0);
+            return $this->targetsByNotification[$notificationId] ?? [];
+        }
     }
 
     class CommonDBTM
@@ -143,6 +167,54 @@ namespace {
         null,
         'not-a-date'
     ), 'an invalid current date should stop the scan');
+
+    global $DB;
+    $DB = new FakeReminderDB();
+
+    assertSameValue([
+        'event_found' => false,
+        'mail_template_found' => false,
+        'reviewer_recipient_found' => false,
+        'ready' => false,
+    ], CredentialLifecycleReminderService::notificationSetupStatus(2), 'missing entity notification should be reported as not configured');
+
+    Notification::$eventNotifications = [
+        ['id' => 10, 'notificationtemplates_id' => 0, 'mode' => Notification_NotificationTemplate::MODE_MAIL],
+    ];
+    assertSameValue([
+        'event_found' => true,
+        'mail_template_found' => false,
+        'reviewer_recipient_found' => false,
+        'ready' => false,
+    ], CredentialLifecycleReminderService::notificationSetupStatus(2), 'event without an email template should be reported');
+
+    Notification::$eventNotifications = [
+        ['id' => 11, 'notificationtemplates_id' => 4, 'mode' => Notification_NotificationTemplate::MODE_MAIL],
+    ];
+    assertSameValue([
+        'event_found' => true,
+        'mail_template_found' => true,
+        'reviewer_recipient_found' => false,
+        'ready' => false,
+    ], CredentialLifecycleReminderService::notificationSetupStatus(2), 'email notification without reviewer target should be reported');
+    assertSameValue(
+        [
+            'notifications_id' => 11,
+            'type' => Notification::USER_TYPE,
+            'items_id' => NotificationTargetCredential::TARGET_REVIEWER,
+            'is_exclusion' => 0,
+        ],
+        $DB->lastCriteria['WHERE'],
+        'diagnostic uses the exact recipient scope used by the cron'
+    );
+
+    $DB->targetsByNotification[11] = [['id' => 901]];
+    assertSameValue([
+        'event_found' => true,
+        'mail_template_found' => true,
+        'reviewer_recipient_found' => true,
+        'ready' => true,
+    ], CredentialLifecycleReminderService::notificationSetupStatus(2), 'email template and reviewer recipient should report ready');
 
     $credential = new FakeCredential();
     $credential->fields = [
