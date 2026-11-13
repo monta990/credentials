@@ -77,9 +77,9 @@ function plugin_credentials_install(): bool
         ['value' => '']
     );
     $migration->addField(Credential::getTable(), 'category', 'string', ['value' => '']);
-    $migration->addField(Credential::getTable(), 'expires_at', 'date');
-    $migration->addField(Credential::getTable(), 'review_due_at', 'date');
-    $migration->addField(Credential::getTable(), 'reviewed_at', 'datetime');
+    $migration->addField(Credential::getTable(), 'expires_at', 'date', ['null' => true]);
+    $migration->addField(Credential::getTable(), 'review_due_at', 'date', ['null' => true]);
+    $migration->addField(Credential::getTable(), 'reviewed_at', 'datetime', ['null' => true]);
     $migration->addField(Credential::getTable(), 'reviewer_users_id', 'integer', ['value' => 0]);
     $migration->addRight(Credential::$rightname, ALLSTANDARDRIGHT, ['config' => READ | UPDATE]);
     $migration->addRight(Credential::RIGHT_REVEAL, READ, ['config' => READ | UPDATE]);
