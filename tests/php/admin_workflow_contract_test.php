@@ -37,7 +37,7 @@ $contracts = [
     [str_contains($controller, 'VaultArchive::encrypt(') && str_contains($controller, 'VaultArchive::decrypt('), 'Export/import must use the authenticated encrypted archive.'],
     [str_contains($controller, 'Credential::encryptValue($value)'), 'Imported secret values must be re-encrypted with the destination GLPIKey.'],
     [str_contains($controller, 'MAX_IMPORT_BYTES') && str_contains($controller, 'MAX_IMPORT_RECORDS'), 'Import must enforce upload and record count limits.'],
-    [str_contains($controller, 'maximum 5,000') && str_contains($controller, "if ($password === '')"), 'Import must communicate the configured limit and reject empty passwords.'],
+    [str_contains($controller, 'maximum 5,000') && str_contains($controller, 'if ($password === \'\')'), 'Import must communicate the configured limit and reject empty passwords.'],
     [str_contains($controller, 'CredentialHistory::recordForCredential($credentialId, Credential::HISTORY_EXPORTED)'), 'Exports must be recorded in secret-free credential history.'],
     [str_contains($controller, 'Credential::HISTORY_IMPORTED') && str_contains($controller, 'Credential::HISTORY_RESTORED') && str_contains($controller, 'Credential::HISTORY_PURGED'), 'Import, restore and permanent purge must be auditable.'],
     [str_contains($controller, 'CredentialItemLink::lockCredential($id') && str_contains($controller, 'CredentialItemLink::getCredentialForUpdate($id)'), 'Administrative lifecycle and export operations must serialize through current row locks.'],
@@ -50,7 +50,7 @@ $contracts = [
     [str_contains($vault, 'SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13') && str_contains($vault, 'sodium_crypto_secretbox_open'), 'Vault backups must use Argon2id and authenticated decryption.'],
     [str_contains($checker, '/releases/latest') && str_contains($checker, 'CACHE_TTL = 21600'), 'GitHub release checks must query the latest stable release and cache six hours.'],
     [str_contains($checker, "preg_match('/^\\\\d+\\\\.\\\\d+\\\\.\\\\d+$/") && str_contains($checker, 'safeReleaseUrl'), 'Update checker must reject prerelease tags and restrict release links to the official repository.'],
-    [str_contains($history, "$credential_id . '#' . $entityId"), 'Credential history must retain the entity scope needed to audit a purged credential.'],
+    [str_contains($history, '$credential_id . \'#\' . $entityId'), 'Credential history must retain the entity scope needed to audit a purged credential.'],
     [str_contains($link, 'public static function getCredentialForUpdate(') && str_contains($link, 'FOR UPDATE'), 'Administrative concurrent operations must use a current locking read.'],
     [str_contains($hook, "'review_due_at'") && str_contains($hook, "'reviewer_users_id'") && str_contains($hook, "'category'"), 'The database upgrade must add lifecycle metadata.'],
 ];
