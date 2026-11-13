@@ -878,7 +878,7 @@ final class CredentialController extends AbstractController
 
         $iterator = $DB->request([
             'SELECT' => ['id', 'name', 'realname', 'firstname', 'entities_id'],
-            'FROM' => \\User::getTable(),
+            'FROM' => \User::getTable(),
             'WHERE' => [
                 'is_deleted' => 0,
                 'entities_id' => $visible_entities,
