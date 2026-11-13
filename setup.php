@@ -14,7 +14,7 @@ use GlpiPlugin\Credentials\CredentialItem;
 use GlpiPlugin\Credentials\CredentialTicketTab;
 use GlpiPlugin\Credentials\Profile;
 
-define('PLUGIN_CREDENTIALS_VERSION', '0.0.31');
+define('PLUGIN_CREDENTIALS_VERSION', '0.0.32');
 define('PLUGIN_CREDENTIALS_MIN_GLPI', '12.0.0');
 define('PLUGIN_CREDENTIALS_MAX_GLPI', '12.0.99');
 
@@ -33,6 +33,8 @@ function plugin_init_credentials(): void
     // GLPIKey::generate()/security:change_key will migrate this plugin field together
     // with GLPI's own encrypted fields. Never store a value encrypted with GLPIKey
     // without registering it here.
+    $PLUGIN_HOOKS[Hooks::CONFIG_PAGE]['credentials'] = 'config';
+
     $PLUGIN_HOOKS[Hooks::SECURED_FIELDS]['credentials'] = [
         'glpi_plugin_credentials_credentials.login',
         'glpi_plugin_credentials_credentials.password',
