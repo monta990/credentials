@@ -36,6 +36,7 @@ final class AdminController extends AbstractController
     public function index(Request $request): Response
     {
         self::requireAdministrator();
+        Session::checkRight(Credential::$rightname, READ);
         $entities = self::accessibleEntities();
         global $DB;
 
@@ -241,7 +242,7 @@ final class AdminController extends AbstractController
 
         foreach ($exportedIds as $credentialId) {
             if (!CredentialHistory::recordForCredential($credentialId, Credential::HISTORY_EXPORTED)) {
-                throw new \\RuntimeException(__('The backup was created but its export activity could not be recorded.', 'credentials'));
+                throw new \RuntimeException(__('The backup was created but its export activity could not be recorded.', 'credentials'));
             }
         }
 
