@@ -444,6 +444,86 @@ if (!is_string($transfer_source)
     $errors[] = 'Clone, transfer and edit operations must revalidate current item relationships and entity state after acquiring the credential lock.';
 }
 
+// Administrative workflows and encrypted archives are part of the installable package contract.
+$admin_controller = file_get_contents($root . '/src/Controller/AdminController.php');
+$update_checker = file_get_contents($root . '/src/UpdateChecker.php');
+$vault_archive = file_get_contents($root . '/src/VaultArchive.php');
+$admin_contract_test = $root . '/tests/php/admin_workflow_contract_test.php';
+$vault_archive_test = $root . '/tests/php/vault_archive_test.php';
+$cli_runner = file_get_contents($root . '/tools/run-cli-tests.sh');
+
+if (!is_string($admin_controller)
+    || !is_string($update_checker)
+    || !is_string($vault_archive)
+    || !is_file($admin_contract_test)
+    || !is_file($vault_archive_test)
+    || !is_string($cli_runner)
+    || !str_contains($cli_runner, 'tests/php/*_test.php')) {
+    $errors[] = 'Admin controller, update/archive services and automatically discovered workflow tests are required.';
+}
+
+$admin_routes = [
+    "Route('/config'",
+    "Route('/config/check-updates'",
+    "Route('/config/export'",
+    "Route('/config/import'",
+    "Route('/config/review'",
+    "Route('/config/archive/restore'",
+    "Route('/config/archive/purge'",
+];
+foreach ($admin_routes as $route) {
+    if (!str_contains((string) $admin_controller, $route)) {
+        $errors[] = 'Missing administrative Symfony route: ' . $route;
+    }
+}
+foreach ([
+    "'category'",
+    "'expires_at'",
+    "'review_due_at'",
+    "'reviewed_at'",
+    "'reviewer_users_id'",
+] as $lifecycle_field) {
+    if (!str_contains((string) $hook, $lifecycle_field)) {
+        $errors[] = 'Install/update migration is missing lifecycle field: ' . $lifecycle_field;
+    }
+}
+if (!str_contains((string) $admin_controller, "Session::checkRight(Credential::RIGHT_REVEAL, READ)")
+    || !str_contains((string) $admin_controller, "Session::checkRight('config', UPDATE)")
+    || !str_contains((string) $admin_controller, 'Security::requireReauthentication()')) {
+    $errors[] = 'Sensitive administrative actions must preserve GLPI configuration rights, independent reveal rights and native re-authentication.';
+}
+if (!str_contains((string) $admin_controller, '$DB->beginTransaction();')
+    || !str_contains((string) $admin_controller, '$DB->commit();')
+    || !str_contains((string) $admin_controller, '$DB->rollBack();')
+    || !str_contains((string) $admin_controller, 'CredentialItemLink::getCredentialForUpdate($id)')
+    || !str_contains((string) $admin_controller, 'getLinksForCredentialForUpdate($id)')) {
+    $errors[] = 'Review, export, restore and purge must use transactional current reads and rollback on failure.';
+}
+if (!str_contains((string) $admin_controller, "if (\$password === '')")
+    || !str_contains((string) $admin_controller, 'maximum 5,000')
+    || str_contains((string) $admin_controller, 'maximum 500).')) {
+    $errors[] = 'Encrypted import must reject empty passwords and display the configured 5,000-record limit.';
+}
+if (!str_contains((string) $admin_controller, 'itemtype_link')
+    || !str_contains((string) $admin_controller, "'date_mod'")
+    || !str_contains((string) $admin_controller, "'user_name'")) {
+    $errors[] = 'Administrative audit must query both credential and linked-item GLPI log records using native log columns.';
+}
+if (!str_contains((string) $update_checker, 'https://api.github.com/repos/monta990/credentials/releases/latest')
+    || !str_contains((string) $update_checker, 'safeReleaseUrl')
+    || !str_contains((string) $update_checker, "preg_match('/^\\\\d+\\\\.\\\\d+\\\\.\\\\d+$/")) {
+    $errors[] = 'Update checker must use the fixed GitHub endpoint, stable semantic versions and a validated official release URL.';
+}
+if (!str_contains((string) $vault_archive, 'sodium_crypto_secretbox(')
+    || !str_contains((string) $vault_archive, 'sodium_crypto_secretbox_open')
+    || !str_contains((string) $vault_archive, 'sodium_crypto_pwhash(')) {
+    $errors[] = 'Credential archives must use authenticated Sodium encryption and password-based key derivation.';
+}
+if (!str_contains((string) $admin_controller, "'itemtype_link' => Credential::class")
+    || !str_contains((string) $admin_controller, "Credential::getHistoryEntry($row)")) {
+    $errors[] = 'Admin audit view must aggregate events stored on both credentials and their linked GLPI items.';
+}
+
 if ($errors !== []) {
     foreach ($errors as $error) {
         fwrite(STDERR, "FAIL: {$error}\n");
