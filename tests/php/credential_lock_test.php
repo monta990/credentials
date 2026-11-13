@@ -126,6 +126,11 @@ namespace {
         'password' => 'glpikey-password-ciphertext-current',
         'url' => 'glpikey-url-ciphertext-current',
         'notes' => 'glpikey-notes-ciphertext-current',
+        'category' => 'Infrastructure',
+        'expires_at' => '2027-06-30',
+        'review_due_at' => '2027-01-31',
+        'reviewed_at' => '2026-11-12 10:00:00',
+        'reviewer_users_id' => 9,
         'users_id' => 7,
         'date_creation' => '2026-11-01 10:00:00',
         'date_mod' => '2026-11-09 10:00:00',
@@ -143,6 +148,9 @@ namespace {
         || !str_contains($DB->credential_locking_query, $tick . 'glpi_plugin_credentials_credentials' . $tick)
         || !str_contains($DB->credential_locking_query, $tick . 'password' . $tick)
         || !str_contains($DB->credential_locking_query, $tick . 'login' . $tick)
+        || !str_contains($DB->credential_locking_query, $tick . 'category' . $tick)
+        || !str_contains($DB->credential_locking_query, $tick . 'expires_at' . $tick)
+        || !str_contains($DB->credential_locking_query, $tick . 'review_due_at' . $tick)
         || !str_contains($DB->credential_locking_query, $tick . 'id' . $tick . " = '17'")
     ) {
         throw new RuntimeException('Credential fields must be selected with a quoted, ID-scoped current locking read.');
