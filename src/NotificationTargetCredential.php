@@ -120,7 +120,7 @@ final class NotificationTargetCredential extends NotificationTarget
         $this->data['##credential.id##'] = (string) ((int) ($fields['id'] ?? 0));
         $this->data['##credential.name##'] = (string) ($fields['name'] ?? '');
         $this->data['##credential.status##'] = $reminder_status;
-        $this->data['##credential.date##'] = $reminder_date !== '' ? Html::convDate($reminder_date) : '';
+        $this->data['##credential.date##'] = $reminder_date !== '' ? \Html::convDate($reminder_date) : '';
         $this->data['##credential.action##'] = (string) ($events[$event] ?? '');
     }
 }
