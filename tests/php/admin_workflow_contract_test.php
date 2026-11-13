@@ -48,7 +48,7 @@ $contracts = [
     [str_contains($template, 'data-credentials-confirm='), 'Permanent archive purge must use the plugin confirmation handler.'],
     [str_contains($template, "__('New date or leave blank', 'credentials')") && !str_contains($template, 'name="next_review_at" value="{{ item.review_due_at }}"'), 'Review form must not silently resubmit the previous due date.'],
     [str_contains($vault, 'SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13') && str_contains($vault, 'sodium_crypto_secretbox_open'), 'Vault backups must use Argon2id and authenticated decryption.'],
-    [str_contains($checker, '/releases/latest') && str_contains($checker, 'CACHE_TTL = 21600'), 'GitHub release checks must query the latest stable release and cache six hours.'],
+    [str_contains($checker, '/releases/latest') && str_contains($checker, 'safeReleaseUrl') && !str_contains($checker, '(?:-[0-9A-Za-z.-]+)?'), 'Update checker must reject prerelease tags and restrict release links to the official repository.'],
     [str_contains($checker, "preg_match('/^\\\\d+\\\\.\\\\d+\\\\.\\\\d+$/") && str_contains($checker, 'safeReleaseUrl'), 'Update checker must reject prerelease tags and restrict release links to the official repository.'],
     [str_contains($history, '$credential_id . \'#\' . $entityId'), 'Credential history must retain the entity scope needed to audit a purged credential.'],
     [str_contains($link, 'public static function getCredentialForUpdate(') && str_contains($link, 'FOR UPDATE'), 'Administrative concurrent operations must use a current locking read.'],
