@@ -861,33 +861,52 @@ final class CredentialController extends AbstractController
     {
         global $DB;
         $options = [];
-        if (Session::haveRight('user', READ)) {
-            $iterator = $DB->request([
-                'SELECT' => ['id', 'name', 'realname', 'firstname', 'entities_id'],
-                'FROM' => \User::getTable(),
-                'WHERE' => ['is_deleted' => 0],
-                'ORDER' => ['name'],
-                'LIMIT' => 250,
-            ]);
-            foreach ($iterator as $row) {
-                if (!Session::haveAccessToEntity((int) $row['entities_id'])) {
-                    continue;
-                }
-                $display = trim((string) ($row['realname'] ?? '') . ' ' . (string) ($row['firstname'] ?? ''));
-                $login = (string) $row['name'];
-                $options[] = [
-                    'id' => (int) $row['id'],
-                    'label' => $display !== '' ? $display . ' (' . $login . ')' : $login,
-                ];
-            }
+        if (!Session::haveRight('user', READ) || !Session::haveAccessToEntity($entities_id)) {
+            return $options;
         }
 
+        // Filter by the active entity scope in SQL before limiting/paging. Applying
+        // the entity test after LIMIT silently hid valid reviewers in larger GLPI
+        // installations and could waste the cap on users from inaccessible entities.
+        $visible_entities = array_values(array_unique(array_map(
+            'intval',
+            Session::getActiveEntities(),
+        )));
+        if (!in_array($entities_id, $visible_entities, true)) {
+            return $options;
+        }
+
+        $iterator = $DB->request([
+            'SELECT' => ['id', 'name', 'realname', 'firstname', 'entities_id'],
+            'FROM' => \\User::getTable(),
+            'WHERE' => [
+                'is_deleted' => 0,
+                'entities_id' => $visible_entities,
+            ],
+            'ORDER' => ['name', 'id'],
+        ]);
+        foreach ($iterator as $row) {
+            $user_entity = (int) ($row['entities_id'] ?? -1);
+            if (!Session::haveAccessToEntity($user_entity)) {
+                continue;
+            }
+            $display = trim((string) ($row['realname'] ?? '') . ' ' . (string) ($row['firstname'] ?? ''));
+            $login = (string) $row['name'];
+            $options[] = [
+                'id' => (int) $row['id'],
+                'label' => $display !== '' ? $display . ' (' . $login . ')' : $login,
+            ];
+        }
+
+        // Preserve the currently assigned reviewer when the page can still read
+        // that user, even if the selected entity scope has changed since assignment.
         if ($selected_id > 0 && !array_filter($options, static fn(array $option): bool => $option['id'] === $selected_id)) {
             $label = $this->reviewerName($selected_id);
             if ($label !== '') {
                 $options[] = ['id' => $selected_id, 'label' => $label];
             }
         }
+
         return $options;
     }
 
