@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 0.0.33\n"
+"Project-Id-Version: Credentials 0.0.34\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-05 18:00-0700\n"
 "PO-Revision-Date: 2026-11-05 21:10-0700\n"
@@ -834,3 +834,43 @@ msgstr "Tu perfil no tiene permiso para consultar la actividad de credenciales."
 
 msgid "Your profile does not have permission to view archived credential details."
 msgstr "Tu perfil no tiene permiso para consultar los detalles de credenciales archivadas."
+
+msgid "Lifecycle email reminders"
+msgstr "Avisos de ciclo de vida por correo"
+
+msgid "Enable lifecycle email reminders"
+msgstr "Activar avisos de ciclo de vida por correo"
+
+msgid "Days before expiration or review"
+msgstr "Días de antelación para el vencimiento o la revisión"
+
+msgid "Save reminder settings"
+msgstr "Guardar configuración de avisos"
+
+msgid "Overdue dates are always included, regardless of this look-ahead period."
+msgstr "Las fechas vencidas siempre se incluyen, independientemente del periodo de antelación."
+
+msgid "GLPI email notifications are enabled."
+msgstr "Las notificaciones por correo de GLPI están activadas."
+
+msgid "GLPI email notifications are disabled. Reminders will not be queued until you enable them in GLPI."
+msgstr "Las notificaciones por correo de GLPI están desactivadas. No se pondrán avisos en cola hasta que las actives en GLPI."
+
+msgid "The Credentials automatic action is registered and enabled."
+msgstr "La tarea automática de Credentials está registrada y activada."
+
+msgid "The Credentials automatic action is disabled or blocked in GLPI."
+msgstr "La tarea automática de Credentials está desactivada o bloqueada en GLPI."
+
+msgid "The Credentials automatic action is not registered."
+msgstr "La tarea automática de Credentials no está registrada."
+
+msgid "The configured period applies to email reminders. Dashboard status indicators keep their existing 30-day definition."
+msgstr "El periodo configurado se aplica a los avisos por correo. Los indicadores del panel mantienen su definición actual de 30 días."
+
+msgid "The reminder period must be between 1 and 365 days."
+msgstr "El periodo de avisos debe estar entre 1 y 365 días."
+
+msgid "Lifecycle reminder settings were saved."
+msgstr "Se ha guardado la configuración de avisos del ciclo de vida."
+

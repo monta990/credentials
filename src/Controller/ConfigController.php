@@ -15,6 +15,7 @@ use GlpiPlugin\Credentials\CredentialItem;
 use GlpiPlugin\Credentials\Security;
 use GlpiPlugin\Credentials\Service\CredentialAdminService;
 use GlpiPlugin\Credentials\Service\CredentialBackupService;
+use GlpiPlugin\Credentials\Service\CredentialLifecycleReminderService;
 use GlpiPlugin\Credentials\Service\UpdateChecker;
 use Html;
 use Session;
@@ -29,6 +30,8 @@ final class ConfigController extends AbstractController
     #[Route('/config', name: 'credentials_config', methods: ['GET', 'POST'])]
     public function index(Request $request): Response
     {
+        global $CFG_GLPI;
+
         Session::checkLoginUser();
         Session::checkRight('config', UPDATE);
 
@@ -48,6 +51,25 @@ final class ConfigController extends AbstractController
                             default => __('GitHub could not be reached. The update check will be available again later.', 'credentials'),
                         };
                         Session::addMessageAfterRedirect($message, false, INFO);
+                        break;
+
+                    case 'save_reminder_settings':
+                        $days = $request->request->getInt(
+                            'lifecycle_reminder_lookahead_days',
+                            CredentialLifecycleReminderService::DEFAULT_LOOKAHEAD_DAYS
+                        );
+                        if (
+                            $days < CredentialLifecycleReminderService::MIN_LOOKAHEAD_DAYS
+                            || $days > CredentialLifecycleReminderService::MAX_LOOKAHEAD_DAYS
+                        ) {
+                            throw new \RuntimeException(__('The reminder period must be between 1 and 365 days.', 'credentials'));
+                        }
+
+                        \Config::setConfigurationValues('plugin_credentials', [
+                            'lifecycle_reminders_enabled' => $request->request->getBoolean('lifecycle_reminders_enabled') ? 1 : 0,
+                            'lifecycle_reminder_lookahead_days' => $days,
+                        ]);
+                        Session::addMessageAfterRedirect(__('Lifecycle reminder settings were saved.', 'credentials'), false, INFO);
                         break;
 
                     case 'save_retention':
@@ -115,6 +137,13 @@ final class ConfigController extends AbstractController
 
         $settings = \Config::getConfigurationValues('plugin_credentials');
         $retention_days = max(0, min(3650, (int) ($settings['archive_retention_days'] ?? 365)));
+        $reminder_settings = CredentialLifecycleReminderService::getSettings();
+        $reminder_task = new \CronTask();
+        $reminder_task_registered = $reminder_task->getFromDBbyName(
+            CredentialLifecycleReminderService::class,
+            CredentialLifecycleReminderService::CRON_NAME
+        );
+        $reminder_task_enabled = $reminder_task_registered && $reminder_task->isDisabled() === 0;
         $update = UpdateChecker::latest();
         $dashboard = CredentialAdminService::dashboard(
             max(0, (int) ($_SESSION['glpiactive_entity'] ?? 0)),
@@ -134,6 +163,11 @@ final class ConfigController extends AbstractController
             'update' => $update,
             'dashboard' => $dashboard,
             'retention_days' => $retention_days,
+            'reminders_enabled' => $reminder_settings['enabled'],
+            'reminder_lookahead_days' => $reminder_settings['lookahead_days'],
+            'glpi_notifications_enabled' => !empty($CFG_GLPI['use_notifications']),
+            'reminder_task_registered' => $reminder_task_registered,
+            'reminder_task_enabled' => $reminder_task_enabled,
             'item_types' => $item_types,
             'backup_available' => CredentialBackupService::isAvailable()
                 && Session::haveRight(Credential::RIGHT_BACKUP, READ)

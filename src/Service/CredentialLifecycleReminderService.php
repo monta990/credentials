@@ -26,7 +26,45 @@ final class CredentialLifecycleReminderService
     public const CRON_NAME = 'sendreminders';
     public const EVENT = 'lifecycle_reminder';
     private const REMINDER_TABLE = 'glpi_plugin_credentials_reminders';
-    private const LOOKAHEAD_DAYS = 30;
+    public const DEFAULT_LOOKAHEAD_DAYS = 30;
+    public const MIN_LOOKAHEAD_DAYS = 1;
+    public const MAX_LOOKAHEAD_DAYS = 365;
+
+    /**
+     * Read lifecycle reminder options, preserving the original behavior on upgrades.
+     *
+     * @return array{enabled:bool,lookahead_days:int}
+     */
+    public static function getSettings(): array
+    {
+        $settings = \Config::getConfigurationValues('plugin_credentials');
+        if (!is_array($settings)) {
+            $settings = [];
+        }
+
+        $enabled = filter_var(
+            $settings['lifecycle_reminders_enabled'] ?? true,
+            FILTER_VALIDATE_BOOLEAN,
+            FILTER_NULL_ON_FAILURE
+        );
+
+        return [
+            'enabled' => $enabled ?? true,
+            'lookahead_days' => self::normalizeLookaheadDays(
+                $settings['lifecycle_reminder_lookahead_days'] ?? self::DEFAULT_LOOKAHEAD_DAYS
+            ),
+        ];
+    }
+
+    /** Keep stored settings safe even if they were edited outside the plugin UI. */
+    public static function normalizeLookaheadDays(mixed $days): int
+    {
+        if (!is_numeric($days)) {
+            return self::DEFAULT_LOOKAHEAD_DAYS;
+        }
+
+        return max(self::MIN_LOOKAHEAD_DAYS, min(self::MAX_LOOKAHEAD_DAYS, (int) $days));
+    }
 
     /** @return array{description?:string} */
     public static function cronInfo(string $name): array
@@ -49,7 +87,8 @@ final class CredentialLifecycleReminderService
     {
         global $DB, $CFG_GLPI;
 
-        if (empty($CFG_GLPI['use_notifications'])) {
+        $settings = self::getSettings();
+        if (!$settings['enabled'] || empty($CFG_GLPI['use_notifications'])) {
             return 0;
         }
 
@@ -58,7 +97,7 @@ final class CredentialLifecycleReminderService
             return 0;
         }
         $cutoff = (new \DateTimeImmutable($today))
-            ->modify('+' . self::LOOKAHEAD_DAYS . ' days')
+            ->modify('+' . $settings['lookahead_days'] . ' days')
             ->format('Y-m-d');
 
         // Never select encrypted login/password/URL/notes columns for notification work.
@@ -96,7 +135,8 @@ final class CredentialLifecycleReminderService
             $due_reminders = self::dueReminderTypes(
                 isset($row['date_expires']) ? (string) $row['date_expires'] : null,
                 isset($row['date_next_review']) ? (string) $row['date_next_review'] : null,
-                $today
+                $today,
+                $settings['lookahead_days']
             );
             if ($due_reminders === []) {
                 continue;
@@ -128,20 +168,25 @@ final class CredentialLifecycleReminderService
     }
 
     /**
-     * Return the date-specific reminders that fall due within the next 30 days.
+     * Return the date-specific reminders that fall due within the configured look-ahead period.
      *
      * Past dates remain eligible so overdue reviews and expirations are not missed.
      *
      * @return array<int,array{type:string,date:string}>
      */
-    public static function dueReminderTypes(?string $expires, ?string $next_review, string $today): array
+    public static function dueReminderTypes(
+        ?string $expires,
+        ?string $next_review,
+        string $today,
+        int $lookaheadDays = self::DEFAULT_LOOKAHEAD_DAYS
+    ): array
     {
         if (!CredentialStatus::validDate($today) || $today === '') {
             return [];
         }
 
         $cutoff = (new \DateTimeImmutable($today))
-            ->modify('+' . self::LOOKAHEAD_DAYS . ' days')
+            ->modify('+' . self::normalizeLookaheadDays($lookaheadDays) . ' days')
             ->format('Y-m-d');
 
         $reminders = [];

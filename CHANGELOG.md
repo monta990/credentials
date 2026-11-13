@@ -1,3 +1,11 @@
+## 0.0.34 — 2026-11-13
+
+- Added administrator controls to enable or pause lifecycle email reminders and choose a look-ahead period from 1 to 365 days; existing installations keep reminders enabled with the original 30-day default.
+- Added live configuration diagnostics for GLPI global email notifications and the Credentials automatic action, distinguishing missing, enabled and disabled/blocked task states.
+- Reminder processing now uses the configured window while continuing to include overdue dates and to deduplicate by credential, entity, due date and reviewer.
+- Added regressions for 60-day custom windows, the 365-day upper limit, defaults on upgrade, disabled settings, numeric normalization and invalid stored values.
+- Updated README, Spanish documentation, administrative translations and the HANDOFF for the configurable reminder workflow.
+
 ## 0.0.33 — 2026-11-13
 
 - Added a daily GLPI automatic action for expiration and review reminders, covering overdue dates and dates within the next 30 days.

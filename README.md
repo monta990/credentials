@@ -118,9 +118,9 @@ Expiration and review dates can generate email reminders. Credentials does not c
 
 ### Automatic lifecycle email reminders
 
-Credentials registers a daily GLPI automatic action. It checks active credentials with an assigned review responsible person and raises a reminder for an overdue expiration/review date or a date within the next 30 days.
+Credentials registers a daily GLPI automatic action. From **Setup > Plugins > Credentials > Configuration**, administrators can enable or pause lifecycle reminders and choose a look-ahead period from 1 to 365 days (30 days by default). Overdue dates remain eligible regardless of the selected period.
 
-To enable email reminders, configure a GLPI notification for the **Credential** item type and the **Expiration and review follow-up** event. Add **Review responsible** as a recipient and select an email notification template. The template can use these tags:
+The configuration page also reports whether GLPI global email notifications are enabled and whether the Credentials automatic action is registered and enabled. To deliver email reminders, configure a GLPI notification for the **Credential** item type and the **Expiration and review follow-up** event. Add **Review responsible** as a recipient and select an email notification template. The template can use these tags:
 
 - `##credential.id##`
 - `##credential.name##`
@@ -128,7 +128,7 @@ To enable email reminders, configure a GLPI notification for the **Credential** 
 - `##credential.date##`
 - `##credential.action##`
 
-Then make sure GLPI notifications are enabled and the Credentials automatic action named `sendreminders` is enabled under GLPI's automatic-action settings. The assigned reviewer must be an active GLPI user with access to the credential's entity and a default email address.
+Then make sure GLPI notifications are enabled and the Credentials automatic action named `sendreminders` is enabled under GLPI's automatic-action settings. The plugin-level reminder switch must also be enabled. The assigned reviewer must be an active GLPI user with access to the credential's entity and a default email address.
 
 The plugin records reminders by credential, entity, due date and reviewer, so it does not send the same reminder every day. If expiration and review share the same date, they are covered by one notice. Changing the date or responsible person allows a new reminder. No password or other protected credential value is included in notification data.
 
