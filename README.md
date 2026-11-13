@@ -95,6 +95,16 @@ The plugin provides separate permissions for:
 
 Give password-display permission only to team members who need it to perform their work.
 
+## Administration and backups
+
+Administrators with the appropriate GLPI configuration and Credentials permissions can open the plugin's administration page to review credential categories, upcoming expirations, scheduled reviews and archived entries.
+
+The administration page can also check GitHub for published stable plugin releases. It only reports available versions; updates must still be installed manually through GLPI.
+
+Use the encrypted **.ccvault** export to create an additional password-protected backup of active credentials and their linked items. Keep the backup password separately. Import creates new entries and never overwrites existing credentials. The archive is intended for a matching GLPI database: the referenced entities and linked GLPI items must already exist and be accessible with their original IDs. It is not an automatic migration between unrelated GLPI installations.
+
+Archived credentials can be restored by linking them to an existing item in the same GLPI entity. Permanent deletion cannot be undone.
+
 ## Important information
 
 - Keep access to Credentials limited to authorized personnel.
