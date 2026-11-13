@@ -1,8 +1,8 @@
-# HANDOFF — Credentials 0.0.34 (PR #5 propuesto)
+# HANDOFF — Credentials 0.0.35 (PR #6 propuesto; depende de PR #5)
 
 ## Estado de implementación
 
-La rama `main` permanece en 0.0.33 (commit `0bd2441198e26d53281db8936c59104b8d7c4d38`). El PR #5 propuesto desde `feat/configurable-lifecycle-reminders` incrementa el plugin a 0.0.34 y completa la administración de los recordatorios: activación/desactivación, anticipación configurable y diagnóstico del estado de notificaciones y de la tarea automática. El PR aún requiere CI completo, revisión de Codex y aceptación en una instancia GLPI 12 real antes de fusionarse o publicarse.
+La rama `main` permanece en 0.0.33 (commit `0bd2441198e26d53281db8936c59104b8d7c4d38`). El PR #5 propone 0.0.34 desde `feat/configurable-lifecycle-reminders` y contiene activación/desactivación, anticipación configurable y diagnóstico global de notificaciones/tarea automática. El PR #6, en `feat/notification-setup-diagnostics`, se basa en el head de PR #5 y propone 0.0.35; por lo tanto, es un PR apilado y no debe fusionarse antes del #5. Ambos requieren revisión automatizada y aceptación en GLPI 12 real antes de publicarse.
 
 La lógica de recordatorios conserva el programador, el sistema de notificaciones y la cola nativos de GLPI. El valor predeterminado sigue siendo 30 días y los recordatorios vienen activados en instalaciones existentes para mantener el comportamiento anterior. No implementa un servidor SMTP propio ni modifica/rota contraseñas automáticamente.
 
@@ -23,6 +23,7 @@ La lógica de recordatorios conserva el programador, el sistema de notificacione
 - Acción automática diaria registrada en GLPI (`CredentialLifecycleReminderService::cronSendReminders`) para revisar vencimientos y revisiones atrasadas o dentro del periodo configurable de 1 a 365 días (30 por defecto).
 - Ajustes administrativos para activar/pausar los recordatorios y definir la anticipación; las instalaciones anteriores mantienen la configuración habilitada y el periodo original de 30 días.
 - Diagnóstico en el panel de configuración del estado de las notificaciones globales de GLPI y de la tarea automática Credentials (no registrada, activa o deshabilitada/bloqueada).
+- Diagnóstico por entidad de la notificación del evento `lifecycle_reminder`: existencia de notificación activa, plantilla por correo y destinatario `Review responsible`. El cron y el panel comparten la misma validación para evitar discrepancias.
 - Evento de notificación nativo `Expiration and review follow-up`, tipo de elemento `Credential`, con destinatario específico `Review responsible`; la acción automática se registra como `sendreminders` con frecuencia diaria. El administrador debe crear/activar la notificación y asignarle una plantilla de correo en GLPI.
 - Solo se consumen recordatorios cuando las notificaciones globales están habilitadas, existe una notificación activa con plantilla y destinatario del responsable para la entidad, y el responsable está activo, tiene acceso a la entidad y tiene correo predeterminado.
 - Tabla `glpi_plugin_credentials_reminders` con clave única por credencial, entidad, fecha de vencimiento/revisión y responsable. Evita correos repetidos, incluidos dos avisos por campos que vencen en la misma fecha y ejecuciones concurrentes del cron.
@@ -54,6 +55,7 @@ La lógica de recordatorios conserva el programador, el sistema de notificacione
 - Probar migración entre dos instancias GLPI usando claves GLPIKey diferentes y confirmar que los secretos importados se pueden revelar en el destino.
 - Probar restauración y purga con registros archivados con/sin enlaces y fechas de modificación anteriores/posteriores al periodo de retención.
 - Probar los ajustes de recordatorios con la función habilitada/deshabilitada y anticipaciones mínima, predeterminada y máxima; confirmar que los vencimientos pasados siguen generando avisos.
+- Probar los diagnósticos de notificación en entidades con evento ausente, evento sin plantilla, plantilla sin destinatario Review responsible y configuración completa; comprobar la herencia de notificaciones en entidades hijas en GLPI 12.
 - Configurar en GLPI una notificación para el tipo Credential, evento Expiration and review follow-up, destinatario Review responsible y una plantilla de correo; ejecutar la acción automática manualmente en staging.
 - Probar responsables sin correo, inactivos, con fechas de vigencia de cuenta, sin perfil en la entidad y con acceso recursivo; confirmar que no se consume el marcador si el destinatario no es elegible.
 - Verificar correos vencidos y próximos, deduplicación por credencial/entidad/fecha/responsable, fechas coincidentes y ejecuciones de cron concurrentes.
@@ -62,7 +64,9 @@ La lógica de recordatorios conserva el programador, el sistema de notificacione
 
 ## Notas de despliegue
 
-- Versión propuesta del plugin: 0.0.34 (PR #5; main todavía en 0.0.33).
+- Versión propuesta por PR #5: 0.0.34.
+- Versión propuesta por PR #6 apilado: 0.0.35.
+- `main` no incluye todavía estos cambios; no lanzar una versión desde el branch apilado antes de fusionar en orden.
 - GLPI: 12.0.x.
 - PHP mínimo declarado: 8.3.
 - La extensión PHP Sodium es necesaria para exportar/importar respaldos protegidos. Si no está disponible, las demás funciones siguen utilizables.
@@ -76,7 +80,7 @@ Consulta CHANGELOG.md para el historial completo.
 
 ## Historial técnico de versiones anteriores
 
-Los siguientes apuntes preservan decisiones y comprobaciones de versiones previas; no sustituyen el estado 0.0.34 descrito al inicio.
+Los siguientes apuntes preservan decisiones y comprobaciones de versiones previas; no sustituyen el estado 0.0.35 descrito al inicio.
 
 La versión `0.0.31` conserva los flujos funcionales de la versión `0.0.28`: la contraseña revelada se muestra en un `<input type="text" readonly>` seleccionable; copiar y ocultar leen y limpian `input.value`. Después de guardar desde el modal, `public/js/credential-frame.js` solicita la navegación completa del padre mediante `postMessage` same-origin validado. Cancelar sigue siendo independiente y no envía el formulario.
 

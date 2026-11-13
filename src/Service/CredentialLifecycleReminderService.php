@@ -202,7 +202,12 @@ final class CredentialLifecycleReminderService
         return $reminders;
     }
 
-    private static function hasConfiguredNotification(int $entities_id): bool
+    /**
+     * Inspect the exact GLPI notification requirements used by the cron for one entity.
+     *
+     * @return array{event_found:bool,mail_template_found:bool,reviewer_recipient_found:bool,ready:bool}
+     */
+    public static function notificationSetupStatus(int $entities_id): array
     {
         global $DB;
 
@@ -211,7 +216,12 @@ final class CredentialLifecycleReminderService
             Credential::class,
             $entities_id
         );
+        $event_found = false;
+        $mail_template_found = false;
+        $reviewer_recipient_found = false;
+
         foreach ($notifications as $notification) {
+            $event_found = true;
             if (
                 (int) ($notification['notificationtemplates_id'] ?? 0) <= 0
                 || (string) ($notification['mode'] ?? '') !== Notification_NotificationTemplate::MODE_MAIL
@@ -219,8 +229,9 @@ final class CredentialLifecycleReminderService
                 continue;
             }
 
-            // Require the plugin's explicit reviewer recipient. A notification without
-            // this target is not considered configured and must not consume a reminder.
+            $mail_template_found = true;
+
+            // The cron accepts only this explicit recipient on an email notification.
             $targets = $DB->request([
                 'SELECT' => ['id'],
                 'FROM' => 'glpi_notificationtargets',
@@ -233,11 +244,22 @@ final class CredentialLifecycleReminderService
                 'LIMIT' => 1,
             ]);
             foreach ($targets as $target) {
-                return true;
+                $reviewer_recipient_found = true;
+                break 2;
             }
         }
 
-        return false;
+        return [
+            'event_found' => $event_found,
+            'mail_template_found' => $mail_template_found,
+            'reviewer_recipient_found' => $reviewer_recipient_found,
+            'ready' => $mail_template_found && $reviewer_recipient_found,
+        ];
+    }
+
+    private static function hasConfiguredNotification(int $entities_id): bool
+    {
+        return self::notificationSetupStatus($entities_id)['ready'];
     }
 
     /**

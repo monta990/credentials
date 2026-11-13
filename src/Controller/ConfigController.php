@@ -135,6 +135,8 @@ final class ConfigController extends AbstractController
             return $this->redirectToConfig();
         }
 
+        $active_entity = max(0, (int) ($_SESSION['glpiactive_entity'] ?? 0));
+        $notification_setup = CredentialLifecycleReminderService::notificationSetupStatus($active_entity);
         $settings = \Config::getConfigurationValues('plugin_credentials');
         $retention_days = max(0, min(3650, (int) ($settings['archive_retention_days'] ?? 365)));
         $reminder_settings = CredentialLifecycleReminderService::getSettings();
@@ -146,7 +148,7 @@ final class ConfigController extends AbstractController
         $reminder_task_enabled = $reminder_task_registered && $reminder_task->isDisabled() === 0;
         $update = UpdateChecker::latest();
         $dashboard = CredentialAdminService::dashboard(
-            max(0, (int) ($_SESSION['glpiactive_entity'] ?? 0)),
+            $active_entity,
             $retention_days
         );
 
@@ -168,6 +170,7 @@ final class ConfigController extends AbstractController
             'glpi_notifications_enabled' => !empty($CFG_GLPI['use_notifications']),
             'reminder_task_registered' => $reminder_task_registered,
             'reminder_task_enabled' => $reminder_task_enabled,
+            'notification_setup' => $notification_setup,
             'item_types' => $item_types,
             'backup_available' => CredentialBackupService::isAvailable()
                 && Session::haveRight(Credential::RIGHT_BACKUP, READ)
@@ -180,7 +183,7 @@ final class ConfigController extends AbstractController
             'can_purge' => Session::haveRight(Credential::$rightname, READ)
                 && Session::haveRight(Credential::$rightname, DELETE),
             'encryption_ready' => Credential::isEncryptionReady(),
-            'active_entity' => (int) ($_SESSION['glpiactive_entity'] ?? 0),
+            'active_entity' => $active_entity,
             'admin_user' => (string) ($_SESSION['glpiname'] ?? ''),
             'config_url' => PLUGIN_CREDENTIALS_WEBDIR . '/config',
             'export_url' => PLUGIN_CREDENTIALS_WEBDIR . '/config/export',
