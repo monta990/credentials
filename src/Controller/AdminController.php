@@ -176,6 +176,7 @@ final class AdminController extends AbstractController
 
         global $DB;
         $records = [];
+        $exportedIds = [];
         $entities = self::accessibleEntities();
         $iterator = $DB->request([
             'SELECT' => [
@@ -221,6 +222,7 @@ final class AdminController extends AbstractController
                 'review_due_at' => (string) ($row['review_due_at'] ?? ''),
                 'items' => $links,
             ];
+            $exportedIds[] = $id;
         }
 
         $archive = VaultArchive::encrypt([
@@ -232,14 +234,9 @@ final class AdminController extends AbstractController
             'records' => $records,
         ], $passphrase);
 
-        foreach ($iterator as $unused) {
-            // The iterator is already exhausted; retained for clarity that export
-            // logging is performed per exported record below, not per link/field.
-        }
-        foreach ($records as $index => $_record) {
-            $credentialId = (int) ($rowIds[$index] ?? 0);
-            if ($credentialId > 0) {
-                CredentialHistory::recordForCredential($credentialId, Credential::HISTORY_EXPORTED);
+        foreach ($exportedIds as $credentialId) {
+            if (!CredentialHistory::recordForCredential($credentialId, Credential::HISTORY_EXPORTED)) {
+                throw new \\RuntimeException(__('The backup was created but its export activity could not be recorded.', 'credentials'));
             }
         }
 
