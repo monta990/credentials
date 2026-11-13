@@ -31,7 +31,7 @@ Instead of keeping the same information in separate places, your team can find i
 - 👁️ **Controlled password display:** Only authorized team members can reveal saved passwords.
 - 📋 **Quick copy:** Copy a password when access is needed.
 - 🧾 **Activity history:** Keep a record of important credential actions without exposing passwords.
-- 🏷️ **Categories:** Organize entries by systems, services, networks, servers or other groups defined by your team.
+- 🏷️ **Categories:** Create, rename and update category descriptions; editing a category preserves its existing credential associations.
 - 📅 **Expiration and reviews:** Record expiration dates, last and next review dates, and the person responsible for reviewing each credential. Optional email reminders notify the assigned reviewer through GLPI. Optional email reminders notify the assigned reviewer through GLPI.
 - 🧭 **Administration page:** Review plugin updates, activity, upcoming reviews and archived records in one place.
 - 📦 **Protected backups:** Export and import credentials using a password-protected backup file.
@@ -107,7 +107,7 @@ The Credentials administration page is available from GLPI's plugin configuratio
 Administrators can use this page to:
 
 - Check whether a newer stable version is available on GitHub.
-- Create and manage credential categories.
+- Create, rename and update credential categories without breaking existing links.
 - Review credentials that have expired or need a review soon.
 - See recent activity recorded in GLPI history.
 - Review archived credentials and restore them by linking them to an available item.
@@ -120,7 +120,7 @@ Expiration and review dates can generate email reminders. Credentials does not c
 
 Credentials registers a daily GLPI automatic action. From **Setup > Plugins > Credentials > Configuration**, administrators can enable or pause lifecycle reminders and choose a look-ahead period from 1 to 365 days (30 days by default). Overdue dates remain eligible regardless of the selected period.
 
-The configuration page also reports whether GLPI global email notifications are enabled and whether the Credentials automatic action is registered and enabled. To deliver email reminders, configure a GLPI notification for the **Credential** item type and the **Expiration and review follow-up** event. Add **Review responsible** as a recipient and select an email notification template. The template can use these tags:
+The configuration page also reports whether GLPI global email notifications and the email delivery mode are enabled, whether the Credentials automatic action is registered and enabled, and whether the required Credential email notification (including its email template and Review responsible recipient) is correctly configured for the active entity. To deliver email reminders, configure a GLPI notification for the **Credential** item type and the **Expiration and review follow-up** event. Add **Review responsible** as a recipient and select an email notification template. The template can use these tags:
 
 - `##credential.id##`
 - `##credential.name##`

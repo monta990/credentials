@@ -89,6 +89,19 @@
                     {% endif %}
                 </div>
             </div>
+            <div class="mt-3" aria-live="polite">
+                {% if notification_setup.ready %}
+                    <div class="alert alert-success mb-0" role="status">{{ __('The Credential lifecycle email notification is correctly configured for the active entity.', 'credentials') }}</div>
+                {% elseif not notification_setup.event_found %}
+                    <div class="alert alert-warning mb-0" role="status">{{ __('No active Credential lifecycle notification was found for the active entity.', 'credentials') }}</div>
+                {% elseif not notification_setup.mail_template_found %}
+                    <div class="alert alert-warning mb-0" role="status">{{ __('A lifecycle notification exists, but it does not have an email template assigned.', 'credentials') }}</div>
+                {% elseif not notification_setup.mail_mode_enabled %}
+                    <div class="alert alert-warning mb-0" role="status">{{ __('The GLPI email notification mode is disabled. Enable the email notification mode in GLPI before reminders can be queued.', 'credentials') }}</div>
+                {% else %}
+                    <div class="alert alert-warning mb-0" role="status">{{ __('The email notification is present, but the Review responsible recipient is not configured.', 'credentials') }}</div>
+                {% endif %}
+            </div>
             <p class="form-hint mt-3 mb-0">{{ __('The configured period applies to email reminders. Dashboard status indicators keep their existing 30-day definition.', 'credentials') }}</p>
         </div>
     </div>
@@ -145,6 +158,20 @@
                                 <td>{{ category.comment }}</td>
                                 <td><span class="text-muted small">{% if category.entities_id == 0 %}{{ __('Global', 'credentials') }}{% else %}{{ __('Current entity', 'credentials') }}{% endif %}</span></td>
                                 <td class="text-end">
+                                    <div class="d-inline-block text-start">
+                                        <details>
+                                            <summary class="btn btn-sm btn-outline-secondary">{{ __('Edit category', 'credentials') }}</summary>
+                                            <form method="post" action="{{ config_url }}" class="mt-2">
+                                                <input type="hidden" name="action" value="update_category">
+                                                <input type="hidden" name="category_id" value="{{ category.id }}">
+                                                <label class="form-label small" for="credentials-category-name-{{ category.id }}">{{ __('Category name', 'credentials') }}</label>
+                                                <input class="form-control form-control-sm mb-2" id="credentials-category-name-{{ category.id }}" name="category_name" maxlength="255" value="{{ category.name }}" required>
+                                                <label class="form-label small" for="credentials-category-comment-{{ category.id }}">{{ __('Description', 'credentials') }}</label>
+                                                <input class="form-control form-control-sm mb-2" id="credentials-category-comment-{{ category.id }}" name="category_comment" maxlength="2000" value="{{ category.comment }}">
+                                                <button class="btn btn-sm btn-primary" type="submit">{{ __('Save changes', 'credentials') }}</button>
+                                            </form>
+                                        </details>
+                                    </div>
                                     <form method="post" action="{{ config_url }}" class="d-inline" data-credentials-confirm="{{ __('Delete this category? Categories used by credentials cannot be deleted.', 'credentials')|e('html_attr') }}">
                                         <input type="hidden" name="action" value="delete_category">
                                         <input type="hidden" name="category_id" value="{{ category.id }}">
