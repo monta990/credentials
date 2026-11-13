@@ -269,6 +269,11 @@ namespace {
             'password' => 'glpikey-password-ciphertext',
             'url' => 'glpikey-url-ciphertext',
             'notes' => 'glpikey-notes-ciphertext',
+            'category' => 'Infrastructure',
+            'expires_at' => '2027-06-30',
+            'review_due_at' => '2027-01-31',
+            'reviewed_at' => '2026-11-12 10:00:00',
+            'reviewer_users_id' => 9,
             'users_id' => 7,
             'date_creation' => '2026-11-01 10:00:00',
             'date_mod' => '2026-11-01 10:00:00',
@@ -430,6 +435,11 @@ namespace {
     transferAssert($copied['password'] === 'glpikey-password-ciphertext-v2', 'A transfer must copy the latest committed password ciphertext.');
     transferAssert($copied['url'] === 'glpikey-url-ciphertext-v2', 'A transfer must copy the latest committed URL ciphertext.');
     transferAssert($copied['notes'] === 'glpikey-notes-ciphertext-v2', 'A transfer must copy the latest committed notes ciphertext.');
+    transferAssert($copied['category'] === 'Infrastructure', 'A cross-entity copy must retain the credential category.');
+    transferAssert($copied['expires_at'] === '2027-06-30', 'A cross-entity copy must retain the credential expiration date.');
+    transferAssert($copied['review_due_at'] === '2027-01-31', 'A cross-entity copy must retain the review schedule.');
+    transferAssert($copied['reviewed_at'] === '2026-11-12 10:00:00', 'A cross-entity copy must retain the last review timestamp.');
+    transferAssert((int) $copied['reviewer_users_id'] === 9, 'A cross-entity copy must retain the last reviewer ID.');
 
 
     // Concurrent archive while the transfer waits: the initial ID list is
