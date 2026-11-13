@@ -30,7 +30,7 @@ final class AdminController extends AbstractController
 {
     private const RELEASES_PAGE = 'https://github.com/monta990/credentials/releases';
     private const MAX_IMPORT_BYTES = 20_000_000;
-    private const MAX_IMPORT_RECORDS = 500;
+    private const MAX_IMPORT_RECORDS = 5000;
 
     #[Route('/config', name: 'credentials_config', methods: ['GET'])]
     public function index(Request $request): Response
@@ -195,6 +195,9 @@ final class AdminController extends AbstractController
         ]);
 
         foreach ($iterator as $row) {
+            if (count($records) >= self::MAX_IMPORT_RECORDS) {
+                throw new \\RuntimeException(__('The backup cannot contain more than 5,000 credentials. Export a smaller set.', 'credentials'));
+            }
             $id = (int) $row['id'];
             $credential = new Credential();
             if (!$credential->getFromDB($id) || !$credential->can($id, READ)) {
@@ -294,7 +297,7 @@ final class AdminController extends AbstractController
                 if (
                     $name === '' || mb_strlen($name) > 255 || $entityId < 0
                     || !Session::haveAccessToEntity($entityId)
-                    || !is_array($links) || count($links) < 1 || count($links) > 50
+                    || !is_array($links) || count($links) < 1 || count($links) > 1000
                 ) {
                     throw new \InvalidArgumentException(__('A credential in the backup has invalid name, entity or linked-item data.', 'credentials'));
                 }
