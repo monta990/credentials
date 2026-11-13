@@ -11,27 +11,43 @@ namespace {
     final class Notification
     {
         public const USER_TYPE = 1;
-        public static array $eventNotifications = [];
 
-        public static function getNotificationsByEventAndType(string $event, string $itemtype, int $entities_id): array
+        public static function getTable(): string
         {
-            return self::$eventNotifications;
+            return 'glpi_notifications';
         }
     }
 
     final class Notification_NotificationTemplate
     {
-        public const MODE_MAIL = 'mail';
+        public const MODE_MAIL = 'mailing';
+
+        public static function getTable(): string
+        {
+            return 'glpi_notificationtemplatetemplates';
+        }
+    }
+
+    function getEntitiesRestrictCriteria(string $table, string $field, int|array|string $value, bool|string $recursive = false): array
+    {
+        return [$table . '.' . $field => $value];
     }
 
     final class FakeReminderDB
     {
+        public array $notifications = [];
         public array $targetsByNotification = [];
         public array $lastCriteria = [];
+        public array $lastNotificationCriteria = [];
 
         public function request(array $criteria): array
         {
             $this->lastCriteria = $criteria;
+            if (($criteria['FROM'] ?? '') === Notification::getTable()) {
+                $this->lastNotificationCriteria = $criteria;
+                return $this->notifications;
+            }
+
             $notificationId = (int) ($criteria['WHERE']['notifications_id'] ?? 0);
             return $this->targetsByNotification[$notificationId] ?? [];
         }
@@ -170,30 +186,34 @@ namespace {
 
     global $DB;
     $DB = new FakeReminderDB();
+    $CFG_GLPI = ['notifications_mailing' => true];
 
     assertSameValue([
         'event_found' => false,
         'mail_template_found' => false,
+        'mail_mode_enabled' => true,
         'reviewer_recipient_found' => false,
         'ready' => false,
     ], CredentialLifecycleReminderService::notificationSetupStatus(2), 'missing entity notification should be reported as not configured');
 
-    Notification::$eventNotifications = [
-        ['id' => 10, 'notificationtemplates_id' => 0, 'mode' => Notification_NotificationTemplate::MODE_MAIL],
+    $DB->notifications = [
+        ['id' => 10, 'notificationtemplates_id' => null, 'mode' => null],
     ];
     assertSameValue([
         'event_found' => true,
         'mail_template_found' => false,
+        'mail_mode_enabled' => true,
         'reviewer_recipient_found' => false,
         'ready' => false,
     ], CredentialLifecycleReminderService::notificationSetupStatus(2), 'event without an email template should be reported');
 
-    Notification::$eventNotifications = [
+    $DB->notifications = [
         ['id' => 11, 'notificationtemplates_id' => 4, 'mode' => Notification_NotificationTemplate::MODE_MAIL],
     ];
     assertSameValue([
         'event_found' => true,
         'mail_template_found' => true,
+        'mail_mode_enabled' => true,
         'reviewer_recipient_found' => false,
         'ready' => false,
     ], CredentialLifecycleReminderService::notificationSetupStatus(2), 'email notification without reviewer target should be reported');
@@ -212,9 +232,43 @@ namespace {
     assertSameValue([
         'event_found' => true,
         'mail_template_found' => true,
+        'mail_mode_enabled' => true,
         'reviewer_recipient_found' => true,
         'ready' => true,
     ], CredentialLifecycleReminderService::notificationSetupStatus(2), 'email template and reviewer recipient should report ready');
+
+    $DB->notifications = [
+        ['id' => 12, 'notificationtemplates_id' => 6, 'mode' => 'ajax'],
+        ['id' => 13, 'notificationtemplates_id' => 7, 'mode' => Notification_NotificationTemplate::MODE_MAIL],
+    ];
+    $DB->targetsByNotification[12] = [['id' => 902]];
+    unset($DB->targetsByNotification[13]);
+    assertSameValue([
+        'event_found' => true,
+        'mail_template_found' => true,
+        'mail_mode_enabled' => true,
+        'reviewer_recipient_found' => false,
+        'ready' => false,
+    ], CredentialLifecycleReminderService::notificationSetupStatus(2), 'reviewer target attached to an unrelated non-mail notification must not satisfy setup');
+
+    $DB->notifications = [
+        ['id' => 14, 'notificationtemplates_id' => 8, 'mode' => Notification_NotificationTemplate::MODE_MAIL],
+    ];
+    $CFG_GLPI['notifications_mailing'] = false;
+    $DB->targetsByNotification[14] = [['id' => 903]];
+    assertSameValue([
+        'event_found' => true,
+        'mail_template_found' => true,
+        'mail_mode_enabled' => false,
+        'reviewer_recipient_found' => true,
+        'ready' => false,
+    ], CredentialLifecycleReminderService::notificationSetupStatus(2), 'disabled global email mode must not hide the configured email template');
+
+    assertSameValue(
+        2,
+        $DB->lastNotificationCriteria['WHERE'][Notification::getTable() . '.entities_id'] ?? null,
+        'notification diagnostic must preserve the current entity restriction'
+    );
 
     $credential = new FakeCredential();
     $credential->fields = [

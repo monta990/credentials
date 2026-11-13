@@ -20,7 +20,7 @@ $checks = [
     'Lifecycle reminder notification target is discoverable' => str_contains($reminder_target, 'class NotificationTargetCredential extends NotificationTarget') && str_contains($reminder_target, "CredentialLifecycleReminderService::EVENT"),
     'Lifecycle notification is addressed to assigned reviewer' => str_contains($reminder_target, "addUserByField('reviewer_users_id')") && str_contains($reminder_service, 'getDefaultEmail()'),
     'Lifecycle reminders use GLPI native notification queue' => str_contains($reminder_service, 'NotificationEvent::raiseEvent('),
-    'Only active email notification templates consume reminder markers' => str_contains($reminder_service, '\\Notification_NotificationTemplate::MODE_MAIL'),
+    'Notification diagnostics inspect email templates independently of enabled global modes' => str_contains($reminder_service, '\\Notification_NotificationTemplate::MODE_MAIL') && str_contains($reminder_service, "'LEFT JOIN' =>") && str_contains($reminder_service, "'notifications_mailing'") && str_contains($reminder_service, 'getEntitiesRestrictCriteria'),
     'Reminder marker has unique credential/entity/date/reviewer key' => str_contains($hook, 'credential_reminder') && str_contains($hook, '`reminder_date`, `reviewer_users_id`)'),
     'Reminder markers are removed when credentials are permanently purged' => str_contains($admin, "'glpi_plugin_credentials_reminders'"),
     'Administrative page route' => str_contains($controller, "Route('/config'"),

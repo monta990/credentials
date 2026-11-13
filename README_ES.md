@@ -104,7 +104,7 @@ Credentials registra una tarea automática diaria de GLPI para avisar al respons
 
 Para enviar los correos, también se debe habilitar el sistema global de notificaciones de GLPI y configurar una notificación para el tipo **Credential**, evento **Expiration and review follow-up**, destinatario **Review responsible** y una plantilla por correo. La pantalla de configuración muestra si las notificaciones globales y la tarea automática de Credentials están activas. El responsable asignado debe tener una cuenta activa, acceso a la entidad y un correo predeterminado.
 
-La pantalla de configuración también comprueba, para la entidad activa, que exista una notificación activa del evento, que tenga una plantilla por correo y que incluya al destinatario **Review responsible**. Informa por separado si falta la notificación, la plantilla o el responsable.
+La pantalla de configuración también comprueba, para la entidad activa, que exista una notificación activa del evento, que tenga una plantilla por correo y que incluya al destinatario **Review responsible**. Informa por separado si falta la notificación, la plantilla o el responsable, y también indica cuando el canal global de correo de GLPI está deshabilitado.
 
 La deduplicación evita repetir diariamente el mismo aviso para la misma credencial, entidad, fecha y responsable. Si el vencimiento y la revisión coinciden, se genera un único aviso. El mensaje no incluye contraseñas ni otros valores protegidos.
 
