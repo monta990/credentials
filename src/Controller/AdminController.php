@@ -87,39 +87,87 @@ final class AdminController extends AbstractController
         ksort($categoryCounts, SORT_NATURAL | SORT_FLAG_CASE);
 
         $auditRows = [];
-        $auditIterator = $DB->request([
-            'SELECT' => ['id', 'items_id', 'date', 'users_id', 'linked_action'],
+        $pluginActions = array_map(
+            static fn(int $action): int => \Log::HISTORY_PLUGIN + $action,
+            range(Credential::HISTORY_CREATED, Credential::HISTORY_PURGED),
+        );
+        $auditCandidates = [];
+
+        // GLPI's glpi_logs schema uses date_mod/user_name, not date/users_id.
+        $credentialAudit = $DB->request([
+            'SELECT' => ['id', 'items_id', 'date_mod', 'user_name', 'linked_action', 'old_value'],
             'FROM' => 'glpi_logs',
-            'WHERE' => ['itemtype' => Credential::class],
-            'ORDER' => ['date DESC'],
-            'LIMIT' => 75,
+            'WHERE' => [
+                'itemtype' => Credential::class,
+                'linked_action' => $pluginActions,
+            ],
+            'ORDER' => ['date_mod DESC'],
+            'LIMIT' => 100,
         ]);
-        foreach ($auditIterator as $row) {
+        foreach ($credentialAudit as $row) {
             $credentialId = (int) ($row['items_id'] ?? 0);
             $credential = new Credential();
-            if ($credentialId > 0 && $credential->getFromDB($credentialId)
-                && !Session::haveAccessToEntity((int) ($credential->fields['entities_id'] ?? 0))) {
-                continue;
-            }
-            $userName = '';
-            $userId = (int) ($row['users_id'] ?? 0);
-            if ($userId > 0) {
-                $user = new User();
-                if ($user->getFromDB($userId)) {
-                    $userName = (string) $user->getName();
+            $hasCredential = $credentialId > 0 && $credential->getFromDB($credentialId);
+            $entityId = $hasCredential ? (int) ($credential->fields['entities_id'] ?? -1) : -1;
+            if (!$hasCredential) {
+                // The permanent-purge event survives deletion of the credential row.
+                // New direct events retain the entity ID in old_value.
+                $parts = explode('#', (string) ($row['old_value'] ?? ''), 2);
+                if (isset($parts[1]) && ctype_digit($parts[1])) {
+                    $entityId = (int) $parts[1];
                 }
             }
+            if ($entityId < 0 || !Session::haveAccessToEntity($entityId)) {
+                continue;
+            }
             $row['credential_id'] = $credentialId;
-            $row['user_name'] = $userName !== '' ? $userName : (string) $userId;
+            $row['date'] = (string) ($row['date_mod'] ?? '');
+            $row['user_name'] = (string) ($row['user_name'] ?? '');
             $row['event'] = Credential::getHistoryEntry($row);
             if ($row['event'] !== '') {
-                $auditRows[] = $row;
-            }
-            if (count($auditRows) >= 50) {
-                break;
+                $auditCandidates[] = $row;
             }
         }
 
+        // Events written against users/assets store their class in itemtype
+        // and Credential::class in itemtype_link. Enforce both item READ
+        // access and credential entity scope before exposing event metadata.
+        $linkedAudit = $DB->request([
+            'SELECT' => ['id', 'items_id', 'itemtype', 'date_mod', 'user_name', 'linked_action', 'old_value'],
+            'FROM' => 'glpi_logs',
+            'WHERE' => [
+                'itemtype' => CredentialItem::getSupportedItemtypes(),
+                'itemtype_link' => Credential::class,
+                'linked_action' => $pluginActions,
+            ],
+            'ORDER' => ['date_mod DESC'],
+            'LIMIT' => 150,
+        ]);
+        foreach ($linkedAudit as $row) {
+            $itemtype = (string) ($row['itemtype'] ?? '');
+            $itemsId = (int) ($row['items_id'] ?? 0);
+            $item = CredentialItem::loadReadableItem($itemtype, $itemsId);
+            if ($item === null || !Session::haveAccessToEntity(CredentialItem::resolveParentEntityID($item))) {
+                continue;
+            }
+            $credentialId = (int) ($row['old_value'] ?? 0);
+            $credential = new Credential();
+            if ($credentialId <= 0 || !$credential->getFromDB($credentialId)
+                || !Session::haveAccessToEntity((int) ($credential->fields['entities_id'] ?? -1))) {
+                continue;
+            }
+            $row['credential_id'] = $credentialId;
+            $row['date'] = (string) ($row['date_mod'] ?? '');
+            $row['user_name'] = (string) ($row['user_name'] ?? '');
+            $row['event'] = Credential::getHistoryEntry($row);
+            if ($row['event'] !== '') {
+                $auditCandidates[] = $row;
+            }
+        }
+        usort($auditCandidates, static fn(array $a, array $b): int => strcmp((string) ($b['date_mod'] ?? ''), (string) ($a['date_mod'] ?? '')));
+        $auditRows = array_slice($auditCandidates, 0, 50);
+
+        $release = UpdateChecker::check();
         $release = UpdateChecker::check();
         $content = self::renderPage($request, [
             'base_url' => self::routeUrl('config'),
@@ -183,72 +231,104 @@ final class AdminController extends AbstractController
         global $DB;
         $records = [];
         $exportedIds = [];
-        $entities = self::accessibleEntities();
-        $iterator = $DB->request([
-            'SELECT' => [
-                'id', 'name', 'entities_id', 'login', 'password', 'url', 'notes',
-                'category', 'expires_at', 'review_due_at',
-            ],
-            'FROM' => Credential::getTable(),
-            'WHERE' => ['entities_id' => $entities, 'is_deleted' => 0],
-            'ORDER' => ['id'],
-        ]);
-
-        foreach ($iterator as $row) {
-            if (count($records) >= self::MAX_IMPORT_RECORDS) {
-                throw new \RuntimeException(__('The backup cannot contain more than 5,000 credentials. Export a smaller set.', 'credentials'));
-            }
-            $id = (int) $row['id'];
-            $credential = new Credential();
-            if (!$credential->getFromDB($id) || !$credential->can($id, READ)) {
-                throw new \Glpi\Exception\Http\AccessDeniedHttpException();
+        $archive = '';
+        $DB->beginTransaction();
+        try {
+            $entities = self::accessibleEntities();
+            $iterator = $DB->request([
+                'SELECT' => ['id'],
+                'FROM' => Credential::getTable(),
+                'WHERE' => ['entities_id' => $entities, 'is_deleted' => 0],
+                'ORDER' => ['id'],
+            ]);
+            $credentialIds = [];
+            foreach ($iterator as $row) {
+                $credentialIds[] = (int) $row['id'];
             }
 
-            $secretFields = [];
-            foreach (['login', 'password', 'url', 'notes'] as $field) {
-                $ciphertext = (string) ($row[$field] ?? '');
-                $plaintext = Credential::decryptValue($ciphertext);
-                if ($plaintext === null || ($ciphertext !== '' && $plaintext === '')) {
-                    throw new \RuntimeException(__('A credential could not be decrypted. The backup was cancelled.', 'credentials'));
+            foreach ($credentialIds as $id) {
+                // Serialize the backup against edits, archival, link/unlink and
+                // transfer. The second read is a current InnoDB locking read.
+                if (!CredentialItemLink::lockCredential($id, null, true)) {
+                    throw new \RuntimeException(__('A credential changed while the backup was being prepared. Retry the export.', 'credentials'));
                 }
-                $secretFields[$field] = $plaintext;
+                $row = CredentialItemLink::getCredentialForUpdate($id);
+                if ($row === null || (int) ($row['is_deleted'] ?? 1) !== 0) {
+                    throw new \RuntimeException(__('A credential changed while the backup was being prepared. Retry the export.', 'credentials'));
+                }
+
+                $entityId = (int) ($row['entities_id'] ?? -1);
+                if ($entityId < 0 || !Session::haveAccessToEntity($entityId)) {
+                    throw new \Glpi\Exception\Http\AccessDeniedHttpException();
+                }
+
+                $secretFields = [];
+                foreach (['login', 'password', 'url', 'notes'] as $field) {
+                    $ciphertext = (string) ($row[$field] ?? '');
+                    $plaintext = Credential::decryptValue($ciphertext);
+                    if ($plaintext === null || ($ciphertext !== '' && $plaintext === '')) {
+                        throw new \RuntimeException(__('A credential could not be decrypted. The backup was cancelled.', 'credentials'));
+                    }
+                    $secretFields[$field] = $plaintext;
+                }
+
+                $links = CredentialItemLink::getLinksForCredentialForUpdate($id);
+                if ($links === []) {
+                    throw new \RuntimeException(__('An active credential has no linked item. Repair it before exporting.', 'credentials'));
+                }
+                foreach ($links as $link) {
+                    $linkedItem = CredentialItem::loadReadableItem($link['itemtype'], $link['items_id']);
+                    if ($linkedItem === null
+                        || CredentialItem::resolveParentEntityID($linkedItem) !== $entityId) {
+                        throw new \RuntimeException(__('Every linked item must be readable and belong to the credential entity before exporting.', 'credentials'));
+                    }
+                }
+
+                $records[] = [
+                    'name' => (string) ($row['name'] ?? ''),
+                    'entities_id' => $entityId,
+                    'login' => $secretFields['login'],
+                    'password' => $secretFields['password'],
+                    'url' => $secretFields['url'],
+                    'notes' => $secretFields['notes'],
+                    'category' => (string) ($row['category'] ?? ''),
+                    'expires_at' => (string) ($row['expires_at'] ?? ''),
+                    'review_due_at' => (string) ($row['review_due_at'] ?? ''),
+                    'reviewed_at' => (string) ($row['reviewed_at'] ?? ''),
+                    'reviewer_users_id' => (int) ($row['reviewer_users_id'] ?? 0),
+                    'items' => $links,
+                ];
+                $exportedIds[] = $id;
             }
 
-            $links = CredentialItemLink::getLinksForCredential($id);
-            if ($links === []) {
-                throw new \RuntimeException(__('An active credential has no linked item. Repair it before exporting.', 'credentials'));
-            }
+            $archive = VaultArchive::encrypt([
+                'format' => 'credentials-vault',
+                'format_version' => 1,
+                'exported_at' => gmdate('c'),
+                'exported_by' => (int) Session::getLoginUserID(),
+                'source_plugin_version' => PLUGIN_CREDENTIALS_VERSION,
+                'records' => $records,
+            ], $passphrase);
 
-            $records[] = [
-                'name' => (string) $row['name'],
-                'entities_id' => (int) $row['entities_id'],
-                'login' => $secretFields['login'],
-                'password' => $secretFields['password'],
-                'url' => $secretFields['url'],
-                'notes' => $secretFields['notes'],
-                'category' => (string) ($row['category'] ?? ''),
-                'expires_at' => (string) ($row['expires_at'] ?? ''),
-                'review_due_at' => (string) ($row['review_due_at'] ?? ''),
-                'items' => $links,
-            ];
-            $exportedIds[] = $id;
+            foreach ($exportedIds as $credentialId) {
+                if (!CredentialHistory::recordForCredential($credentialId, Credential::HISTORY_EXPORTED)) {
+                    throw new \RuntimeException(__('The backup was created but its export activity could not be recorded.', 'credentials'));
+                }
+            }
+            $DB->commit();
+        } catch (\Throwable $exception) {
+            $DB->rollBack();
+            unset($records, $secretFields, $links, $row, $credentialIds, $iterator);
+            if (function_exists('sodium_memzero') && $passphrase !== '') {
+                sodium_memzero($passphrase);
+            }
+            throw $exception;
         }
 
-        $archive = VaultArchive::encrypt([
-            'format' => 'credentials-vault',
-            'format_version' => 1,
-            'exported_at' => gmdate('c'),
-            'exported_by' => (int) Session::getLoginUserID(),
-            'source_plugin_version' => PLUGIN_CREDENTIALS_VERSION,
-            'records' => $records,
-        ], $passphrase);
-
-        foreach ($exportedIds as $credentialId) {
-            if (!CredentialHistory::recordForCredential($credentialId, Credential::HISTORY_EXPORTED)) {
-                throw new \RuntimeException(__('The backup was created but its export activity could not be recorded.', 'credentials'));
-            }
+        unset($records, $secretFields, $links, $row, $credentialIds, $iterator);
+        if (function_exists('sodium_memzero') && $passphrase !== '') {
+            sodium_memzero($passphrase);
         }
-
         $response = new Response($archive);
         $response->headers->set('Content-Type', 'application/vnd.cy-credentials+json; charset=UTF-8');
         $response->headers->set('Content-Disposition', 'attachment; filename="credentials-backup-' . date('Y-m-d_H-i-s') . '.ccvault"');
@@ -279,7 +359,7 @@ final class AdminController extends AbstractController
         $payload = VaultArchive::decrypt($raw, $request->request->getString('backup_password'));
         $records = $payload['records'] ?? null;
         if (!is_array($records) || count($records) > self::MAX_IMPORT_RECORDS) {
-            throw new \InvalidArgumentException(__('The backup does not contain a supported number of credentials (maximum 500).', 'credentials'));
+            throw new \InvalidArgumentException(__('The backup does not contain a supported number of credentials (maximum 5,000).', 'credentials'));
         }
 
         global $DB;
@@ -329,6 +409,9 @@ final class AdminController extends AbstractController
 
                 $login = (string) ($record['login'] ?? '');
                 $password = (string) ($record['password'] ?? '');
+                if ($password === '') {
+                    throw new \InvalidArgumentException(__('Every imported credential must include a password.', 'credentials'));
+                }
                 $url = (string) ($record['url'] ?? '');
                 $notes = (string) ($record['notes'] ?? '');
                 $category = trim((string) ($record['category'] ?? ''));
@@ -429,21 +512,39 @@ final class AdminController extends AbstractController
         $credential = new Credential();
         if ($id <= 0 || !$credential->getFromDB($id)
             || (int) ($credential->fields['is_deleted'] ?? 0) !== 0
-            || !Session::haveAccessToEntity((int) ($credential->fields['entities_id'] ?? 0))
-            || !$credential->can($id, UPDATE)) {
+            || !Session::haveAccessToEntity((int) ($credential->fields['entities_id'] ?? 0))) {
             throw new \Glpi\Exception\Http\AccessDeniedHttpException();
         }
 
         global $DB;
-        $updated = $DB->update(Credential::getTable(), [
-            'reviewed_at' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
-            'reviewer_users_id' => (int) Session::getLoginUserID(),
-            'review_due_at' => $nextReview !== '' ? $nextReview : null,
-            'date_mod' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
-        ], ['id' => $id, 'is_deleted' => 0]);
-        if ($updated === false || $DB->getAffectedRows() !== 1
-            || !CredentialHistory::recordForCredential($id, Credential::HISTORY_REVIEWED)) {
-            throw new \RuntimeException(__('The review could not be saved or audited.', 'credentials'));
+        $DB->beginTransaction();
+        try {
+            $entityId = (int) ($credential->fields['entities_id'] ?? -1);
+            if (!CredentialItemLink::lockCredential($id, $entityId, true)) {
+                throw new \RuntimeException(__('The credential changed while its review was being recorded.', 'credentials'));
+            }
+            $live = CredentialItemLink::getCredentialForUpdate($id);
+            if ($live === null || (int) ($live['is_deleted'] ?? 1) !== 0
+                || (int) ($live['entities_id'] ?? -1) !== $entityId
+                || !Session::haveAccessToEntity($entityId)) {
+                throw new \Glpi\Exception\Http\AccessDeniedHttpException();
+            }
+
+            $now = (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s'));
+            $updated = $DB->update(Credential::getTable(), [
+                'reviewed_at' => $now,
+                'reviewer_users_id' => (int) Session::getLoginUserID(),
+                'review_due_at' => $nextReview !== '' ? $nextReview : null,
+                'date_mod' => $now,
+            ], ['id' => $id, 'entities_id' => $entityId, 'is_deleted' => 0]);
+            if ($updated === false || $DB->getAffectedRows() !== 1
+                || !CredentialHistory::recordForCredential($id, Credential::HISTORY_REVIEWED)) {
+                throw new \RuntimeException(__('The review could not be saved or audited.', 'credentials'));
+            }
+            $DB->commit();
+        } catch (\Throwable $exception) {
+            $DB->rollBack();
+            throw $exception;
         }
 
         Session::addMessageAfterRedirect(__('The credential review was recorded.', 'credentials'), false, INFO);
@@ -478,9 +579,13 @@ final class AdminController extends AbstractController
             if (!CredentialItemLink::lockCredential($id, (int) $credential->fields['entities_id'], false)) {
                 throw new \RuntimeException(__('The archived credential changed while it was being restored.', 'credentials'));
             }
-            $live = new Credential();
-            if (!$live->getFromDB($id) || (int) ($live->fields['is_deleted'] ?? 0) !== 1) {
-                throw new \RuntimeException(__('The archived credential is no longer available.', 'credentials'));
+            $live = CredentialItemLink::getCredentialForUpdate($id);
+            $liveItem = CredentialItem::loadReadableItem($itemtype, $itemsId);
+            if ($live === null || (int) ($live['is_deleted'] ?? 0) !== 1
+                || (int) ($live['entities_id'] ?? -1) !== (int) $credential->fields['entities_id']
+                || $liveItem === null
+                || CredentialItem::resolveParentEntityID($liveItem) !== (int) ($live['entities_id'] ?? -1)) {
+                throw new \RuntimeException(__('The archived credential or selected item changed while it was being restored.', 'credentials'));
             }
             if (!CredentialItemLink::exists($id, $itemtype, $itemsId)) {
                 $link = new CredentialItemLink();
@@ -534,6 +639,12 @@ final class AdminController extends AbstractController
         try {
             if (!CredentialItemLink::lockCredential($id, (int) $credential->fields['entities_id'], false)) {
                 throw new \RuntimeException(__('The archived credential changed while it was being removed.', 'credentials'));
+            }
+            $live = CredentialItemLink::getCredentialForUpdate($id);
+            if ($live === null || (int) ($live['is_deleted'] ?? 0) !== 1
+                || (int) ($live['entities_id'] ?? -1) !== (int) $credential->fields['entities_id']
+                || !Session::haveAccessToEntity((int) ($live['entities_id'] ?? -1))) {
+                throw new \RuntimeException(__('The archived credential is no longer available.', 'credentials'));
             }
             if (!CredentialHistory::recordForCredential($id, Credential::HISTORY_PURGED)) {
                 throw new \RuntimeException(__('The permanent deletion could not be recorded.', 'credentials'));
