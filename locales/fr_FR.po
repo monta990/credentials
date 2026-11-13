@@ -883,3 +883,5 @@ msgstr "Une notification de cycle de vie existe, mais aucun modèle d'e-mail ne 
 msgid "The email notification is present, but the Review responsible recipient is not configured."
 msgstr "La notification par e-mail existe, mais le destinataire Review responsible n'est pas configuré."
 
+msgid "The GLPI email notification mode is disabled. Enable the email notification mode in GLPI before reminders can be queued."
+msgstr "Le canal de notification par e-mail de GLPI est désactivé. Activez-le dans GLPI avant la mise en file d'attente des rappels."

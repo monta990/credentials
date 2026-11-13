@@ -1,5 +1,8 @@
 ## 0.0.35 — 2026-11-13
 
+- Fixed notification diagnostics so GLPI's global mail-channel filter cannot make an existing email template appear missing; the dashboard now reports a separately disabled global email mode.
+- The notification diagnostic uses GLPI's recursive entity restriction and only accepts a Review responsible target attached to the same notification that owns the email template.
+- Added regressions for the disabled mail mode, unrelated notification targets and entity scoping.
 - Added entity-scoped diagnostics for the complete native GLPI lifecycle notification setup, using the same event, email-template and Review responsible target checks as the reminder scheduler.
 - The Credentials configuration page now distinguishes a missing active event notification, a missing email template, a missing Review responsible recipient, and a ready configuration for the active entity.
 - Refactored the scheduler's notification eligibility check to share the same diagnostic logic, avoiding divergence between what the administration page reports and what the cron accepts.

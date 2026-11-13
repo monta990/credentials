@@ -96,6 +96,8 @@
                     <div class="alert alert-warning mb-0" role="status">{{ __('No active Credential lifecycle notification was found for the active entity.', 'credentials') }}</div>
                 {% elseif not notification_setup.mail_template_found %}
                     <div class="alert alert-warning mb-0" role="status">{{ __('A lifecycle notification exists, but it does not have an email template assigned.', 'credentials') }}</div>
+                {% elseif not notification_setup.mail_mode_enabled %}
+                    <div class="alert alert-warning mb-0" role="status">{{ __('The GLPI email notification mode is disabled. Enable the email notification mode in GLPI before reminders can be queued.', 'credentials') }}</div>
                 {% else %}
                     <div class="alert alert-warning mb-0" role="status">{{ __('The email notification is present, but the Review responsible recipient is not configured.', 'credentials') }}</div>
                 {% endif %}

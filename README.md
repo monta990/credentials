@@ -120,7 +120,7 @@ Expiration and review dates can generate email reminders. Credentials does not c
 
 Credentials registers a daily GLPI automatic action. From **Setup > Plugins > Credentials > Configuration**, administrators can enable or pause lifecycle reminders and choose a look-ahead period from 1 to 365 days (30 days by default). Overdue dates remain eligible regardless of the selected period.
 
-The configuration page also reports whether GLPI global email notifications are enabled, whether the Credentials automatic action is registered and enabled, and whether the required Credential email notification (including its email template and Review responsible recipient) is correctly configured for the active entity. To deliver email reminders, configure a GLPI notification for the **Credential** item type and the **Expiration and review follow-up** event. Add **Review responsible** as a recipient and select an email notification template. The template can use these tags:
+The configuration page also reports whether GLPI global email notifications and the email delivery mode are enabled, whether the Credentials automatic action is registered and enabled, and whether the required Credential email notification (including its email template and Review responsible recipient) is correctly configured for the active entity. To deliver email reminders, configure a GLPI notification for the **Credential** item type and the **Expiration and review follow-up** event. Add **Review responsible** as a recipient and select an email notification template. The template can use these tags:
 
 - `##credential.id##`
 - `##credential.name##`
