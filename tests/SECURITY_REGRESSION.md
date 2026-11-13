@@ -96,6 +96,23 @@ Attach the CI run, GLPI version/PHP matrix, sanitized screenshots of the three m
 - [ ] Purge requires Credential READ and DELETE rights in addition to configuration access. It only deletes archived records older than the configured period, after row locking and confirming there are no relationships; history is recorded before deletion.
 - [ ] Uninstall removes the new profile right and category table; upgrade does not remove existing credentials.
 
+
+## Automated lifecycle notices (0.0.33)
+
+- [ ] Plugin installation and upgrade create the reminder ledger and register one daily GLPI automatic action; repeated upgrades do not create duplicates.
+- [ ] Plugin uninstall unregisters only Credentials automatic actions and removes the reminder ledger; archived-credential purge removes that credential's reminder markers transactionally.
+- [ ] Notification template setup exposes the Credential item type, the lifecycle reminder event and the dedicated Review responsible recipient.
+- [ ] The cron does nothing when GLPI notifications are globally disabled or no active mailing-channel event, template and reviewer recipient are configured for the credential entity.
+- [ ] Only active credentials with a valid assigned reviewer, a profile covering the credential entity and a default email address can consume a reminder marker.
+- [ ] Overdue dates and dates through exactly 30 days ahead are included; dates outside the window and invalid dates are ignored.
+- [ ] A unique ledger key prevents repeats for the same credential, entity, due date and reviewer, including concurrent cron executions. Equal expiration and review dates produce one reminder.
+- [ ] Updating a due date or changing the assigned reviewer allows a new notice without repeating the unchanged reminder.
+- [ ] The notification query never selects encrypted login, password, URL or notes columns. The target builds its template from the minimal non-secret fields only.
+- [ ] Notification templates expose only credential ID, name, lifecycle status, due date and event label; no password, login, protected URL, notes or ciphertext appears in mail, queue data, logs or errors.
+- [ ] Configure and test the notification queue in a staging GLPI 12 instance, including a reviewer with no email, an inactive reviewer, entity restrictions, notifications disabled, missing template, and a manually triggered automatic action.
+- [ ] Confirm the notification uses the configured mail template and GLPI's existing queue/retry behavior; no direct SMTP implementation or automatic password rotation is added.
+
+
 ## Encrypted export/import (0.0.32)
 
 - [ ] Export/import require the dedicated backup profile right; import additionally requires credential create permission.

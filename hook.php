@@ -10,6 +10,7 @@ use Glpi\Cache\CacheManager;
 use GlpiPlugin\Credentials\Credential;
 use GlpiPlugin\Credentials\CredentialItem;
 use GlpiPlugin\Credentials\CredentialItemLink;
+use GlpiPlugin\Credentials\Service\CredentialLifecycleReminderService;
 use GlpiPlugin\Credentials\Profile;
 
 /** Install or upgrade Credentials tables and rights. */
@@ -75,7 +76,21 @@ function plugin_credentials_install(): bool
         KEY `is_deleted` (`is_deleted`)
     ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
 
-    if ($credentials_created === false || $links_created === false || $categories_created === false) {
+    $reminders_created = $DB->doQuery("CREATE TABLE IF NOT EXISTS `glpi_plugin_credentials_reminders` (
+        `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        `plugin_credentials_credentials_id` INT UNSIGNED NOT NULL,
+        `entities_id` INT UNSIGNED NOT NULL DEFAULT 0,
+        `reminder_type` VARCHAR(16) NOT NULL,
+        `reminder_date` DATE NOT NULL,
+        `reviewer_users_id` INT UNSIGNED NOT NULL,
+        `date_sent` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `credential_reminder` (`plugin_credentials_credentials_id`, `entities_id`, `reminder_date`, `reviewer_users_id`),
+        KEY `credential` (`plugin_credentials_credentials_id`),
+        KEY `date_sent` (`date_sent`)
+    ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+
+    if ($credentials_created === false || $links_created === false || $categories_created === false || $reminders_created === false) {
         return false;
     }
 
@@ -103,6 +118,22 @@ function plugin_credentials_install(): bool
     $migration->executeMigration();
     Profile::initProfile();
 
+    // Keep lifecycle reminders inside GLPI's native automatic-action scheduler.
+    $reminder_task = new CronTask();
+    if (
+        !$reminder_task->getFromDBbyName(
+            CredentialLifecycleReminderService::class,
+            CredentialLifecycleReminderService::CRON_NAME
+        )
+        && !CronTask::register(
+            CredentialLifecycleReminderService::class,
+            CredentialLifecycleReminderService::CRON_NAME,
+            DAY_TIMESTAMP
+        )
+    ) {
+        return false;
+    }
+
     // This hook runs for both first installation and plugin updates. Reset GLPI's
     // cache contexts (including translations) and compiled Twig templates so the
     // next request cannot reuse stale plugin metadata, rights or UI definitions.
@@ -117,11 +148,19 @@ function plugin_credentials_uninstall(): bool
     global $DB;
 
     Profile::removeRightsFromSession();
+    if (CronTask::unregister('credentials') === false) {
+        return false;
+    }
     if ($DB->delete('glpi_profilerights', ['name' => [Credential::$rightname, Credential::RIGHT_REVEAL, Credential::RIGHT_BACKUP]]) === false) {
         return false;
     }
     if ($DB->tableExists('glpi_plugin_credentials_items')
         && $DB->doQuery('DROP TABLE `glpi_plugin_credentials_items`') === false
+    ) {
+        return false;
+    }
+    if ($DB->tableExists('glpi_plugin_credentials_reminders')
+        && $DB->doQuery('DROP TABLE `glpi_plugin_credentials_reminders`') === false
     ) {
         return false;
     }

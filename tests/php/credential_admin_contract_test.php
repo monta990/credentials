@@ -11,8 +11,18 @@ $admin = file_get_contents($root . '/src/Service/CredentialAdminService.php');
 $category = file_get_contents($root . '/src/CredentialCategory.php');
 $credential = file_get_contents($root . '/src/Credential.php');
 $profile = file_get_contents($root . '/src/Profile.php');
+$reminder_service = file_get_contents($root . '/src/Service/CredentialLifecycleReminderService.php');
+$reminder_target = file_get_contents($root . '/src/NotificationTargetCredential.php');
 $checks = [
     'GLPI configuration page hook' => str_contains($setup, "Hooks::CONFIG_PAGE]['credentials'] = 'config'"),
+    'Credential is registered for notification templates' => str_contains($setup, "Plugin::registerClass(Credential::class, ['notificationtemplates_types' => true])"),
+    'Daily lifecycle reminder automatic action is registered and unregistered' => str_contains($hook, 'CronTask::register(') && str_contains($hook, "CronTask::unregister('credentials')") && str_contains($hook, 'CredentialLifecycleReminderService::CRON_NAME'),
+    'Lifecycle reminder notification target is discoverable' => str_contains($reminder_target, 'class NotificationTargetCredential extends NotificationTarget') && str_contains($reminder_target, "CredentialLifecycleReminderService::EVENT"),
+    'Lifecycle notification is addressed to assigned reviewer' => str_contains($reminder_target, "addUserByField('reviewer_users_id')") && str_contains($reminder_service, 'getDefaultEmail()'),
+    'Lifecycle reminders use GLPI native notification queue' => str_contains($reminder_service, 'NotificationEvent::raiseEvent('),
+    'Only active email notification templates consume reminder markers' => str_contains($reminder_service, 'Notification_NotificationTemplate::MODE_MAIL'),
+    'Reminder marker has unique credential/entity/date/reviewer key' => str_contains($hook, 'credential_reminder') && str_contains($hook, '`reminder_date`, `reviewer_users_id`)'),
+    'Reminder markers are removed when credentials are permanently purged' => str_contains($admin, "'glpi_plugin_credentials_reminders'"),
     'Administrative page route' => str_contains($controller, "Route('/config'"),
     'Dedicated encrypted backup permission' => str_contains($credential, "RIGHT_BACKUP = 'plugin_credentials_backup'"),
     'Backup permission exposed in profiles' => str_contains($profile, 'Credential::RIGHT_BACKUP'),

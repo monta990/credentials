@@ -69,7 +69,7 @@ foreach (['CredentialController.php', 'TicketCredentialsController.php'] as $con
 }
 
 $setup = (string) $version_source;
-if (!str_contains($setup, 'Plugin::registerClass(Credential::class)')) {
+if (!str_contains($setup, "Plugin::registerClass(Credential::class, ['notificationtemplates_types' => true])")) {
     $errors[] = 'Credential CommonDBTM must be registered for native linked-item history resolution.';
 }
 foreach ([
@@ -471,12 +471,56 @@ foreach ([
     'tests/php/credential_admin_contract_test.php',
     'tests/php/reviewer_options_test.php',
     'tests/php/credential_backup_contract_test.php',
+    'src/Service/CredentialLifecycleReminderService.php',
+    'src/NotificationTargetCredential.php',
+    'tests/php/credential_lifecycle_reminder_test.php',
     'templates/config.html.twig',
 ] as $required_admin_file) {
     if (!is_file($root . '/' . $required_admin_file)) {
         $errors[] = 'Administrative functionality file is missing: ' . $required_admin_file;
     }
 }
+$reminder_service = file_get_contents($root . '/src/Service/CredentialLifecycleReminderService.php');
+$reminder_target = file_get_contents($root . '/src/NotificationTargetCredential.php');
+$reminder_select = '';
+$select_start = is_string($reminder_service) ? strpos($reminder_service, "'SELECT' => [") : false;
+$select_end = is_string($reminder_service) && $select_start !== false
+    ? strpos($reminder_service, "'FROM' => Credential::getTable()", $select_start)
+    : false;
+if ($select_start !== false && $select_end !== false) {
+    $reminder_select = substr($reminder_service, $select_start, $select_end - $select_start);
+}
+if (
+    !is_string($hook)
+    || !str_contains($hook, 'glpi_plugin_credentials_reminders')
+    || !str_contains($hook, 'CronTask::register(')
+    || !str_contains($hook, "CronTask::unregister('credentials')")
+    || !is_string($setup)
+    || !str_contains($setup, "['notificationtemplates_types' => true]")
+    || !is_string($reminder_service)
+    || !str_contains($reminder_service, 'NotificationEvent::raiseEvent(')
+    || !str_contains($reminder_service, 'reminderAlreadyQueued($dedupe_key)')
+    || !str_contains($reminder_service, 'getDefaultEmail()')
+    || !is_string($reminder_target)
+    || !str_contains($reminder_target, 'TARGET_REVIEWER = 1000')
+    || !str_contains($reminder_target, "addUserByField('reviewer_users_id')")
+    || !str_contains((string) $admin_service, "'glpi_plugin_credentials_reminders'")
+    || !str_contains($hook, "UNIQUE KEY `credential_reminder` (`plugin_credentials_credentials_id`, `entities_id`, `reminder_date`, `reviewer_users_id`)")
+    || $reminder_select === ''
+) {
+    $errors[] = 'Credential lifecycle reminders must use GLPI CronTask/notifications and a date/reviewer-scoped idempotency ledger.';
+}
+foreach (['login', 'password', 'url', 'notes'] as $protected_field) {
+    if (str_contains($reminder_select, "'" . $protected_field . "'")) {
+        $errors[] = 'Lifecycle reminder scans must not select protected credential field: ' . $protected_field . '.';
+    }
+}
+foreach (['##credential.login##', '##credential.password##', '##credential.url##', '##credential.notes##'] as $protected_tag) {
+    if (is_string($reminder_target) && str_contains($reminder_target, $protected_tag)) {
+        $errors[] = 'Lifecycle notification templates must not expose protected tag: ' . $protected_tag . '.';
+    }
+}
+
 if (!str_contains((string) $hook, 'glpi_plugin_credentials_categories')
     || !str_contains((string) $hook, "'date_expires'")
     || !str_contains((string) $hook, "'date_last_review'")
