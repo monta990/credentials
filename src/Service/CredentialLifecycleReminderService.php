@@ -202,25 +202,67 @@ final class CredentialLifecycleReminderService
         return $reminders;
     }
 
-    private static function hasConfiguredNotification(int $entities_id): bool
+    /**
+     * Inspect the exact GLPI notification requirements used by the cron for one entity.
+     *
+     * @return array{event_found:bool,mail_template_found:bool,reviewer_recipient_found:bool,ready:bool}
+     */
+    public static function notificationSetupStatus(int $entities_id): array
     {
-        global $DB;
+        global $DB, $CFG_GLPI;
 
-        $notifications = Notification::getNotificationsByEventAndType(
-            self::EVENT,
-            Credential::class,
-            $entities_id
-        );
+        // Notification::getNotificationsByEventAndType() filters template links
+        // by globally enabled modes. Query the same entity-aware notification scope
+        // without that mode filter so the UI can distinguish a missing template
+        // from an existing email template whose global channel is disabled.
+        $notification_table = Notification::getTable();
+        $template_link_table = \Notification_NotificationTemplate::getTable();
+        $notifications = $DB->request([
+            'SELECT' => [
+                $notification_table . '.id',
+                $template_link_table . '.mode',
+                $template_link_table . '.notificationtemplates_id',
+            ],
+            'FROM' => $notification_table,
+            'LEFT JOIN' => [
+                $template_link_table => [
+                    'ON' => [
+                        $template_link_table => 'notifications_id',
+                        $notification_table => 'id',
+                    ],
+                ],
+            ],
+            'WHERE' => [
+                $notification_table . '.itemtype' => Credential::class,
+                $notification_table . '.event' => self::EVENT,
+                $notification_table . '.is_active' => 1,
+            ] + \getEntitiesRestrictCriteria(
+                $notification_table,
+                'entities_id',
+                $entities_id,
+                true
+            ),
+            'ORDER' => [$notification_table . '.id'],
+        ]);
+
+        $event_found = false;
+        $mail_template_found = false;
+        $reviewer_recipient_found = false;
+        $mail_mode_enabled = !empty($CFG_GLPI['notifications_mailing']);
+
         foreach ($notifications as $notification) {
+            $event_found = true;
             if (
                 (int) ($notification['notificationtemplates_id'] ?? 0) <= 0
-                || (string) ($notification['mode'] ?? '') !== Notification_NotificationTemplate::MODE_MAIL
+                || (string) ($notification['mode'] ?? '') !== \Notification_NotificationTemplate::MODE_MAIL
             ) {
                 continue;
             }
 
-            // Require the plugin's explicit reviewer recipient. A notification without
-            // this target is not considered configured and must not consume a reminder.
+            $mail_template_found = true;
+
+            // A reviewer target must belong to the same notification that owns
+            // the email template; unrelated notification targets are not enough.
             $targets = $DB->request([
                 'SELECT' => ['id'],
                 'FROM' => 'glpi_notificationtargets',
@@ -233,11 +275,23 @@ final class CredentialLifecycleReminderService
                 'LIMIT' => 1,
             ]);
             foreach ($targets as $target) {
-                return true;
+                $reviewer_recipient_found = true;
+                break 2;
             }
         }
 
-        return false;
+        return [
+            'event_found' => $event_found,
+            'mail_template_found' => $mail_template_found,
+            'mail_mode_enabled' => $mail_mode_enabled,
+            'reviewer_recipient_found' => $reviewer_recipient_found,
+            'ready' => $mail_mode_enabled && $mail_template_found && $reviewer_recipient_found,
+        ];
+    }
+
+    private static function hasConfiguredNotification(int $entities_id): bool
+    {
+        return self::notificationSetupStatus($entities_id)['ready'];
     }
 
     /**

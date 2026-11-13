@@ -471,6 +471,7 @@ foreach ([
     'tests/php/credential_admin_contract_test.php',
     'tests/php/reviewer_options_test.php',
     'tests/php/credential_backup_contract_test.php',
+    'tests/php/credential_category_test.php',
     'src/Service/CredentialLifecycleReminderService.php',
     'src/NotificationTargetCredential.php',
     'tests/php/credential_lifecycle_reminder_test.php',

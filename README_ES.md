@@ -31,7 +31,7 @@ En lugar de guardar la misma información en distintos lugares, el equipo puede 
 - 👁️ **Visualización controlada:** Solo el personal autorizado puede mostrar las contraseñas guardadas.
 - 📋 **Copia rápida:** Copia una contraseña cuando sea necesario.
 - 🧾 **Historial de actividad:** Conserva un registro de las acciones importantes sin mostrar contraseñas.
-- 🏷️ **Categorías:** Organiza las credenciales por sistemas, servicios, redes, servidores u otros grupos definidos por tu equipo.
+- 🏷️ **Categorías:** Crea, renombra y actualiza descripciones; editar una categoría conserva sus asociaciones con credenciales.
 - 📅 **Vigencia y revisiones:** Registra vencimientos, última y próxima revisión, y la persona responsable.
 - 🧭 **Página de administración:** Consulta actualizaciones, actividad, revisiones pendientes y registros archivados.
 - 📦 **Respaldos protegidos:** Exporta e importa credenciales mediante un archivo protegido con contraseña.
@@ -89,7 +89,7 @@ La página de administración de **Credentials** se encuentra en el área de con
 Desde esa página, los administradores pueden:
 
 - Consultar si existe una versión estable más reciente en GitHub.
-- Crear y administrar categorías.
+- Crear, renombrar y actualizar categorías sin romper los vínculos existentes con credenciales.
 - Revisar credenciales vencidas o próximas a revisión.
 - Consultar la actividad reciente registrada en el historial de GLPI.
 - Revisar credenciales archivadas y restaurarlas al vincularlas con un elemento disponible.
@@ -103,6 +103,8 @@ Las fechas de vencimiento y revisión son recordatorios administrativos. Credent
 Credentials registra una tarea automática diaria de GLPI para avisar al responsable de revisión sobre vencimientos y revisiones atrasadas o próximas. En **Configuración > Plugins > Credentials > Configuración**, el administrador puede activar o pausar los avisos y elegir una anticipación de 1 a 365 días (30 por defecto). Las fechas atrasadas siempre se incluyen.
 
 Para enviar los correos, también se debe habilitar el sistema global de notificaciones de GLPI y configurar una notificación para el tipo **Credential**, evento **Expiration and review follow-up**, destinatario **Review responsible** y una plantilla por correo. La pantalla de configuración muestra si las notificaciones globales y la tarea automática de Credentials están activas. El responsable asignado debe tener una cuenta activa, acceso a la entidad y un correo predeterminado.
+
+La pantalla de configuración también comprueba, para la entidad activa, que exista una notificación activa del evento, que tenga una plantilla por correo y que incluya al destinatario **Review responsible**. Informa por separado si falta la notificación, la plantilla o el responsable, y también indica cuando el canal global de correo de GLPI está deshabilitado.
 
 La deduplicación evita repetir diariamente el mismo aviso para la misma credencial, entidad, fecha y responsable. Si el vencimiento y la revisión coinciden, se genera un único aviso. El mensaje no incluye contraseñas ni otros valores protegidos.
 

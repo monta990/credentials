@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 0.0.34\n"
+"Project-Id-Version: Credentials 0.0.36\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-06 06:40+0000\n"
 "PO-Revision-Date: 2026-11-05 19:50-0700\n"
@@ -870,4 +870,31 @@ msgstr "Le délai de rappel doit être compris entre 1 et 365 jours."
 
 msgid "Lifecycle reminder settings were saved."
 msgstr "Les paramètres de rappel du cycle de vie ont été enregistrés."
+
+msgid "The Credential lifecycle email notification is correctly configured for the active entity."
+msgstr "La notification par e-mail du cycle de vie de Credential est correctement configurée pour l'entité active."
+
+msgid "No active Credential lifecycle notification was found for the active entity."
+msgstr "Aucune notification active du cycle de vie de Credential n'a été trouvée pour l'entité active."
+
+msgid "A lifecycle notification exists, but it does not have an email template assigned."
+msgstr "Une notification de cycle de vie existe, mais aucun modèle d'e-mail ne lui est associé."
+
+msgid "The email notification is present, but the Review responsible recipient is not configured."
+msgstr "La notification par e-mail existe, mais le destinataire Review responsible n'est pas configuré."
+
+msgid "The GLPI email notification mode is disabled. Enable the email notification mode in GLPI before reminders can be queued."
+msgstr "Le canal de notification par e-mail de GLPI est désactivé. Activez-le dans GLPI avant la mise en file d'attente des rappels."
+
+msgid "Edit category"
+msgstr "Modifier la catégorie"
+
+msgid "Save changes"
+msgstr "Enregistrer les modifications"
+
+msgid "Category updated successfully."
+msgstr "La catégorie a été mise à jour."
+
+msgid "The category could not be updated. Check its name, entity access and make sure it is not already in use by another category."
+msgstr "Impossible de mettre à jour la catégorie. Vérifiez son nom et votre accès à l'entité, et assurez-vous qu'aucune autre catégorie ne porte déjà ce nom."
 

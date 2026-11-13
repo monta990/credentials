@@ -1,3 +1,21 @@
+## 0.0.36 — 2026-11-13
+
+- Added category editing to the Credentials administration page; administrators can rename categories and update descriptions without changing category IDs, entity ownership or existing credential associations.
+- Category updates trim input, enforce the existing length limits, reject empty names and same-entity duplicates, and require access to the category's entity. Create, edit, find-or-create and delete operations serialize by locking the GLPI entity row before checking names, preventing concurrent duplicate-name writes without a risky retroactive unique-index migration.
+- Added regression coverage for valid edits, duplicate names, authorization, invalid/deleted IDs, length boundaries, timestamp handling and preservation of entity scope.
+- Updated English and Spanish documentation, HANDOFF and es_MX/es_ES/fr_FR PO/MO catalogs. This PR is stacked on PR #6 and proposes version 0.0.36.
+
+## 0.0.35 — 2026-11-13
+
+- Fixed notification diagnostics so GLPI's global mail-channel filter cannot make an existing email template appear missing; the dashboard now reports a separately disabled global email mode.
+- The notification diagnostic uses GLPI's recursive entity restriction and only accepts a Review responsible target attached to the same notification that owns the email template.
+- Added regressions for the disabled mail mode, unrelated notification targets and entity scoping.
+- Added entity-scoped diagnostics for the complete native GLPI lifecycle notification setup, using the same event, email-template and Review responsible target checks as the reminder scheduler.
+- The Credentials configuration page now distinguishes a missing active event notification, a missing email template, a missing Review responsible recipient, and a ready configuration for the active entity.
+- Refactored the scheduler's notification eligibility check to share the same diagnostic logic, avoiding divergence between what the administration page reports and what the cron accepts.
+- Added regressions for each incomplete notification configuration state and for a fully configured email notification, including the exact reviewer-target query scope.
+- Updated administrator documentation, handoff notes and locale catalogs; this PR is stacked on PR #5 and proposes version 0.0.35.
+
 ## 0.0.34 — 2026-11-13
 
 - Added administrator controls to enable or pause lifecycle email reminders and choose a look-ahead period from 1 to 365 days; existing installations keep reminders enabled with the original 30-day default.
