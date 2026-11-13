@@ -1,3 +1,14 @@
+# Changelog
+
+## 0.0.32 — 2026-11-12 (development)
+
+- Added a dedicated administration page with stable GitHub release checks, credential categories, expiration alerts and review scheduling.
+- Added secret-free administrative activity, archived credential restoration and confirmed permanent purge.
+- Added password-protected `.ccvault` export/import using Argon2id and authenticated Sodium encryption; imported secrets are encrypted again with the destination GLPI key.
+- Hardened review, export, restore and purge operations with transactions and current row-locking reads.
+- Expanded administrative workflow and encrypted archive regression checks.
+- Updated English-source UI text translations for Spanish (Mexico), Spanish (Spain) and French (France).
+
 ## 0.0.31 — 2026-11-09
 
 - La transferencia ahora trata como obsoletos los IDs de credencial cuyo registro fue archivado, cambió de entidad o perdió el vínculo exacto de origen mientras se esperaba el bloqueo. La decisión se basa en lecturas actuales bloqueantes, no en el snapshot anterior de InnoDB.
