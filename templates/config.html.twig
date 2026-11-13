@@ -1,0 +1,157 @@
+<div class="container-fluid plugin_credentials">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <div>
+            <h2 class="mb-1"><i class="ti ti-key me-2" aria-hidden="true"></i>{{ __('Credentials settings', 'credentials') }}</h2>
+            <p class="text-muted mb-0">{{ __('Manage credential updates, reviews, backups and archived entries.', 'credentials') }}</p>
+        </div>
+        <span class="badge bg-secondary">{{ __('Installed version', 'credentials') }}: {{ release.installed }}</span>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">{{ __('Active credentials', 'credentials') }}</div><div class="fs-2 fw-bold">{{ active_count }}</div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">{{ __('Archived credentials', 'credentials') }}</div><div class="fs-2 fw-bold">{{ archived_count }}</div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">{{ __('Expired credentials', 'credentials') }}</div><div class="fs-2 fw-bold">{{ expired_count }}</div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted">{{ __('Reviews due', 'credentials') }}</div><div class="fs-2 fw-bold">{{ review_due_count }}</div></div></div></div>
+    </div>
+
+    <section class="card mb-4">
+        <div class="card-header"><h3 class="h4 mb-0"><i class="ti ti-brand-github me-2" aria-hidden="true"></i>{{ __('Plugin updates', 'credentials') }}</h3></div>
+        <div class="card-body">
+            {% if release.status == 'update_available' %}
+                <div class="alert alert-warning" role="status">{{ __('A newer stable version is available.', 'credentials') }} <strong>{{ release.latest }}</strong></div>
+            {% elseif release.status == 'up_to_date' %}
+                <div class="alert alert-success" role="status">{{ __('You are using the latest published stable version.', 'credentials') }}</div>
+            {% elseif release.status == 'no_release' %}
+                <div class="alert alert-info" role="status">{{ __('There are no published releases yet. Check the GitHub releases page for future versions.', 'credentials') }}</div>
+            {% elseif release.status == 'stale' %}
+                <div class="alert alert-warning" role="status">{{ __('GitHub could not be reached. Showing the last successful release check.', 'credentials') }} {% if release.latest %}{{ release.latest }}{% endif %}</div>
+            {% else %}
+                <div class="alert alert-secondary" role="status">{{ __('GitHub release information is currently unavailable.', 'credentials') }}</div>
+            {% endif %}
+            <p class="mb-2">{{ __('Installed version', 'credentials') }}: <strong>{{ release.installed }}</strong> · {{ __('Latest stable version', 'credentials') }}: <strong>{{ release.latest ?: __('Not published', 'credentials') }}</strong></p>
+            {% if release.published_at %}<p class="text-muted mb-2">{{ __('Published', 'credentials') }}: {{ release.published_at }}</p>{% endif %}
+            {% if release.checked_at %}<p class="text-muted mb-2">{{ __('Last checked', 'credentials') }}: {{ release.checked_at }}</p>{% endif %}
+            <div class="d-flex gap-2 flex-wrap">
+                <form method="post" action="{{ update_url|e('html_attr') }}"><button class="btn btn-secondary" type="submit"><i class="ti ti-refresh me-1" aria-hidden="true"></i>{{ __('Check for updates', 'credentials') }}</button></form>
+                <a class="btn btn-link" href="{{ release_page|e('html_attr') }}" target="_blank" rel="noopener noreferrer">{{ __('View GitHub releases', 'credentials') }}</a>
+            </div>
+            <p class="form-hint mt-2 mb-0">{{ __('The plugin checks for published stable releases only. It never installs updates automatically.', 'credentials') }}</p>
+        </div>
+    </section>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-xl-6">
+            <section class="card h-100">
+                <div class="card-header"><h3 class="h4 mb-0"><i class="ti ti-shield-lock me-2" aria-hidden="true"></i>{{ __('Encrypted backup', 'credentials') }}</h3></div>
+                <div class="card-body">
+                    {% if can_export and sodium_ready %}
+                        <p>{{ __('Export active credentials and their links to a password-protected backup. Choose a strong backup password and keep it separately.', 'credentials') }}</p>
+                        <form method="post" action="{{ export_url|e('html_attr') }}">
+                            <div class="mb-3"><label class="form-label" for="credentials-export-password">{{ __('Backup password', 'credentials') }}</label><input class="form-control" id="credentials-export-password" name="backup_password" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required></div>
+                            <div class="mb-3"><label class="form-label" for="credentials-export-confirm">{{ __('Confirm backup password', 'credentials') }}</label><input class="form-control" id="credentials-export-confirm" name="backup_password_confirm" type="password" minlength="12" maxlength="1024" autocomplete="new-password" required></div>
+                            <button class="btn btn-primary" type="submit"><i class="ti ti-download me-1" aria-hidden="true"></i>{{ __('Export encrypted backup', 'credentials') }}</button>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">{{ __('You need credential read and password display permissions, and the sodium extension, to export protected information.', 'credentials') }}</div>
+                    {% endif %}
+                    <p class="form-hint mt-3 mb-0">{{ __('The backup is encrypted independently of the GLPI key. Store both the backup and its password securely. Export does not replace a full GLPI database and encryption-key backup.', 'credentials') }}</p>
+                </div>
+            </section>
+        </div>
+        <div class="col-12 col-xl-6">
+            <section class="card h-100">
+                <div class="card-header"><h3 class="h4 mb-0"><i class="ti ti-upload me-2" aria-hidden="true"></i>{{ __('Import encrypted backup', 'credentials') }}</h3></div>
+                <div class="card-body">
+                    {% if can_import and sodium_ready %}
+                        <p>{{ __('Import creates new credentials. Existing entries are never overwritten.', 'credentials') }}</p>
+                        <form method="post" action="{{ import_url|e('html_attr') }}" enctype="multipart/form-data">
+                            <div class="mb-3"><label class="form-label" for="credentials-import-file">{{ __('Backup file', 'credentials') }}</label><input class="form-control" id="credentials-import-file" name="archive" type="file" accept=".ccvault,.json,application/json" required></div>
+                            <div class="mb-3"><label class="form-label" for="credentials-import-password">{{ __('Backup password', 'credentials') }}</label><input class="form-control" id="credentials-import-password" name="backup_password" type="password" maxlength="1024" autocomplete="current-password" required></div>
+                            <button class="btn btn-primary" type="submit"><i class="ti ti-database-import me-1" aria-hidden="true"></i>{{ __('Import credentials', 'credentials') }}</button>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">{{ __('Credential creation permission, an available GLPI encryption key and the sodium extension are required to import.', 'credentials') }}</div>
+                    {% endif %}
+                    <p class="form-hint mt-3 mb-0">{{ __('The import expects the linked GLPI items and entity IDs to exist and be accessible in this installation. Restore a backup into a matching GLPI database.', 'credentials') }}</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <section class="card mb-4">
+        <div class="card-header"><h3 class="h4 mb-0"><i class="ti ti-tags me-2" aria-hidden="true"></i>{{ __('Credential categories', 'credentials') }}</h3></div>
+        <div class="card-body">
+            {% if categories %}
+                <div class="d-flex flex-wrap gap-2">{% for category in categories %}<span class="badge bg-secondary">{{ category.name }} · {{ category.count }}</span>{% endfor %}</div>
+            {% else %}
+                <p class="text-muted mb-0">{{ __('No categories have been added yet. Add a category when creating or editing a credential.', 'credentials') }}</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-xl-6">
+            <section class="card h-100">
+                <div class="card-header"><h3 class="h4 mb-0"><i class="ti ti-calendar-exclamation me-2" aria-hidden="true"></i>{{ __('Expiration alerts', 'credentials') }}</h3></div>
+                <div class="card-body">
+                    {% if expiring_rows %}
+                        <div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>{{ __('Credential', 'credentials') }}</th><th>{{ __('Category', 'credentials') }}</th><th>{{ __('Expiration date', 'credentials') }}</th><th>{{ __('Status', 'credentials') }}</th></tr></thead><tbody>
+                        {% for item in expiring_rows %}<tr><td>{{ item.name }} <small class="text-muted">#{{ item.id }}</small></td><td>{{ item.category ?: '—' }}</td><td>{{ item.expires_at }}</td><td>{% if item.status == 'expired' %}<span class="badge bg-danger">{{ __('Expired', 'credentials') }}</span>{% else %}<span class="badge bg-warning text-dark">{{ __('Expiring soon', 'credentials') }}</span>{% endif %}</td></tr>{% endfor %}
+                        </tbody></table></div>
+                    {% else %}<p class="text-muted mb-0">{{ __('No credential expirations are due within the next 30 days.', 'credentials') }}</p>{% endif %}
+                </div>
+            </section>
+        </div>
+        <div class="col-12 col-xl-6">
+            <section class="card h-100">
+                <div class="card-header"><h3 class="h4 mb-0"><i class="ti ti-calendar-check me-2" aria-hidden="true"></i>{{ __('Review schedule', 'credentials') }}</h3></div>
+                <div class="card-body">
+                    {% if review_rows %}
+                        <div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>{{ __('Credential', 'credentials') }}</th><th>{{ __('Next review', 'credentials') }}</th><th>{{ __('Status', 'credentials') }}</th><th>{{ __('Action', 'credentials') }}</th></tr></thead><tbody>
+                        {% for item in review_rows %}<tr><td>{{ item.name }} <small class="text-muted">#{{ item.id }}</small></td><td>{{ item.review_due_at }}</td><td>{% if item.status == 'overdue' %}<span class="badge bg-danger">{{ __('Overdue', 'credentials') }}</span>{% else %}<span class="badge bg-warning text-dark">{{ __('Upcoming', 'credentials') }}</span>{% endif %}</td><td>{% if can_review %}<form method="post" action="{{ review_url|e('html_attr') }}" class="d-flex gap-1"><input type="hidden" name="id" value="{{ item.id }}"><input class="form-control form-control-sm" type="date" name="next_review_at" value="{{ item.review_due_at }}" aria-label="{{ __('Next review', 'credentials') }}"><button class="btn btn-sm btn-primary" type="submit">{{ __('Mark reviewed', 'credentials') }}</button></form>{% endif %}</td></tr>{% endfor %}
+                        </tbody></table></div>
+                    {% else %}<p class="text-muted mb-0">{{ __('No credential reviews are due within the next 30 days.', 'credentials') }}</p>{% endif %}
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <section class="card mb-4">
+        <div class="card-header"><h3 class="h4 mb-0"><i class="ti ti-archive me-2" aria-hidden="true"></i>{{ __('Archived credentials', 'credentials') }}</h3></div>
+        <div class="card-body">
+            <p class="form-hint">{{ __('Archived credentials remain recoverable until permanently deleted. To restore one, choose an existing item from the same GLPI entity.', 'credentials') }}</p>
+            {% if archived_rows %}
+                <div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>{{ __('Credential', 'credentials') }}</th><th>{{ __('Category', 'credentials') }}</th><th>{{ __('Archived', 'credentials') }}</th><th>{{ __('Restore', 'credentials') }}</th><th>{{ __('Permanent deletion', 'credentials') }}</th></tr></thead><tbody>
+                {% for item in archived_rows %}
+                    <tr>
+                        <td>{{ item.name }} <small class="text-muted">#{{ item.id }}</small></td><td>{{ item.category ?: '—' }}</td><td>{{ item.date_mod ?: '—' }}</td>
+                        <td>{% if can_restore %}<form method="post" action="{{ restore_url|e('html_attr') }}" class="d-flex gap-1 flex-wrap"><input type="hidden" name="id" value="{{ item.id }}"><input class="form-control form-control-sm" name="itemtype" type="text" maxlength="100" placeholder="{{ __('Item type', 'credentials') }}" required><input class="form-control form-control-sm" name="items_id" type="number" min="1" placeholder="{{ __('Item ID', 'credentials') }}" required><button class="btn btn-sm btn-primary" type="submit">{{ __('Restore', 'credentials') }}</button></form>{% endif %}</td>
+                        <td>{% if can_purge %}<form method="post" action="{{ purge_url|e('html_attr') }}" onsubmit="return confirm('{{ __('Permanently delete this archived credential?', 'credentials')|e('js') }}');"><input type="hidden" name="id" value="{{ item.id }}"><label class="form-check"><input class="form-check-input" name="confirm_purge" type="checkbox" value="1" required><span class="form-check-label">{{ __('Confirm', 'credentials') }}</span></label><button class="btn btn-sm btn-danger" type="submit">{{ __('Delete permanently', 'credentials') }}</button></form>{% endif %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody></table></div>
+            {% else %}<p class="text-muted mb-0">{{ __('There are no archived credentials in the active entities.', 'credentials') }}</p>{% endif %}
+        </div>
+    </section>
+
+    <section class="card mb-4">
+        <div class="card-header"><h3 class="h4 mb-0"><i class="ti ti-history me-2" aria-hidden="true"></i>{{ __('Recent activity', 'credentials') }}</h3></div>
+        <div class="card-body">
+            {% if audit_rows %}
+                <div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>{{ __('Date', 'credentials') }}</th><th>{{ __('User', 'credentials') }}</th><th>{{ __('Credential ID', 'credentials') }}</th><th>{{ __('Event', 'credentials') }}</th></tr></thead><tbody>
+                {% for event in audit_rows %}<tr><td>{{ event.date }}</td><td>{{ event.user_name }}</td><td>#{{ event.credential_id }}</td><td>{{ event.event }}</td></tr>{% endfor %}
+                </tbody></table></div>
+            {% else %}<p class="text-muted mb-0">{{ __('No credential activity is available to display.', 'credentials') }}</p>{% endif %}
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-header"><h3 class="h4 mb-0"><i class="ti ti-settings-check me-2" aria-hidden="true"></i>{{ __('Security and maintenance', 'credentials') }}</h3></div>
+        <div class="card-body">
+            <p class="mb-2">{{ __('GLPI encryption key', 'credentials') }}:
+                {% if encryption_ready %}<span class="badge bg-success">{{ __('Available', 'credentials') }}</span>{% else %}<span class="badge bg-danger">{{ __('Unavailable', 'credentials') }}</span>{% endif %}
+            </p>
+            <p class="form-hint mb-0">{{ __('The GLPI database and GLPI encryption key must be backed up together. Encrypted credential exports provide an additional portable backup, not a replacement for a full system backup.', 'credentials') }}</p>
+        </div>
+    </section>
+</div>
