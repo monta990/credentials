@@ -442,13 +442,13 @@ msgid "Encrypted backup"
 msgstr "Respaldo cifrado"
 
 msgid "Export active credentials and their links to a password-protected backup. Choose a strong backup password and keep it separately."
-msgstr "Exporta las credenciales activas y sus vínculos a un copia de seguridad protegido con contraseña. Elige una contraseña segura y guárdala por separado."
+msgstr "Exporta las credenciales activas y sus vínculos a una copia de seguridad protegida con contraseña. Elige una contraseña segura y guárdala por separado."
 
 msgid "Backup password"
-msgstr "Contraseña del copia de seguridad"
+msgstr "Contraseña de la copia de seguridad"
 
 msgid "Confirm backup password"
-msgstr "Confirmar contraseña del copia de seguridad"
+msgstr "Confirmar contraseña de la copia de seguridad"
 
 msgid "Export encrypted backup"
 msgstr "Exportar copia de seguridad cifrado"
@@ -457,7 +457,7 @@ msgid "You need credential read and password display permissions, and the sodium
 msgstr "Para exportar información protegida necesitas permisos de lectura de credenciales y de visualización de contraseñas, además de la extensión sodium."
 
 msgid "The backup is encrypted independently of the GLPI key. Store both the backup and its password securely. Export does not replace a full GLPI database and encryption-key backup."
-msgstr "El copia de seguridad se cifra independientemente de la clave de GLPI. Guarda de forma segura tanto el archivo como su contraseña. La exportación no sustituye un copia de seguridad completo de la base de datos y de la clave de cifrado de GLPI."
+msgstr "La copia de seguridad se cifra independientemente de la clave de GLPI. Guarda de forma segura tanto el archivo como su contraseña. La exportación no sustituye una copia de seguridad completa de la base de datos y de la clave de cifrado de GLPI."
 
 msgid "Import encrypted backup"
 msgstr "Importar copia de seguridad cifrado"
@@ -475,7 +475,7 @@ msgid "Credential creation permission, an available GLPI encryption key and the 
 msgstr "Para importar se requiere permiso de creación de credenciales, una clave de cifrado de GLPI disponible y la extensión sodium."
 
 msgid "The import expects the linked GLPI items and entity IDs to exist and be accessible in this installation. Restore a backup into a matching GLPI database."
-msgstr "La importación requiere que los elementos vinculados y los ID de entidad existan y sean accesibles en esta instalación. Restaura el copia de seguridad en una base de datos de GLPI compatible."
+msgstr "La importación requiere que los elementos vinculados y los ID de entidad existan y sean accesibles en esta instalación. Restaura la copia de seguridad en una base de datos de GLPI compatible."
 
 msgid "Credential categories"
 msgstr "Categorías de credenciales"
@@ -580,19 +580,19 @@ msgid "Unavailable"
 msgstr "No disponible"
 
 msgid "The GLPI database and GLPI encryption key must be backed up together. Encrypted credential exports provide an additional portable backup, not a replacement for a full system backup."
-msgstr "La base de datos de GLPI y su clave de cifrado deben respaldarse juntas. Las exportaciones cifradas de credenciales son un copia de seguridad adicional, no sustituyen un copia de seguridad completo del sistema."
+msgstr "La base de datos de GLPI y su clave de cifrado deben respaldarse juntas. Las exportaciones cifradas de credenciales son una copia de seguridad adicional, no sustituyen una copia de seguridad completa del sistema."
 
 msgid "GitHub release information has been refreshed."
 msgstr "La información de versiones de GitHub se actualizó."
 
 msgid "The backup passwords do not match."
-msgstr "Las contraseñas del copia de seguridad no coinciden."
+msgstr "Las contraseñas de la copia de seguridad no coinciden."
 
 msgid "A credential changed while the backup was being prepared. Retry the export."
-msgstr "Una credencial cambió mientras se preparaba el copia de seguridad. Inténtalo de nuevo la exportación."
+msgstr "Una credencial cambió mientras se preparaba la copia de seguridad. Inténtalo de nuevo para exportarla."
 
 msgid "A credential could not be decrypted. The backup was cancelled."
-msgstr "No fue posible descifrar una credencial. Se canceló el copia de seguridad."
+msgstr "No fue posible descifrar una credencial. Se canceló la copia de seguridad."
 
 msgid "An active credential has no linked item. Repair it before exporting."
 msgstr "Una credencial activa no tiene ningún elemento vinculado. Corrige el registro antes de exportarlo."
@@ -601,7 +601,7 @@ msgid "Every linked item must be readable and belong to the credential entity be
 msgstr "Todos los elementos vinculados deben ser visibles y pertenecer a la misma entidad de la credencial antes de exportar."
 
 msgid "The backup was created but its export activity could not be recorded."
-msgstr "Se creó el copia de seguridad, pero no fue posible registrar la actividad de exportación."
+msgstr "Se creó la copia de seguridad, pero no fue posible registrar la actividad de exportación."
 
 msgid "Credential encryption is not available on this server."
 msgstr "El cifrado de credenciales no está disponible en este servidor."
@@ -613,19 +613,19 @@ msgid "The credential backup could not be read."
 msgstr "No fue posible leer el archivo de copia de seguridad de credenciales."
 
 msgid "The backup does not contain a supported number of credentials (maximum 5,000)."
-msgstr "El copia de seguridad no contiene una cantidad admitida de credenciales (máximo 5,000)."
+msgstr "La copia de seguridad no contiene una cantidad admitida de credenciales (máximo 5,000)."
 
 msgid "The credential backup contains an invalid entry."
-msgstr "El copia de seguridad de credenciales contiene una entrada no válida."
+msgstr "La copia de seguridad de credenciales contiene una entrada no válida."
 
 msgid "A credential in the backup has invalid name, entity or linked-item data."
-msgstr "Una credencial del copia de seguridad tiene un nombre, una entidad o datos de elementos vinculados no válidos."
+msgstr "Una credencial de la copia de seguridad tiene un nombre, una entidad o datos de elementos vinculados no válidos."
 
 msgid "A linked item in the backup is invalid."
-msgstr "Un elemento vinculado del copia de seguridad no es válido."
+msgstr "Un elemento vinculado de la copia de seguridad no es válido."
 
 msgid "A linked item in the backup is not supported."
-msgstr "Un elemento vinculado del copia de seguridad no es compatible."
+msgstr "Un elemento vinculado de la copia de seguridad no es compatible."
 
 msgid "Every linked item must exist, be editable and belong to the same entity as its credential."
 msgstr "Todos los elementos vinculados deben existir, permitir edición y pertenecer a la misma entidad que su credencial."
@@ -634,10 +634,10 @@ msgid "Every imported credential must include a password."
 msgstr "Todas las credenciales importadas deben incluir una contraseña."
 
 msgid "A credential in the backup contains fields with invalid values or lengths."
-msgstr "Una credencial del copia de seguridad contiene campos con valores o longitudes no válidos."
+msgstr "Una credencial de la copia de seguridad contiene campos con valores o longitudes no válidos."
 
 msgid "A credential in the backup contains an invalid URL."
-msgstr "Una credencial del copia de seguridad contiene una URL no válida."
+msgstr "Una credencial de la copia de seguridad contiene una URL no válida."
 
 msgid "The GLPI key could not encrypt imported credential data."
 msgstr "No fue posible cifrar los datos importados con la clave de GLPI."
@@ -709,7 +709,7 @@ msgid "A protected credential was imported."
 msgstr "Se importó una credencial protegida."
 
 msgid "A protected credential was exported to an encrypted backup."
-msgstr "Se exportó una credencial protegida a un copia de seguridad cifrado."
+msgstr "Se exportó una credencial protegida a una copia de seguridad cifrada."
 
 msgid "A protected credential review was recorded."
 msgstr "Se registró una revisión de una credencial protegida."
