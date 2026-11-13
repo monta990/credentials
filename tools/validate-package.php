@@ -469,6 +469,7 @@ foreach ([
     'src/Service/CredentialBackupService.php',
     'tests/php/credential_status_test.php',
     'tests/php/credential_admin_contract_test.php',
+    'tests/php/reviewer_options_test.php',
     'tests/php/credential_backup_contract_test.php',
     'templates/config.html.twig',
 ] as $required_admin_file) {
