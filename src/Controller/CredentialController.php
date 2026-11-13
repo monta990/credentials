@@ -865,9 +865,9 @@ final class CredentialController extends AbstractController
             return $options;
         }
 
-        // Filter by the active entity scope in SQL before limiting/paging. Applying
-        // the entity test after LIMIT silently hid valid reviewers in larger GLPI
-        // installations and could waste the cap on users from inaccessible entities.
+        // Filter by the active entity scope in SQL before building the options.
+        // The previous fixed result limit hid valid reviewers in larger GLPI
+        // installations, while post-query filtering could waste that limit.
         $visible_entities = array_values(array_unique(array_map(
             'intval',
             Session::getActiveEntities(),
@@ -916,7 +916,11 @@ final class CredentialController extends AbstractController
             return '';
         }
         $user = new \User();
-        if (!$user->getFromDB($users_id) || (int) ($user->fields['is_deleted'] ?? 0) !== 0) {
+        if (
+            !$user->getFromDB($users_id)
+            || (int) ($user->fields['is_deleted'] ?? 0) !== 0
+            || !Session::haveAccessToEntity((int) ($user->fields['entities_id'] ?? -1))
+        ) {
             return '';
         }
         $display = trim((string) ($user->fields['realname'] ?? '') . ' ' . (string) ($user->fields['firstname'] ?? ''));
