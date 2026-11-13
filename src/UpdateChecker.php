@@ -174,10 +174,10 @@ final class UpdateChecker
     private static function cachePath(): ?string
     {
         if (defined('GLPI_PLUGIN_DOC_DIR')) {
-            return rtrim(GLPI_PLUGIN_DOC_DIR, '/\') . '/credentials/release_cache.json';
+            return rtrim(GLPI_PLUGIN_DOC_DIR, '/\\') . '/credentials/release_cache.json';
         }
         if (defined('GLPI_ROOT')) {
-            return rtrim(GLPI_ROOT, '/\') . '/files/_plugins/credentials/release_cache.json';
+            return rtrim(GLPI_ROOT, '/\\') . '/files/_plugins/credentials/release_cache.json';
         }
         return null;
     }
