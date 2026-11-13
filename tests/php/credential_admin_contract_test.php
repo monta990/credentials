@@ -41,7 +41,7 @@ $checks = [
     'Dashboard does not return individual rows without credential READ' => str_contains($admin, '$can_read_credentials && $status') && str_contains($admin, '$can_read_credentials && count($archived) < 25') && str_contains($admin, '$can_read_credentials ? self::recentAuditEvents(50) : []'),
     'Archived records must be unlinked before permanent deletion' => str_contains($admin, 'getLinksForCredentialForUpdate($id) !== []'),
     'GitHub update checker' => is_file($root . '/src/Service/UpdateChecker.php'),
-    'Reviewer selector filters entities before loading all available users' => str_contains($controller_source, "'entities_id' => $visible_entities") && !str_contains($controller_source, "'LIMIT' => 250"),
+    'Reviewer selector filters entities before loading all available users' => str_contains($controller_source, "'entities_id' => \$visible_entities") && !str_contains($controller_source, "'LIMIT' => 250"),
     'Dashboard template' => is_file($root . '/templates/config.html.twig'),
 ];
 foreach ($checks as $label => $passed) {
