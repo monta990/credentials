@@ -168,7 +168,6 @@ final class AdminController extends AbstractController
         $auditRows = array_slice($auditCandidates, 0, 50);
 
         $release = UpdateChecker::check();
-        $release = UpdateChecker::check();
         $content = self::renderPage($request, [
             'base_url' => self::routeUrl('config'),
             'update_url' => self::routeUrl('config/check-updates'),
@@ -294,8 +293,6 @@ final class AdminController extends AbstractController
                     'category' => (string) ($row['category'] ?? ''),
                     'expires_at' => (string) ($row['expires_at'] ?? ''),
                     'review_due_at' => (string) ($row['review_due_at'] ?? ''),
-                    'reviewed_at' => (string) ($row['reviewed_at'] ?? ''),
-                    'reviewer_users_id' => (int) ($row['reviewer_users_id'] ?? 0),
                     'items' => $links,
                 ];
                 $exportedIds[] = $id;
