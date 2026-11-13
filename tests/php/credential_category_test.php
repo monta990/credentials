@@ -326,7 +326,7 @@ assertCategoryResult(
     'category creation serializes with competing same-name writes'
 );
 
-$sharedId = \GlpiPlugin\Credentials\CredentialCategory::findOrCreateByName('Shared', 7);
+$sharedId = \GlpiPlugin\Credentials\CredentialCategory::findOrCreateByName('Shared Services', 7);
 assertCategoryResult(3, $sharedId, 'findOrCreate reuses a global category while holding the entity lock');
 
 $createdId = \GlpiPlugin\Credentials\CredentialCategory::findOrCreateByName('ERP', 7);
