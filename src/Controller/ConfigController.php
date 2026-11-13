@@ -56,7 +56,7 @@ final class ConfigController extends AbstractController
                     case 'save_reminder_settings':
                         $days = $request->request->getInt(
                             'lifecycle_reminder_lookahead_days',
-                            CredentialLifecycleReminderService::DEFAULT_LOOKAHEAD_DAYS
+                            -1
                         );
                         if (
                             $days < CredentialLifecycleReminderService::MIN_LOOKAHEAD_DAYS
