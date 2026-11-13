@@ -37,6 +37,8 @@ final class UpdateChecker
                 'header' => "Accept: application/vnd.github+json\r\nUser-Agent: GLPI-Credentials-Plugin\r\nX-GitHub-Api-Version: 2022-11-28\r\n",
                 'timeout' => 4,
                 'ignore_errors' => true,
+                'follow_location' => 0,
+                'max_redirects' => 0,
             ],
         ]);
 
@@ -96,7 +98,10 @@ final class UpdateChecker
         }
 
         $version = preg_replace('/^[vV]/', '', trim((string) $release['tag_name']));
-        if (!is_string($version) || !preg_match('/^\d+\.\d+\.\d+$/', $version)) {
+        if (!is_string($version) || !preg_match('/^\\d+\\.\\d+\\.\\d+$/', $version)) {
+            if ($stale !== null) {
+                return self::result($installed, $stale, true);
+            }
             return [
                 'status' => 'unavailable',
                 'installed' => $installed,
