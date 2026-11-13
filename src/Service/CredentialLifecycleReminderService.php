@@ -216,7 +216,7 @@ final class CredentialLifecycleReminderService
         // without that mode filter so the UI can distinguish a missing template
         // from an existing email template whose global channel is disabled.
         $notification_table = Notification::getTable();
-        $template_link_table = \\Notification_NotificationTemplate::getTable();
+        $template_link_table = \Notification_NotificationTemplate::getTable();
         $notifications = $DB->request([
             'SELECT' => [
                 $notification_table . '.id',
@@ -236,7 +236,7 @@ final class CredentialLifecycleReminderService
                 $notification_table . '.itemtype' => Credential::class,
                 $notification_table . '.event' => self::EVENT,
                 $notification_table . '.is_active' => 1,
-            ] + \\getEntitiesRestrictCriteria(
+            ] + \getEntitiesRestrictCriteria(
                 $notification_table,
                 'entities_id',
                 $entities_id,
@@ -254,7 +254,7 @@ final class CredentialLifecycleReminderService
             $event_found = true;
             if (
                 (int) ($notification['notificationtemplates_id'] ?? 0) <= 0
-                || (string) ($notification['mode'] ?? '') !== \\Notification_NotificationTemplate::MODE_MAIL
+                || (string) ($notification['mode'] ?? '') !== \Notification_NotificationTemplate::MODE_MAIL
             ) {
                 continue;
             }
