@@ -196,7 +196,7 @@ final class AdminController extends AbstractController
 
         foreach ($iterator as $row) {
             if (count($records) >= self::MAX_IMPORT_RECORDS) {
-                throw new \\RuntimeException(__('The backup cannot contain more than 5,000 credentials. Export a smaller set.', 'credentials'));
+                throw new \RuntimeException(__('The backup cannot contain more than 5,000 credentials. Export a smaller set.', 'credentials'));
             }
             $id = (int) $row['id'];
             $credential = new Credential();
