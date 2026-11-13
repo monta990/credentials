@@ -26,7 +26,8 @@ final class UpdateChecker
             !$force
             && $stale !== null
             && isset($stale['checked_at'])
-            && (int) $stale['checked_at'] <= time() + 300\n            && (time() - (int) $stale['checked_at']) < self::CACHE_TTL
+            && (int) $stale['checked_at'] <= time() + 300
+            && (time() - (int) $stale['checked_at']) < self::CACHE_TTL
         ) {
             return self::result($installed, $stale);
         }
