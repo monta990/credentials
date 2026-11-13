@@ -26,7 +26,7 @@ final class UpdateChecker
             !$force
             && $stale !== null
             && isset($stale['checked_at'])
-            && (time() - (int) $stale['checked_at']) < self::CACHE_TTL
+            && (int) $stale['checked_at'] <= time() + 300\n            && (time() - (int) $stale['checked_at']) < self::CACHE_TTL
         ) {
             return self::result($installed, $stale);
         }
@@ -109,7 +109,7 @@ final class UpdateChecker
 
         $fresh = [
             'version' => $version,
-            'url' => filter_var($release['html_url'] ?? '', FILTER_VALIDATE_URL) ? (string) $release['html_url'] : self::RELEASES_PAGE,
+            'url' => self::safeReleaseUrl($release['html_url'] ?? null),
             'published_at' => isset($release['published_at']) ? (string) $release['published_at'] : null,
             'checked_at' => time(),
             'state' => 'release',
@@ -170,6 +170,22 @@ final class UpdateChecker
         return null;
     }
 
+    private static function safeReleaseUrl(mixed $url): string
+    {
+        if (!is_string($url) || $url === '') {
+            return self::RELEASES_PAGE;
+        }
+        $parts = parse_url($url);
+        if (!is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || strtolower((string) ($parts['host'] ?? '')) !== 'github.com'
+            || isset($parts['user']) || isset($parts['pass'])
+            || !preg_match('~^/monta990/credentials/releases/tag/[A-Za-z0-9._-]+$~', (string) ($parts['path'] ?? ''))) {
+            return self::RELEASES_PAGE;
+        }
+        return $url;
+    }
+
     /** @param array<string, mixed> $data */
     private static function result(string $installed, array $data, bool $stale = false): array
     {
@@ -186,7 +202,7 @@ final class UpdateChecker
             'status' => $status,
             'installed' => $installed,
             'latest' => $latest,
-            'url' => isset($data['url']) && is_string($data['url']) ? $data['url'] : self::RELEASES_PAGE,
+            'url' => self::safeReleaseUrl($data['url'] ?? null),
             'published_at' => isset($data['published_at']) && is_string($data['published_at']) ? $data['published_at'] : null,
             'checked_at' => isset($data['checked_at']) ? gmdate('c', (int) $data['checked_at']) : null,
         ];
