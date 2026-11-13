@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-namespace GlpiPlugin\\Credentials;
+namespace GlpiPlugin\Credentials;
 
 /** Checks the latest published stable GitHub release and caches it for six hours. */
 final class UpdateChecker
@@ -34,7 +34,7 @@ final class UpdateChecker
         $context = stream_context_create([
             'http' => [
                 'method' => 'GET',
-                'header' => "Accept: application/vnd.github+json\\r\\nUser-Agent: GLPI-Credentials-Plugin\\r\\nX-GitHub-Api-Version: 2022-11-28\\r\\n",
+                'header' => "Accept: application/vnd.github+json\r\nUser-Agent: GLPI-Credentials-Plugin\r\nX-GitHub-Api-Version: 2022-11-28\r\n",
                 'timeout' => 4,
                 'ignore_errors' => true,
             ],
@@ -43,7 +43,7 @@ final class UpdateChecker
         $body = @file_get_contents(self::RELEASES_URL, false, $context, 0, 65536);
         $httpStatus = 0;
         foreach (($http_response_header ?? []) as $header) {
-            if (preg_match('#^HTTP/\\S+\\s+(\\d{3})#i', $header, $matches)) {
+            if (preg_match('#^HTTP/\S+\s+(\d{3})#i', $header, $matches)) {
                 $httpStatus = (int) $matches[1];
             }
         }
@@ -96,7 +96,7 @@ final class UpdateChecker
         }
 
         $version = preg_replace('/^[vV]/', '', trim((string) $release['tag_name']));
-        if (!is_string($version) || !preg_match('/^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$/', $version)) {
+        if (!is_string($version) || !preg_match('/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/', $version)) {
             return [
                 'status' => 'unavailable',
                 'installed' => $installed,
@@ -129,7 +129,7 @@ final class UpdateChecker
         if (!is_array($data) || !isset($data['checked_at']) || !array_key_exists('version', $data)) {
             return null;
         }
-        if ($data['version'] !== null && !preg_match('/^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$/', (string) $data['version'])) {
+        if ($data['version'] !== null && !preg_match('/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/', (string) $data['version'])) {
             return null;
         }
         return $data;
@@ -162,10 +162,10 @@ final class UpdateChecker
     private static function cachePath(): ?string
     {
         if (defined('GLPI_PLUGIN_DOC_DIR')) {
-            return rtrim(GLPI_PLUGIN_DOC_DIR, '/\\') . '/credentials/release_cache.json';
+            return rtrim(GLPI_PLUGIN_DOC_DIR, '/\') . '/credentials/release_cache.json';
         }
         if (defined('GLPI_ROOT')) {
-            return rtrim(GLPI_ROOT, '/\\') . '/files/_plugins/credentials/release_cache.json';
+            return rtrim(GLPI_ROOT, '/\') . '/files/_plugins/credentials/release_cache.json';
         }
         return null;
     }
