@@ -63,10 +63,13 @@ final class CredentialHistory
             return false;
         }
 
+        $entityId = (int) ($credential->fields['entities_id'] ?? 0);
+        // Keep the non-secret entity reference so a permanent-purge event can
+        // still be filtered by entity after the credential row is removed.
         return (bool) Log::history(
             $credential_id,
             Credential::class,
-            [0, (string) $credential_id, ''],
+            [0, $credential_id . '#' . $entityId, ''],
             Credential::class,
             Log::HISTORY_PLUGIN + $action,
         );
