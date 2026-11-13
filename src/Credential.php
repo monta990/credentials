@@ -28,6 +28,11 @@ final class Credential extends CommonDBTM
     public const HISTORY_DELETED = 5;
     public const HISTORY_REVEALED = 6;
     public const HISTORY_ORPHANED = 7;
+    public const HISTORY_RESTORED = 8;
+    public const HISTORY_IMPORTED = 9;
+    public const HISTORY_EXPORTED = 10;
+    public const HISTORY_REVIEWED = 11;
+    public const HISTORY_PURGED = 12;
 
     /** Keep change history for non-secret fields, never retain credential values in glpi_logs. */
     public bool $dohistory = true;
@@ -180,6 +185,11 @@ final class Credential extends CommonDBTM
             self::HISTORY_DELETED  => __s('A protected credential was deleted.', 'credentials'),
             self::HISTORY_REVEALED => __s('A protected credential password was revealed.', 'credentials'),
             self::HISTORY_ORPHANED => __s('A protected credential is no longer linked to any item.', 'credentials'),
+            self::HISTORY_RESTORED => __s('A protected credential was restored from the archive.', 'credentials'),
+            self::HISTORY_IMPORTED => __s('A protected credential was imported.', 'credentials'),
+            self::HISTORY_EXPORTED => __s('A protected credential was exported to an encrypted backup.', 'credentials'),
+            self::HISTORY_REVIEWED => __s('A protected credential review was recorded.', 'credentials'),
+            self::HISTORY_PURGED => __s('A protected credential was permanently deleted from the archive.', 'credentials'),
             default                => '',
         };
     }
@@ -194,6 +204,11 @@ final class Credential extends CommonDBTM
             self::HISTORY_DELETED,
             self::HISTORY_REVEALED,
             self::HISTORY_ORPHANED,
+            self::HISTORY_RESTORED,
+            self::HISTORY_IMPORTED,
+            self::HISTORY_EXPORTED,
+            self::HISTORY_REVIEWED,
+            self::HISTORY_PURGED,
         ], true);
     }
 
