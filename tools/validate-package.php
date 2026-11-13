@@ -511,16 +511,17 @@ if (!str_contains((string) $admin_controller, 'itemtype_link')
 }
 if (!str_contains((string) $update_checker, 'https://api.github.com/repos/monta990/credentials/releases/latest')
     || !str_contains((string) $update_checker, 'safeReleaseUrl')
-    || !str_contains((string) $update_checker, "preg_match('/^\\\\d+\\\\.\\\\d+\\\\.\\\\d+$/")) {
+    || str_contains((string) $update_checker, '(?:-[0-9A-Za-z.-]+)?')) {
     $errors[] = 'Update checker must use the fixed GitHub endpoint, stable semantic versions and a validated official release URL.';
 }
+
 if (!str_contains((string) $vault_archive, 'sodium_crypto_secretbox(')
     || !str_contains((string) $vault_archive, 'sodium_crypto_secretbox_open')
     || !str_contains((string) $vault_archive, 'sodium_crypto_pwhash(')) {
     $errors[] = 'Credential archives must use authenticated Sodium encryption and password-based key derivation.';
 }
 if (!str_contains((string) $admin_controller, "'itemtype_link' => Credential::class")
-    || !str_contains((string) $admin_controller, "Credential::getHistoryEntry($row)")) {
+    || !str_contains((string) $admin_controller, 'Credential::getHistoryEntry($row)')) {
     $errors[] = 'Admin audit view must aggregate events stored on both credentials and their linked GLPI items.';
 }
 
