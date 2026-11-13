@@ -96,7 +96,7 @@ final class UpdateChecker
         }
 
         $version = preg_replace('/^[vV]/', '', trim((string) $release['tag_name']));
-        if (!is_string($version) || !preg_match('/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/', $version)) {
+        if (!is_string($version) || !preg_match('/^\d+\.\d+\.\d+$/', $version)) {
             return [
                 'status' => 'unavailable',
                 'installed' => $installed,
@@ -126,10 +126,16 @@ final class UpdateChecker
             return null;
         }
         $data = json_decode((string) @file_get_contents($path), true);
-        if (!is_array($data) || !isset($data['checked_at']) || !array_key_exists('version', $data)) {
+        if (!is_array($data)
+            || !isset($data['checked_at'])
+            || !is_numeric($data['checked_at'])
+            || (int) $data['checked_at'] <= 0
+            || (int) $data['checked_at'] > time() + 300
+            || !array_key_exists('version', $data)
+            || !in_array($data['state'] ?? null, ['release', 'no_release', 'stale'], true)) {
             return null;
         }
-        if ($data['version'] !== null && !preg_match('/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/', (string) $data['version'])) {
+        if ($data['version'] !== null && !preg_match('/^\d+\.\d+\.\d+$/', (string) $data['version'])) {
             return null;
         }
         return $data;
@@ -192,9 +198,9 @@ final class UpdateChecker
         $latest = isset($data['version']) && is_string($data['version']) ? $data['version'] : null;
         $state = (string) ($data['state'] ?? '');
         $status = match (true) {
+            $stale => 'stale',
             $state === 'no_release' => 'no_release',
             $latest === null => 'unavailable',
-            $stale => 'stale',
             version_compare($latest, $installed, '>') => 'update_available',
             default => 'up_to_date',
         };
