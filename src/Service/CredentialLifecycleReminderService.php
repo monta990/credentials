@@ -224,7 +224,7 @@ final class CredentialLifecycleReminderService
             $event_found = true;
             if (
                 (int) ($notification['notificationtemplates_id'] ?? 0) <= 0
-                || (string) ($notification['mode'] ?? '') !== Notification_NotificationTemplate::MODE_MAIL
+                || (string) ($notification['mode'] ?? '') !== \Notification_NotificationTemplate::MODE_MAIL
             ) {
                 continue;
             }
