@@ -51,6 +51,7 @@ final class VaultArchive
             $ciphertext = sodium_crypto_secretbox($plaintext, $nonce, $key);
         } finally {
             sodium_memzero($key);
+            sodium_memzero($plaintext);
         }
 
         return json_encode([
