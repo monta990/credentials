@@ -63,8 +63,14 @@ foreach ($contracts as [$condition, $message]) {
 if (str_contains($controller, 'reviewed_by_users_id') || str_contains($controller, '$rowIds')) {
     throw new RuntimeException('Administration must not write unknown reviewer columns or use uninitialized export IDs.');
 }
-if (str_contains($controller, "'reviewed_at' => (string)")
-    || str_contains($controller, "'reviewer_users_id' => (int)")) {
+$exportBlockStart = strpos($controller, 'public function export(Request $request)');
+$importBlockStart = strpos($controller, 'public function import(Request $request)');
+$exportBlock = $exportBlockStart !== false && $importBlockStart !== false
+    ? substr($controller, $exportBlockStart, $importBlockStart - $exportBlockStart)
+    : '';
+if ($exportBlock === ''
+    || str_contains($exportBlock, "'reviewed_at'")
+    || str_contains($exportBlock, "'reviewer_users_id'")) {
     throw new RuntimeException('Backup must not transfer installation-specific reviewer identity metadata.');
 }
 
