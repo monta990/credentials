@@ -355,7 +355,7 @@ assertCategoryResult(false, \GlpiPlugin\Credentials\CredentialCategory::create('
 
 $DB->failEntityLock = true;
 try {
-    \\GlpiPlugin\\Credentials\\CredentialCategory::create('Lock Failure', 7);
+    \GlpiPlugin\\Credentials\\CredentialCategory::create('Lock Failure', 7);
     throw new RuntimeException('Expected the simulated entity lock failure to propagate');
 } catch (RuntimeException $exception) {
     assertCategoryResult('Simulated entity lock query failure', $exception->getMessage(), 'lock failure propagates after rollback');
@@ -366,7 +366,7 @@ assertCategoryResult(0, $DB->transactionLevel(), 'a failed standalone category l
 $DB->beginTransaction();
 $DB->failEntityLock = true;
 try {
-    \\GlpiPlugin\\Credentials\\CredentialCategory::findOrCreateByName('Nested Lock Failure', 7);
+    \GlpiPlugin\\Credentials\\CredentialCategory::findOrCreateByName('Nested Lock Failure', 7);
     throw new RuntimeException('Expected the nested entity lock failure to propagate');
 } catch (RuntimeException $exception) {
     assertCategoryResult('Simulated entity lock query failure', $exception->getMessage(), 'nested lock failure propagates after rollback');
