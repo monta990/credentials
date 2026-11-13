@@ -1,10 +1,10 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 0.0.31\n"
+"Project-Id-Version: Credentials 0.0.32\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-06 06:40+0000\n"
-"PO-Revision-Date: 2026-11-05 19:50-0700\n"
+"PO-Revision-Date: 2026-11-12 19:00-0700\n"
 "Last-Translator: Credentials maintainers\n"
 "Language: es_MX\n"
 "Language-Team: Español (México)\n"
@@ -376,3 +376,342 @@ msgstr "elementos vinculados visibles"
 
 msgid "linked items are hidden because you do not have permission to read them."
 msgstr "elementos vinculados están ocultos porque no tienes permiso para consultarlos."
+
+msgid "Credentials settings"
+msgstr "Configuración de Credentials"
+
+msgid "Manage credential updates, reviews, backups and archived entries."
+msgstr "Administra las actualizaciones, revisiones, respaldos y entradas archivadas de las credenciales."
+
+msgid "Installed version"
+msgstr "Versión instalada"
+
+msgid "Active credentials"
+msgstr "Credenciales activas"
+
+msgid "Archived credentials"
+msgstr "Credenciales archivadas"
+
+msgid "Expired credentials"
+msgstr "Credenciales vencidas"
+
+msgid "Reviews due"
+msgstr "Revisiones pendientes"
+
+msgid "Plugin updates"
+msgstr "Actualizaciones del plugin"
+
+msgid "A newer stable version is available."
+msgstr "Hay una versión estable más reciente disponible."
+
+msgid "You are using the latest published stable version."
+msgstr "Estás usando la versión estable publicada más reciente."
+
+msgid "There are no published releases yet. Check the GitHub releases page for future versions."
+msgstr "Aún no hay versiones publicadas. Consulta la página de versiones de GitHub para futuras publicaciones."
+
+msgid "GitHub could not be reached. Showing the last successful release check."
+msgstr "No fue posible conectar con GitHub. Se muestra la última comprobación correcta."
+
+msgid "GitHub release information is currently unavailable."
+msgstr "La información de versiones de GitHub no está disponible en este momento."
+
+msgid "Latest stable version"
+msgstr "Última versión estable"
+
+msgid "Not published"
+msgstr "No publicada"
+
+msgid "Published"
+msgstr "Publicada"
+
+msgid "Last checked"
+msgstr "Última comprobación"
+
+msgid "Check for updates"
+msgstr "Buscar actualizaciones"
+
+msgid "View GitHub releases"
+msgstr "Ver versiones de GitHub"
+
+msgid "The plugin checks for published stable releases only. It never installs updates automatically."
+msgstr "El plugin solo busca versiones estables publicadas. Nunca instala actualizaciones automáticamente."
+
+msgid "Encrypted backup"
+msgstr "Respaldo cifrado"
+
+msgid "Export active credentials and their links to a password-protected backup. Choose a strong backup password and keep it separately."
+msgstr "Exporta las credenciales activas y sus vínculos a un respaldo protegido con contraseña. Elige una contraseña segura y guárdala por separado."
+
+msgid "Backup password"
+msgstr "Contraseña del respaldo"
+
+msgid "Confirm backup password"
+msgstr "Confirmar contraseña del respaldo"
+
+msgid "Export encrypted backup"
+msgstr "Exportar respaldo cifrado"
+
+msgid "You need credential read and password display permissions, and the sodium extension, to export protected information."
+msgstr "Para exportar información protegida necesitas permisos de lectura de credenciales y de visualización de contraseñas, además de la extensión sodium."
+
+msgid "The backup is encrypted independently of the GLPI key. Store both the backup and its password securely. Export does not replace a full GLPI database and encryption-key backup."
+msgstr "El respaldo se cifra independientemente de la clave de GLPI. Guarda de forma segura tanto el archivo como su contraseña. La exportación no sustituye un respaldo completo de la base de datos y de la clave de cifrado de GLPI."
+
+msgid "Import encrypted backup"
+msgstr "Importar respaldo cifrado"
+
+msgid "Import creates new credentials. Existing entries are never overwritten."
+msgstr "La importación crea credenciales nuevas. Nunca sobrescribe las entradas existentes."
+
+msgid "Backup file"
+msgstr "Archivo de respaldo"
+
+msgid "Import credentials"
+msgstr "Importar credenciales"
+
+msgid "Credential creation permission, an available GLPI encryption key and the sodium extension are required to import."
+msgstr "Para importar se requiere permiso de creación de credenciales, una clave de cifrado de GLPI disponible y la extensión sodium."
+
+msgid "The import expects the linked GLPI items and entity IDs to exist and be accessible in this installation. Restore a backup into a matching GLPI database."
+msgstr "La importación requiere que los elementos vinculados y los ID de entidad existan y sean accesibles en esta instalación. Restaura el respaldo en una base de datos de GLPI compatible."
+
+msgid "Credential categories"
+msgstr "Categorías de credenciales"
+
+msgid "No categories have been added yet. Add a category when creating or editing a credential."
+msgstr "Aún no hay categorías. Agrega una categoría al crear o editar una credencial."
+
+msgid "Expiration alerts"
+msgstr "Alertas de vencimiento"
+
+msgid "Category"
+msgstr "Categoría"
+
+msgid "Expiration date"
+msgstr "Fecha de vencimiento"
+
+msgid "Status"
+msgstr "Estado"
+
+msgid "Expired"
+msgstr "Vencida"
+
+msgid "Expiring soon"
+msgstr "Próxima a vencer"
+
+msgid "No credential expirations are due within the next 30 days."
+msgstr "No hay vencimientos de credenciales programados para los próximos 30 días."
+
+msgid "Review schedule"
+msgstr "Programa de revisiones"
+
+msgid "Next review"
+msgstr "Próxima revisión"
+
+msgid "Action"
+msgstr "Acción"
+
+msgid "Overdue"
+msgstr "Atrasada"
+
+msgid "Upcoming"
+msgstr "Próxima"
+
+msgid "New date or leave blank"
+msgstr "Nueva fecha o dejar vacío"
+
+msgid "Mark reviewed"
+msgstr "Marcar como revisada"
+
+msgid "No credential reviews are due within the next 30 days."
+msgstr "No hay revisiones de credenciales pendientes para los próximos 30 días."
+
+msgid "Archived credentials remain recoverable until permanently deleted. To restore one, choose an existing item from the same GLPI entity."
+msgstr "Las credenciales archivadas se pueden recuperar hasta que se eliminen permanentemente. Para restaurar una, selecciona un elemento existente de la misma entidad de GLPI."
+
+msgid "Archived"
+msgstr "Archivada"
+
+msgid "Restore"
+msgstr "Restaurar"
+
+msgid "Permanent deletion"
+msgstr "Eliminación permanente"
+
+msgid "Permanently delete this archived credential?"
+msgstr "¿Eliminar permanentemente esta credencial archivada?"
+
+msgid "Confirm"
+msgstr "Confirmar"
+
+msgid "Delete permanently"
+msgstr "Eliminar permanentemente"
+
+msgid "There are no archived credentials in the active entities."
+msgstr "No hay credenciales archivadas en las entidades activas."
+
+msgid "Recent activity"
+msgstr "Actividad reciente"
+
+msgid "Date"
+msgstr "Fecha"
+
+msgid "User"
+msgstr "Usuario"
+
+msgid "Event"
+msgstr "Evento"
+
+msgid "No credential activity is available to display."
+msgstr "No hay actividad de credenciales disponible para mostrar."
+
+msgid "Security and maintenance"
+msgstr "Seguridad y mantenimiento"
+
+msgid "GLPI encryption key"
+msgstr "Clave de cifrado de GLPI"
+
+msgid "Available"
+msgstr "Disponible"
+
+msgid "Unavailable"
+msgstr "No disponible"
+
+msgid "The GLPI database and GLPI encryption key must be backed up together. Encrypted credential exports provide an additional portable backup, not a replacement for a full system backup."
+msgstr "La base de datos de GLPI y su clave de cifrado deben respaldarse juntas. Las exportaciones cifradas de credenciales son un respaldo adicional, no sustituyen un respaldo completo del sistema."
+
+msgid "GitHub release information has been refreshed."
+msgstr "La información de versiones de GitHub se actualizó."
+
+msgid "The backup passwords do not match."
+msgstr "Las contraseñas del respaldo no coinciden."
+
+msgid "A credential changed while the backup was being prepared. Retry the export."
+msgstr "Una credencial cambió mientras se preparaba el respaldo. Vuelve a intentar la exportación."
+
+msgid "A credential could not be decrypted. The backup was cancelled."
+msgstr "No fue posible descifrar una credencial. Se canceló el respaldo."
+
+msgid "An active credential has no linked item. Repair it before exporting."
+msgstr "Una credencial activa no tiene ningún elemento vinculado. Corrige el registro antes de exportarlo."
+
+msgid "Every linked item must be readable and belong to the credential entity before exporting."
+msgstr "Todos los elementos vinculados deben ser visibles y pertenecer a la misma entidad de la credencial antes de exportar."
+
+msgid "The backup was created but its export activity could not be recorded."
+msgstr "Se creó el respaldo, pero no fue posible registrar la actividad de exportación."
+
+msgid "Credential encryption is not available on this server."
+msgstr "El cifrado de credenciales no está disponible en este servidor."
+
+msgid "Select a valid credential backup file (maximum 20 MB)."
+msgstr "Selecciona un archivo de respaldo de credenciales válido (máximo 20 MB)."
+
+msgid "The credential backup could not be read."
+msgstr "No fue posible leer el archivo de respaldo de credenciales."
+
+msgid "The backup does not contain a supported number of credentials (maximum 5,000)."
+msgstr "El respaldo no contiene una cantidad admitida de credenciales (máximo 5,000)."
+
+msgid "The credential backup contains an invalid entry."
+msgstr "El respaldo de credenciales contiene una entrada no válida."
+
+msgid "A credential in the backup has invalid name, entity or linked-item data."
+msgstr "Una credencial del respaldo tiene un nombre, una entidad o datos de elementos vinculados no válidos."
+
+msgid "A linked item in the backup is invalid."
+msgstr "Un elemento vinculado del respaldo no es válido."
+
+msgid "A linked item in the backup is not supported."
+msgstr "Un elemento vinculado del respaldo no es compatible."
+
+msgid "Every linked item must exist, be editable and belong to the same entity as its credential."
+msgstr "Todos los elementos vinculados deben existir, permitir edición y pertenecer a la misma entidad que su credencial."
+
+msgid "Every imported credential must include a password."
+msgstr "Todas las credenciales importadas deben incluir una contraseña."
+
+msgid "A credential in the backup contains fields with invalid values or lengths."
+msgstr "Una credencial del respaldo contiene campos con valores o longitudes no válidos."
+
+msgid "A credential in the backup contains an invalid URL."
+msgstr "Una credencial del respaldo contiene una URL no válida."
+
+msgid "The GLPI key could not encrypt imported credential data."
+msgstr "No fue posible cifrar los datos importados con la clave de GLPI."
+
+msgid "An imported credential could not be saved."
+msgstr "No fue posible guardar una credencial importada."
+
+msgid "An imported credential could not be linked to its GLPI item."
+msgstr "No fue posible vincular una credencial importada con su elemento de GLPI."
+
+msgid "An imported credential could not be written to GLPI history."
+msgstr "No fue posible registrar una credencial importada en el historial de GLPI."
+
+msgid "An imported credential could not be recorded in the activity history."
+msgstr "No fue posible registrar una credencial importada en el historial de actividad."
+
+msgid "Imported %d credential(s). Existing entries were not overwritten."
+msgstr "Se importaron %d credencial(es). No se sobrescribieron las entradas existentes."
+
+msgid "Enter a valid next review date or leave it empty to clear the schedule."
+msgstr "Indica una fecha de próxima revisión válida o deja el campo vacío para borrar la programación."
+
+msgid "The credential changed while its review was being recorded."
+msgstr "La credencial cambió mientras se registraba su revisión."
+
+msgid "The review could not be saved or audited."
+msgstr "No fue posible guardar la revisión o registrar su auditoría."
+
+msgid "The credential review was recorded."
+msgstr "Se registró la revisión de la credencial."
+
+msgid "The archived credential changed while it was being restored."
+msgstr "La credencial archivada cambió mientras se restauraba."
+
+msgid "The archived credential or selected item changed while it was being restored."
+msgstr "La credencial archivada o el elemento seleccionado cambió durante la restauración."
+
+msgid "The credential could not be linked to the selected item."
+msgstr "No fue posible vincular la credencial con el elemento seleccionado."
+
+msgid "The credential could not be restored and recorded in GLPI history."
+msgstr "No fue posible restaurar la credencial y registrar la operación en el historial de GLPI."
+
+msgid "The credential was restored and linked to the selected item."
+msgstr "La credencial se restauró y se vinculó con el elemento seleccionado."
+
+msgid "The archived credential changed while it was being removed."
+msgstr "La credencial archivada cambió mientras se eliminaba."
+
+msgid "The archived credential is no longer available."
+msgstr "La credencial archivada ya no está disponible."
+
+msgid "The permanent deletion could not be recorded."
+msgstr "No fue posible registrar la eliminación permanente."
+
+msgid "The archived credential could not be permanently deleted."
+msgstr "No fue posible eliminar permanentemente la credencial archivada."
+
+msgid "The archived credential was permanently deleted. This action cannot be undone."
+msgstr "La credencial archivada se eliminó permanentemente. Esta acción no se puede deshacer."
+
+msgid "Leave empty to clear the next review date."
+msgstr "Deja el campo vacío para borrar la fecha de próxima revisión."
+
+msgid "A protected credential was restored from the archive."
+msgstr "Se restauró una credencial protegida desde el archivo."
+
+msgid "A protected credential was imported."
+msgstr "Se importó una credencial protegida."
+
+msgid "A protected credential was exported to an encrypted backup."
+msgstr "Se exportó una credencial protegida a un respaldo cifrado."
+
+msgid "A protected credential review was recorded."
+msgstr "Se registró una revisión de una credencial protegida."
+
+msgid "A protected credential was permanently deleted from the archive."
+msgstr "Se eliminó permanentemente una credencial protegida del archivo."
