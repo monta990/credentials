@@ -16,7 +16,8 @@ final class VaultArchive
 {
     private const FORMAT = 'credentials-vault';
     private const FORMAT_VERSION = 1;
-    private const MAX_BYTES = 20_000_000;
+    private const MAX_PLAINTEXT_BYTES = 14_000_000;
+    private const MAX_ARCHIVE_BYTES = 20_000_000;
 
     public static function encrypt(array $payload, string $passphrase): string
     {
@@ -29,7 +30,7 @@ final class VaultArchive
             $payload,
             JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES,
         );
-        if (strlen($plaintext) > self::MAX_BYTES) {
+        if (strlen($plaintext) > self::MAX_PLAINTEXT_BYTES) {
             throw new \RuntimeException('The credential backup is too large.');
         }
 
@@ -69,7 +70,7 @@ final class VaultArchive
     public static function decrypt(string $archive, string $passphrase): array
     {
         self::assertPassphrase($passphrase);
-        if (!extension_loaded('sodium') || $archive === '' || strlen($archive) > self::MAX_BYTES + 8192) {
+        if (!extension_loaded('sodium') || $archive === '' || strlen($archive) > self::MAX_ARCHIVE_BYTES) {
             throw new \RuntimeException('The selected credential backup is invalid.');
         }
 
