@@ -826,8 +826,8 @@ final class CredentialController extends AbstractController
         if ($value === '') {
             return true;
         }
-        $date = \\DateTimeImmutable::createFromFormat('!Y-m-d', $value);
-        return $date instanceof \\DateTimeImmutable && $date->format('Y-m-d') === $value;
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        return $date instanceof \DateTimeImmutable && $date->format('Y-m-d') === $value;
     }
 
     private function resolveReviewerName(int $userId): string
@@ -835,7 +835,7 @@ final class CredentialController extends AbstractController
         if ($userId <= 0) {
             return '';
         }
-        $user = new \\User();
+        $user = new \User();
         return $user->getFromDB($userId) ? (string) $user->getName() : '';
     }
 
