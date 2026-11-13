@@ -68,6 +68,7 @@ final class FakeCategoryDB
     public array $entityLocks = [];
     public array $queryLog = [];
     public mixed $beforeEntityLock = null;
+    public bool $failEntityLock = false;
     private int $transactionLevel = 0;
     private int $nextCategoryId = 5;
     private array $existingEntities = [0, 7, 8];
@@ -101,9 +102,17 @@ final class FakeCategoryDB
         return $this->transactionLevel > 0;
     }
 
+    public function transactionLevel(): int
+    {
+        return $this->transactionLevel;
+    }
+
     public function doQuery(string $query): FakeCategoryResult|false
     {
         $this->queryLog[] = $query;
+        if ($this->failEntityLock) {
+            throw new RuntimeException('Simulated entity lock query failure');
+        }
         if (!str_contains($query, 'FOR UPDATE') || !str_contains($query, 'glpi_entities')) {
             return false;
         }
@@ -342,5 +351,29 @@ assertCategoryResult(8, $DB->tables['glpi_plugin_credentials_categories'][7]['en
 
 assertCategoryResult(false, \GlpiPlugin\Credentials\CredentialCategory::create('Cloud', 8), 'same-entity duplicate category creation is rejected');
 assertCategoryResult(false, \GlpiPlugin\Credentials\CredentialCategory::create('Invalid entity', 99), 'categories cannot be created for a missing GLPI entity');
+
+
+$DB->failEntityLock = true;
+try {
+    \GlpiPlugin\Credentials\CredentialCategory::create('Lock Failure', 7);
+    throw new RuntimeException('Expected the simulated entity lock failure to propagate');
+} catch (RuntimeException $exception) {
+    assertCategoryResult('Simulated entity lock query failure', $exception->getMessage(), 'lock failure propagates after rollback');
+}
+assertCategoryResult(0, $DB->transactionLevel(), 'a failed standalone category lock rolls back its transaction');
+
+// Backup and transfer flows may already own the outer transaction.
+$DB->beginTransaction();
+$DB->failEntityLock = true;
+try {
+    \GlpiPlugin\Credentials\CredentialCategory::findOrCreateByName('Nested Lock Failure', 7);
+    throw new RuntimeException('Expected the nested entity lock failure to propagate');
+} catch (RuntimeException $exception) {
+    assertCategoryResult('Simulated entity lock query failure', $exception->getMessage(), 'nested lock failure propagates after rollback');
+}
+assertCategoryResult(1, $DB->transactionLevel(), 'nested failure rolls back only the helper savepoint and preserves the caller transaction');
+$DB->failEntityLock = false;
+$DB->rollBack();
+assertCategoryResult(0, $DB->transactionLevel(), 'the caller can still roll back its outer transaction');
 
 echo "Credential category update tests: OK\n";

@@ -296,9 +296,10 @@ final class CredentialCategory
             $DB->commit();
             return $value;
         } catch (\Throwable $exception) {
-            if ($DB->isInTransaction()) {
-                $DB->rollBack();
-            }
+            // beginTransaction() opens a transaction or a nested savepoint.
+            // rollBack() reverts only the level opened by this helper.
+            // DBmysql::isInTransaction() is private in GLPI 12.
+            $DB->rollBack();
             throw $exception;
         }
     }
