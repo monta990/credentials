@@ -35,6 +35,11 @@ function plugin_credentials_install(): bool
         `date_creation` TIMESTAMP NULL DEFAULT NULL,
         `date_mod` TIMESTAMP NULL DEFAULT NULL,
         `link_lock_token` VARCHAR(255) NOT NULL DEFAULT '',
+        `category` VARCHAR(100) NOT NULL DEFAULT '',
+        `expires_at` DATE DEFAULT NULL,
+        `review_due_at` DATE DEFAULT NULL,
+        `reviewed_at` DATETIME DEFAULT NULL,
+        `reviewer_users_id` INT UNSIGNED NOT NULL DEFAULT 0,
         `is_deleted` TINYINT NOT NULL DEFAULT 0,
         PRIMARY KEY (`id`),
         KEY `name` (`name`),
@@ -71,6 +76,11 @@ function plugin_credentials_install(): bool
         'string',
         ['value' => '']
     );
+    $migration->addField(Credential::getTable(), 'category', 'string', ['value' => '']);
+    $migration->addField(Credential::getTable(), 'expires_at', 'date');
+    $migration->addField(Credential::getTable(), 'review_due_at', 'date');
+    $migration->addField(Credential::getTable(), 'reviewed_at', 'datetime');
+    $migration->addField(Credential::getTable(), 'reviewer_users_id', 'integer', ['value' => 0]);
     $migration->addRight(Credential::$rightname, ALLSTANDARDRIGHT, ['config' => READ | UPDATE]);
     $migration->addRight(Credential::RIGHT_REVEAL, READ, ['config' => READ | UPDATE]);
     $migration->executeMigration();
