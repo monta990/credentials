@@ -146,6 +146,11 @@ final class AdminController extends AbstractController
             'review_rows' => array_slice($reviewRows, 0, 50),
             'archived_rows' => $archivedRows,
             'audit_rows' => $auditRows,
+            'can_export' => Session::haveRight(Credential::$rightname, READ) && Session::haveRight(Credential::RIGHT_REVEAL, READ),
+            'can_import' => Session::haveRight(Credential::$rightname, CREATE) && Credential::isEncryptionReady(),
+            'can_review' => Session::haveRight(Credential::$rightname, UPDATE),
+            'can_restore' => Session::haveRight(Credential::$rightname, UPDATE),
+            'can_purge' => Session::haveRight(Credential::$rightname, DELETE),
         ]);
 
         return $content;
@@ -365,7 +370,6 @@ final class AdminController extends AbstractController
                     'review_due_at' => $reviewDueAt !== '' ? $reviewDueAt : null,
                     'reviewed_at' => null,
                     'reviewer_users_id' => 0,
-                    'reviewed_by_users_id' => 0,
                     'users_id' => (int) Session::getLoginUserID(),
                 ]);
                 if ($newId <= 0) {
