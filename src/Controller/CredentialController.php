@@ -355,6 +355,11 @@ final class CredentialController extends AbstractController
             'modal_title' => __('Credential details', 'credentials') . ($credential_id > 0 ? ' — ' . (string) $credential->fields['name'] : ''),
             'credential_id' => $credential_id,
             'credential_name' => $credential_id > 0 ? (string) $credential->fields['name'] : '',
+            'category' => $credential_id > 0 ? (string) ($credential->fields['category'] ?? '') : '',
+            'expires_at' => $credential_id > 0 ? (string) ($credential->fields['expires_at'] ?? '') : '',
+            'review_due_at' => $credential_id > 0 ? (string) ($credential->fields['review_due_at'] ?? '') : '',
+            'reviewed_at' => $credential_id > 0 ? (string) ($credential->fields['reviewed_at'] ?? '') : '',
+            'reviewer_name' => $credential_id > 0 ? $this->resolveReviewerName((int) ($credential->fields['reviewer_users_id'] ?? 0)) : '',
             'link_count' => $link_count,
             'linked_items_url' => $linked_items_url,
             'detail_js_url' => PLUGIN_CREDENTIALS_WEBDIR . '/js/credential-details.js?v=' . PLUGIN_CREDENTIALS_VERSION,
@@ -534,10 +539,13 @@ final class CredentialController extends AbstractController
         if (!Credential::isEncryptionReady()) {
             $errors[] = __('The GLPI security key is unavailable or invalid. Contact your GLPI administrator.', 'credentials');
         }
-        $values = ['name' => '', 'login' => '', 'url' => '', 'notes' => ''];
+        $values = ['name' => '', 'login' => '', 'url' => '', 'notes' => '', 'category' => '', 'expires_at' => '', 'review_due_at' => ''];
 
         if ($is_update) {
             $values['name'] = (string) $credential->fields['name'];
+            $values['category'] = (string) ($credential->fields['category'] ?? '');
+            $values['expires_at'] = (string) ($credential->fields['expires_at'] ?? '');
+            $values['review_due_at'] = (string) ($credential->fields['review_due_at'] ?? '');
             foreach (['login', 'url', 'notes'] as $field) {
                 $ciphertext = (string) ($credential->fields[$field] ?? '');
                 $plaintext_value = Credential::decryptValue($ciphertext);
@@ -555,6 +563,9 @@ final class CredentialController extends AbstractController
                 'login' => trim($request->request->getString('login')),
                 'url' => trim($request->request->getString('url')),
                 'notes' => trim($request->request->getString('notes')),
+                'category' => trim($request->request->getString('category')),
+                'expires_at' => trim($request->request->getString('expires_at')),
+                'review_due_at' => trim($request->request->getString('review_due_at')),
             ];
             // Never repopulate the password control after a failed POST.
             $plaintext = (string) $request->request->get('password', '');
@@ -570,6 +581,9 @@ final class CredentialController extends AbstractController
                 || mb_strlen($values['login']) > 255
                 || mb_strlen($values['url']) > 2048
                 || mb_strlen($values['notes']) > 100000
+                || mb_strlen($values['category']) > 100
+                || !self::validDate($values['expires_at'])
+                || !self::validDate($values['review_due_at'])
             ) {
                 $errors[] = __('One or more fields exceed their maximum allowed length.', 'credentials');
             }
@@ -609,6 +623,9 @@ final class CredentialController extends AbstractController
                     'login' => $encrypted_login,
                     'url' => $encrypted_url,
                     'notes' => $encrypted_notes,
+                    'category' => $values['category'],
+                    'expires_at' => $values['expires_at'] !== '' ? $values['expires_at'] : null,
+                    'review_due_at' => $values['review_due_at'] !== '' ? $values['review_due_at'] : null,
                     'entities_id' => CredentialItem::resolveParentEntityID($parent),
                 ];
                 if (!$is_update) {
@@ -715,6 +732,24 @@ final class CredentialController extends AbstractController
             ? $detail_url
             : $parent->getFormURLWithID($items_id);
 
+        global $DB;
+        $categoryOptions = [];
+        $categoryIterator = $DB->request([
+            'SELECT' => ['category'],
+            'FROM' => Credential::getTable(),
+            'WHERE' => [
+                'entities_id' => CredentialItem::resolveParentEntityID($parent),
+                'is_deleted' => 0,
+            ],
+            'ORDER' => ['category'],
+        ]);
+        foreach ($categoryIterator as $categoryRow) {
+            $category = trim((string) ($categoryRow['category'] ?? ''));
+            if ($category !== '' && !in_array($category, $categoryOptions, true)) {
+                $categoryOptions[] = $category;
+            }
+        }
+
         return $this->renderGlpiPage(
             $request,
             $is_update ? __('Edit credential', 'credentials') : __('Add credential', 'credentials'),
@@ -730,6 +765,7 @@ final class CredentialController extends AbstractController
                 'associated_item_name' => (string) $parent->getName(),
                 'errors' => $errors,
                 'values' => $values,
+                'categories' => $categoryOptions,
                 'form_url' => $form_url,
                 'cancel_url' => $cancel_url,
                 'encryption_ready' => Credential::isEncryptionReady(),
@@ -783,6 +819,24 @@ final class CredentialController extends AbstractController
         }
 
         return $ticket;
+    }
+
+    private static function validDate(string $value): bool
+    {
+        if ($value === '') {
+            return true;
+        }
+        $date = \\DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        return $date instanceof \\DateTimeImmutable && $date->format('Y-m-d') === $value;
+    }
+
+    private function resolveReviewerName(int $userId): string
+    {
+        if ($userId <= 0) {
+            return '';
+        }
+        $user = new \\User();
+        return $user->getFromDB($userId) ? (string) $user->getName() : '';
     }
 
     private function renderGlpiPage(
