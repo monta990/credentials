@@ -26,6 +26,15 @@ class Session
     }
 }
 
+final class FakeQueryExpression
+{
+    public function __construct(public string $expression) {}
+    public function getValue(): string { return $this->expression; }
+    public function getParams(): array { return []; }
+}
+
+class_alias(FakeQueryExpression::class, 'Glpi\\DBAL\\QueryExpression');
+
 final class FakeCredentialDBResult implements IteratorAggregate
 {
     private int $position = 0;
@@ -94,12 +103,33 @@ final class FakeCredentialDB
 
     public function request(array $query): FakeCredentialDBResult
     {
-        // Normal SELECTs keep the REPEATABLE READ snapshot created by first read.
-        $this->consistentSnapshot ??= $this->links;
-        $rows = $this->consistentSnapshot;
+        // GLPI DBAL QueryExpression is used here only for the static FOR UPDATE
+        // clause. Locking reads must observe current committed links even when
+        // an outer transaction already established its REPEATABLE READ snapshot.
+        $order = $query['ORDER'] ?? [];
+        $is_current_read = false;
+        foreach ($order as $expression) {
+            if ($expression instanceof \\Glpi\\DBAL\\QueryExpression
+                && str_contains($expression->getValue(), 'FOR UPDATE')
+            ) {
+                $is_current_read = true;
+                break;
+            }
+        }
+
+        if ($is_current_read) {
+            $rows = $this->links;
+        } else {
+            $this->consistentSnapshot ??= $this->links;
+            $rows = $this->consistentSnapshot;
+        }
+
         foreach (($query['WHERE'] ?? []) as $field => $expected) {
             $rows = array_values(array_filter($rows, static function (array $row) use ($field, $expected): bool {
-                return (string) ($row[$field] ?? null) === (string) $expected;
+                $actual = $row[$field] ?? null;
+                return is_array($expected)
+                    ? in_array($actual, $expected, true)
+                    : (string) $actual === (string) $expected;
             }));
         }
         $select = $query['SELECT'] ?? '*';
