@@ -7,64 +7,89 @@ namespace {
     {
         public static function getTable($classname = null): string { return ''; }
     }
+
     class Session
     {
         public static function haveRight(...$args): bool { return true; }
     }
 
-    final class FakeCredentialLockResult
+    final class FakeQueryExpression
     {
-        private int $position = 0;
-        public function __construct(private array $rows) {}
-        public function fetch_assoc(): array|false { return $this->rows[$this->position++] ?? false; }
-        public function free(): void {}
+        public function __construct(public string $expression) {}
+        public function getValue(): string { return $this->expression; }
+        public function getParams(): array { return []; }
     }
 
-    class DBmysql
+    class_alias(FakeQueryExpression::class, 'Glpi\\DBAL\\QueryExpression');
+
+    final class FakeCredentialLockIterator implements IteratorAggregate
     {
-        public static function quoteName(string $name): string
+        /** @param list<array<string,mixed>> $rows */
+        public function __construct(private array $rows) {}
+
+        public function current(): ?array
         {
-            return chr(96) . str_replace(chr(96), chr(96) . chr(96), $name) . chr(96);
+            return $this->rows[0] ?? null;
         }
-        public static function quoteValue(mixed $value): string
+
+        public function getIterator(): Traversable
         {
-            return "'" . addslashes((string) $value) . "'";
+            yield from $this->rows;
         }
     }
 
     final class FakeCredentialLockDB
     {
+        /** @var list<array{table:string,values:array<string,mixed>,where:array<string,mixed>}> */
         public array $updates = [];
+        /** @var list<array<string,mixed>> */
+        public array $requests = [];
+        /** @var list<array<string,mixed>> */
         public array $locking_links = [];
-        public array $locking_credential = [];
-        public string $locking_query = '';
-        public string $credential_locking_query = '';
+        /** @var array<string,mixed> */
+        public array $credential_row = [];
         public int $affected_rows = 1;
+
         public function update(string $table, array $values, array $where): bool
         {
             $this->updates[] = compact('table', 'values', 'where');
             return true;
         }
-        public function getAffectedRows(): int { return $this->affected_rows; }
-        public function doQuery(string $query): FakeCredentialLockResult
+
+        public function getAffectedRows(): int
         {
-            if (str_contains($query, '`glpi_plugin_credentials_credentials`')) {
-                $this->credential_locking_query = $query;
-                return new FakeCredentialLockResult($this->locking_credential === [] ? [] : [$this->locking_credential]);
-            }
-            $this->locking_query = $query;
-            return new FakeCredentialLockResult($this->locking_links);
+            return $this->affected_rows;
         }
-        public function fetchAssoc(FakeCredentialLockResult $result): array|false { return $result->fetch_assoc(); }
-        public function freeResult(FakeCredentialLockResult $result): bool { $result->free(); return true; }
+
+        public function request(array $criteria): FakeCredentialLockIterator
+        {
+            $this->requests[] = $criteria;
+            $table = (string) ($criteria['FROM'] ?? '');
+            if ($table === 'glpi_plugin_credentials_items') {
+                return new FakeCredentialLockIterator($this->locking_links);
+            }
+            if ($table === 'glpi_plugin_credentials_credentials') {
+                $id = (int) ($criteria['WHERE']['id'] ?? 0);
+                return new FakeCredentialLockIterator(
+                    $id > 0 && (int) ($this->credential_row['id'] ?? 0) === $id
+                        ? [$this->credential_row]
+                        : []
+                );
+            }
+            throw new RuntimeException('Unexpected locking-read table: ' . $table);
+        }
     }
 }
 
-namespace GlpiPlugin\Credentials {
+namespace GlpiPlugin\\Credentials {
     final class Credential
     {
-        public static function getTable(): string { return 'glpi_plugin_credentials_credentials'; }
+        public static function getTable(): string
+        {
+            return 'glpi_plugin_credentials_credentials';
+        }
     }
+
     final class CredentialItem
     {
         public static function isSupportedItemtype(string $itemtype): bool
@@ -78,25 +103,29 @@ namespace {
     require_once __DIR__ . '/../../src/CredentialItemLink.php';
 
     $DB = new FakeCredentialLockDB();
-    if (!\GlpiPlugin\Credentials\CredentialItemLink::lockCredential(17, 4, true)) {
+
+    if (!\\GlpiPlugin\\Credentials\\CredentialItemLink::lockCredential(17, 4, true)) {
         throw new RuntimeException('An affected credential row must be locked successfully.');
     }
     $write = $DB->updates[0] ?? null;
     if (!is_array($write)
         || $write['table'] !== 'glpi_plugin_credentials_credentials'
         || !preg_match('/^[a-f0-9]{32}$/', (string) ($write['values']['link_lock_token'] ?? ''))
-        || ($write['where'] !== ['id' => 17, 'entities_id' => 4, 'is_deleted' => 0])
+        || $write['where'] !== ['id' => 17, 'entities_id' => 4, 'is_deleted' => 0]
     ) {
         throw new RuntimeException('Credential lock must use a random token and atomic id/entity/active criteria.');
     }
 
     $DB->affected_rows = 0;
-    if (\GlpiPlugin\Credentials\CredentialItemLink::lockCredential(18, 4, true)) {
+    if (\\GlpiPlugin\\Credentials\\CredentialItemLink::lockCredential(18, 4, true)) {
         throw new RuntimeException('A missing, archived or moved credential row must not be treated as locked.');
     }
 
-    if (\GlpiPlugin\Credentials\CredentialItemLink::lockCredential(0)) {
-        throw new RuntimeException('Invalid credential IDs must not be locked.');
+    $updates_before_invalid_id = count($DB->updates);
+    if (\\GlpiPlugin\\Credentials\\CredentialItemLink::lockCredential(0)
+        || count($DB->updates) !== $updates_before_invalid_id
+    ) {
+        throw new RuntimeException('Invalid credential IDs must not be locked or written.');
     }
 
     $DB->locking_links = [
@@ -104,21 +133,27 @@ namespace {
         ['itemtype' => 'User', 'items_id' => 7],
         ['itemtype' => 'User', 'items_id' => 7],
     ];
-    $links = \GlpiPlugin\Credentials\CredentialItemLink::getLinksForCredentialForUpdate(17);
+    $links = \\GlpiPlugin\\Credentials\\CredentialItemLink::getLinksForCredentialForUpdate(17);
     if ($links !== [
         ['itemtype' => 'Computer', 'items_id' => 31],
         ['itemtype' => 'User', 'items_id' => 7],
     ]) {
         throw new RuntimeException('The current locking read must return deduplicated item relationships.');
     }
-    $tick = chr(96);
-    if (!str_contains($DB->locking_query, 'FOR UPDATE')
-        || !str_contains($DB->locking_query, $tick . 'glpi_plugin_credentials_items' . $tick)
-        || !str_contains($DB->locking_query, $tick . 'plugin_credentials_credentials_id' . $tick . " = '17'")
+
+    $relationship_query = $DB->requests[0] ?? [];
+    $locking_order = $relationship_query['ORDER'][0] ?? null;
+    if (($relationship_query['FROM'] ?? null) !== 'glpi_plugin_credentials_items'
+        || ($relationship_query['WHERE'] ?? null) !== ['plugin_credentials_credentials_id' => 17]
+        || !$locking_order instanceof FakeQueryExpression
+        || !str_contains($locking_order->expression, 'FOR UPDATE')
+        || !str_contains($locking_order->expression, 'itemtype')
+        || !str_contains($locking_order->expression, 'items_id')
     ) {
-        throw new RuntimeException('The current read must quote table, key and value and include FOR UPDATE.');
+        throw new RuntimeException('Relationship enumeration must use a scoped DBAL locking expression.');
     }
-    $DB->locking_credential = [
+
+    $DB->credential_row = [
         'id' => 17,
         'name' => 'Database access',
         'entities_id' => 4,
@@ -131,30 +166,31 @@ namespace {
         'date_mod' => '2026-11-09 10:00:00',
         'is_deleted' => 0,
     ];
-    $credential = \GlpiPlugin\Credentials\CredentialItemLink::getCredentialForUpdate(17);
+    $credential = \\GlpiPlugin\\Credentials\\CredentialItemLink::getCredentialForUpdate(17);
     if (!is_array($credential)
         || ($credential['password'] ?? null) !== 'glpikey-password-ciphertext-current'
         || ($credential['login'] ?? null) !== 'glpikey-login-ciphertext-current'
     ) {
-        throw new RuntimeException('The current locking read must return the latest encrypted credential fields.');
+        throw new RuntimeException('The post-lock credential read must return the latest encrypted credential fields.');
     }
-    $tick = chr(96);
-    if (!str_contains($DB->credential_locking_query, 'FOR UPDATE')
-        || !str_contains($DB->credential_locking_query, $tick . 'glpi_plugin_credentials_credentials' . $tick)
-        || !str_contains($DB->credential_locking_query, $tick . 'password' . $tick)
-        || !str_contains($DB->credential_locking_query, $tick . 'login' . $tick)
-        || !str_contains($DB->credential_locking_query, $tick . 'id' . $tick . " = '17'")
+
+    $credential_query = $DB->requests[1] ?? [];
+    if (($credential_query['FROM'] ?? null) !== 'glpi_plugin_credentials_credentials'
+        || ($credential_query['WHERE'] ?? null) !== ['id' => 17]
+        || !in_array('password', $credential_query['SELECT'] ?? [], true)
+        || !in_array('login', $credential_query['SELECT'] ?? [], true)
     ) {
-        throw new RuntimeException('Credential fields must be selected with a quoted, ID-scoped current locking read.');
+        throw new RuntimeException('Credential data must be read by its exact parent ID after acquiring its write lock.');
     }
 
     $source = file_get_contents(__DIR__ . '/../../src/CredentialItemLink.php');
     if (!is_string($source)
-        || !str_contains($source, 'DBmysql::quoteName')
-        || !str_contains($source, 'DBmysql::quoteValue')
-        || !str_contains($source, '$DB->doQuery($query)')
+        || !str_contains($source, 'new QueryExpression(')
+        || !str_contains($source, 'getLinksForCredentialForUpdate(')
+        || str_contains($source, '$DB->doQuery(')
     ) {
-        throw new RuntimeException('The current read must use GLPI DBmysql quoting and execution APIs.');
+        throw new RuntimeException('Current locking reads must use GLPI DBAL QueryExpression, not direct SQL execution.');
     }
-    echo "Credential row-lock API, current-read query and active/entity guard regression: OK\n";
+
+    echo "Credential row-lock API, DBAL current-read query and active/entity guard regression: OK\\n";
 }
