@@ -134,6 +134,23 @@ namespace {
             ));
         }
 
+        /** @return list<int> */
+        public function getCurrentCredentialIDsForItem(string $itemtype, int $items_id): array
+        {
+            $ids = [];
+            foreach ($this->links as $link) {
+                if (($link['itemtype'] ?? null) === $itemtype && (int) ($link['items_id'] ?? 0) === $items_id) {
+                    $id = (int) ($link['plugin_credentials_credentials_id'] ?? 0);
+                    if ($id > 0) {
+                        $ids[$id] = $id;
+                    }
+                }
+            }
+            $ids = array_values($ids);
+            sort($ids, SORT_NUMERIC);
+            return $ids;
+        }
+
         public function getCurrentCredentialForUpdate(int $credential_id): ?array
         {
             foreach ($this->credentials as $credential) {
@@ -233,6 +250,58 @@ namespace GlpiPlugin\Credentials {
             }
             return $locked;
         }
+        public static function lockItemForUpdate(string $itemtype, int $items_id, ?int $expected_entity_id = null): bool
+        {
+            $item = getItemForItemtype($itemtype);
+            if (!$item instanceof \\CommonDBTM || !$item->getFromDB($items_id)) {
+                return false;
+            }
+            return $expected_entity_id === null
+                || CredentialItem::resolveParentEntityID($item) === $expected_entity_id;
+        }
+
+        /** @param array<int,array{itemtype:string,items_id:int,entities_id?:int}> $items */
+        public static function lockItemsForUpdate(array $items): bool
+        {
+            foreach ($items as $item) {
+                if (!self::lockItemForUpdate(
+                    $item['itemtype'],
+                    $item['items_id'],
+                    $item['entities_id'] ?? null
+                )) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /** @return list<int> */
+        public static function getCredentialIDsForItemForUpdate(string $itemtype, int $items_id): array
+        {
+            global $DB;
+            return $DB->getCurrentCredentialIDsForItem($itemtype, $items_id);
+        }
+
+        /** @param array<int,int|string> $credential_ids
+         *  @return list<int>
+         */
+        public static function lockCredentials(array $credential_ids): array
+        {
+            $ids = array_values(array_unique(array_filter(
+                array_map('intval', $credential_ids),
+                static fn(int $id): bool => $id > 0
+            )));
+            sort($ids, SORT_NUMERIC);
+
+            $locked = [];
+            foreach ($ids as $id) {
+                if (self::lockCredential($id)) {
+                    $locked[] = $id;
+                }
+            }
+            return $locked;
+        }
+
         public static function getLinksForCredentialForUpdate(int $id): array
         {
             global $DB;
