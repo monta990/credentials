@@ -318,9 +318,10 @@ namespace {
         'ITEM_PURGE locks its own relation rows before credentials, then decrements the parent count without locking other relations');
 
     check(substr_count($controller, 'CredentialItemLink::lockItemForUpdate(') >= 4,
-        'all controller link, unlink, move-target and create/update flows lock the GLPI item first');    $link_candidate_relation = strpos($controller, 'getLinksForCredentialForUpdate($candidate_id)');
+        'all controller link, unlink, move-target and create/update flows lock the GLPI item first');
+    $link_candidate_relation = strpos($controller, 'getLinksForCredentialForUpdate($candidate_id)');
     $link_candidate_parent = strpos($controller, 'lockCredential($candidate_id, $parent_entity_id, true)');
-    $unlink_start = strpos($controller, "elseif ($request->request->has('unlink')");
+    $unlink_start = strpos($controller, 'elseif ($request->request->has(');
     $unlink_relation = strpos($controller, 'getLinksForCredentialForUpdate($credential_id)', $unlink_start);
     $unlink_parent = strpos($controller, 'lockCredential($credential_id, $parent_entity_id, true)', $unlink_start);
     check($link_candidate_relation !== false && $link_candidate_parent !== false && $link_candidate_relation < $link_candidate_parent
