@@ -81,7 +81,7 @@ namespace {
     }
 }
 
-namespace GlpiPlugin\\Credentials {
+namespace GlpiPlugin\Credentials {
     final class Credential
     {
         public static function getTable(): string
