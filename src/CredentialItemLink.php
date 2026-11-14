@@ -190,7 +190,7 @@ final class CredentialItemLink extends CommonDBTM
 
             $parent_id = (int) ($probe[$parent_field] ?? 0);
             $parent_type = $item::$itemtype;
-            if ($parent_id <= 0 || !is_string($parent_type) || !is_a($parent_type, CommonDBTM::class, true)) {
+            if ($parent_id <= 0 || !is_a($parent_type, CommonDBTM::class, true)) {
                 return false;
             }
             $parent = getItemForItemtype($parent_type);
