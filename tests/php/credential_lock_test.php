@@ -91,7 +91,16 @@ namespace {
             $this->requests[] = $criteria;
             $table = (string) ($criteria['FROM'] ?? '');
             if ($table === 'glpi_plugin_credentials_items') {
-                return new FakeCredentialLockIterator($this->locking_links);
+                $where = $criteria['WHERE'] ?? [];
+                $rows = array_values(array_filter($this->locking_links, static function (array $row) use ($where): bool {
+                    foreach ($where as $field => $expected) {
+                        if (array_key_exists($field, $row) && (string) $row[$field] !== (string) $expected) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }));
+                return new FakeCredentialLockIterator($rows);
             }
             if ($table === 'glpi_plugin_credentials_credentials') {
                 $id = (int) ($criteria['WHERE']['id'] ?? 0);
@@ -170,9 +179,9 @@ namespace {
     }
 
     $DB->locking_links = [
-        ['itemtype' => 'Computer', 'items_id' => 31],
-        ['itemtype' => 'User', 'items_id' => 7],
-        ['itemtype' => 'User', 'items_id' => 7],
+        ['plugin_credentials_credentials_id' => 17, 'itemtype' => 'Computer', 'items_id' => 31],
+        ['plugin_credentials_credentials_id' => 17, 'itemtype' => 'User', 'items_id' => 7],
+        ['plugin_credentials_credentials_id' => 17, 'itemtype' => 'User', 'items_id' => 7],
     ];
     $links = \GlpiPlugin\Credentials\CredentialItemLink::getLinksForCredentialForUpdate(17);
     if ($links !== [
@@ -205,6 +214,7 @@ namespace {
         'users_id' => 7,
         'date_creation' => '2026-11-01 10:00:00',
         'date_mod' => '2026-11-09 10:00:00',
+        'links_count' => 2,
         'is_deleted' => 0,
     ];
     $credential = \GlpiPlugin\Credentials\CredentialItemLink::getCredentialForUpdate(17);
@@ -222,6 +232,48 @@ namespace {
         || !str_contains(($credential_query['ORDER'][0]->expression ?? ''), 'FOR UPDATE')
     ) {
         throw new RuntimeException('Credential data must use a current locking read after acquiring its write lock.');
+    }
+
+    // Last-link decisions use the count on the credential parent and must not
+    // re-lock child relationship rows after acquiring that parent lock.
+    $DB->requests = [];
+    $count = \\GlpiPlugin\\Credentials\\CredentialItemLink::countForCredentialForUpdate(17);
+    $count_query = $DB->requests[0] ?? [];
+    if ($count !== 2
+        || ($count_query['FROM'] ?? null) !== 'glpi_plugin_credentials_credentials'
+        || ($count_query['WHERE'] ?? null) !== ['id' => 17]
+        || !str_contains(($count_query['ORDER'][0]->expression ?? ''), 'FOR UPDATE')
+    ) {
+        throw new RuntimeException('Link count must use the current locked credential parent row, not relationship locks.');
+    }
+
+    $DB->requests = [];
+    $DB->locking_links = [
+        ['plugin_credentials_credentials_id' => 17, 'itemtype' => 'User', 'items_id' => 7],
+        ['plugin_credentials_credentials_id' => 17, 'itemtype' => 'User', 'items_id' => 7],
+        ['plugin_credentials_credentials_id' => 18, 'itemtype' => 'Computer', 'items_id' => 31],
+        ['plugin_credentials_credentials_id' => 18, 'itemtype' => 'User', 'items_id' => 8],
+    ];
+    $link_counts = \\GlpiPlugin\\Credentials\\CredentialItemLink::getCredentialLinkCountsForItemForUpdate('User', 7);
+    $counts_query = $DB->requests[0] ?? [];
+    if ($link_counts !== [17 => 2]
+        || ($counts_query['FROM'] ?? null) !== 'glpi_plugin_credentials_items'
+        || ($counts_query['WHERE'] ?? null) !== ['itemtype' => 'User', 'items_id' => 7]
+        || !str_contains(($counts_query['ORDER'][0]->expression ?? ''), 'FOR UPDATE')
+    ) {
+        throw new RuntimeException('Purge must current-read and count only the selected asset relationship rows by credential.');
+    }
+
+    $DB->credential_row['links_count'] = 2;
+    $DB->affected_rows = 1;
+    \\GlpiPlugin\\Credentials\\CredentialItemLink::adjustLinkCount(17, -1);
+    $count_update = $DB->updates[count($DB->updates) - 1] ?? null;
+    if (!is_array($count_update)
+        || ($count_update['table'] ?? null) !== 'glpi_plugin_credentials_credentials'
+        || ($count_update['values']['links_count'] ?? null) !== 1
+        || ($count_update['where'] ?? null) !== ['id' => 17]
+    ) {
+        throw new RuntimeException('Relationship deletion must update the denormalized credential counter.');
     }
 
     // Database child: resolve the parent without locking the child, then lock parent and child.
