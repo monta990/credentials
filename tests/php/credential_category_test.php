@@ -209,7 +209,9 @@ final class FakeCategoryDB
                 $this->beforeEntityLock = null;
                 $callback($this, $entityId);
             }
-            return in_array($entityId, $this->existingEntities, true);
+            // A successful SQL UPDATE returns true even when no row matched;
+            // the subsequent SELECT below verifies that the entity exists.
+            return true;
         }
 
         $this->updates[] = ['table' => $table, 'data' => $data, 'where' => $where];
