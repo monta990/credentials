@@ -224,7 +224,6 @@ final class CredentialController extends AbstractController
                         || (int) ($locked_credential->fields['is_deleted'] ?? 0) !== 0
                         || (int) ($locked_credential->fields['entities_id'] ?? 0) !== $parent_entity_id
                         || !$locked_credential->can($credential_id, $is_delete ? DELETE : READ)
-                        || !CredentialItemLink::hasLink($locked_links, $itemtype, $items_id)
                     ) {
                         return false;
                     }
