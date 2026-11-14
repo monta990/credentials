@@ -527,7 +527,7 @@ final class CredentialController extends AbstractController
             return $redirect;
         }
 
-        /** @var list<array{itemtype:class-string, type_name:string, items_id:int, name:string, url:string, is_source:bool}> $rows */
+        /** @var list<array{itemtype:string, type_name:string, items_id:int, name:string, url:string, is_source:bool}> $rows */
         $rows = [];
         $hidden_count = 0;
         foreach (CredentialItemLink::getLinksForCredential($credential_id) as $link) {
