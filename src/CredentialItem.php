@@ -127,7 +127,7 @@ final class CredentialItem extends CommonDBTM
 
         // Avoid calling can() on sensitive parent itemtypes while rendering the AJAX tab.
         // Each destination performs the full item authorization check after re-authentication.
-        $parent_rightname = $item::$rightname ?? '';
+        $parent_rightname = $item::$rightname;
         $can_update_parent = $parent_rightname !== '' && Session::haveRight($parent_rightname, UPDATE);
         $can_create = $can_update_parent && Session::haveRight(Credential::$rightname, CREATE);
         $can_update = $can_update_parent && Session::haveRight(Credential::$rightname, UPDATE);
