@@ -14,10 +14,9 @@ use GlpiPlugin\Credentials\CredentialHistory;
 use GlpiPlugin\Credentials\CredentialItem;
 use GlpiPlugin\Credentials\CredentialItemLink;
 use GlpiPlugin\Credentials\CredentialStatus;
-use Log;
 use Session;
 
-/** Non-secret administrative summaries, audit, archive retention and recovery. */
+/** Non-secret administrative summaries, archive retention and recovery. */
 final class CredentialAdminService
 {
     /** @return array<string,mixed> */
@@ -46,6 +45,7 @@ final class CredentialAdminService
         ];
         $attention = [];
         $archived = [];
+        $restorable_items_by_entity = [];
         $purge_before = $retention_days > 0
             ? (new \DateTimeImmutable('now'))->modify('-' . $retention_days . ' days')->format('Y-m-d H:i:s')
             : null;
@@ -65,12 +65,16 @@ final class CredentialAdminService
                     $purge_eligible++;
                 }
                 if ($can_read_credentials && count($archived) < 25) {
+                    if (!array_key_exists($entity, $restorable_items_by_entity)) {
+                        $restorable_items_by_entity[$entity] = self::restorableItemsForEntity($entity);
+                    }
                     $archived[] = [
                         'id' => $id,
                         'name' => (string) $row['name'],
                         'date_mod' => $modified,
                         'entities_id' => $entity,
                         'purge_eligible' => $eligible,
+                        'restorable_items' => $restorable_items_by_entity[$entity],
                     ];
                 }
                 continue;
@@ -107,77 +111,82 @@ final class CredentialAdminService
             'archived' => $archived,
             'purge_eligible' => $purge_eligible,
             'categories' => $category_rows,
-            'audit' => $can_read_credentials ? self::recentAuditEvents(50) : [],
         ];
     }
 
-    /** @return array<int,array<string,mixed>> */
-    public static function recentAuditEvents(int $limit = 50): array
+    /**
+     * Return a bounded list of items in an entity that the current user may update.
+     * This replaces manual itemtype/ID entry in the archive restoration form.
+     *
+     * @return array<int,array{value:string,label:string}>
+     */
+    private static function restorableItemsForEntity(int $entities_id): array
     {
         global $DB;
 
-        if (!Session::haveRight(Credential::$rightname, READ)) {
+        if (!Session::haveAccessToEntity($entities_id)
+            || !Session::haveRight(Credential::$rightname, UPDATE)
+        ) {
             return [];
         }
 
-        $events = [];
-        $iterator = $DB->request([
-            'SELECT' => [
-                'date_mod', 'user_name', 'itemtype', 'items_id',
-                'linked_action', 'old_value', 'new_value',
-            ],
-            'FROM' => 'glpi_logs',
-            'WHERE' => [
-                'itemtype_link' => Credential::class,
-                'linked_action' => ['>=', Log::HISTORY_PLUGIN],
-            ],
-            'ORDER' => ['date_mod DESC'],
-            'LIMIT' => max(1, min(100, $limit)),
-        ]);
+        $options = [];
+        foreach (CredentialItem::getSupportedItemtypes() as $itemtype) {
+            if (count($options) >= 500) {
+                break;
+            }
 
-        foreach ($iterator as $row) {
-            $linked_action = (int) $row['linked_action'];
-            $event_label = Credential::getHistoryEntry(['linked_action' => $linked_action]);
-            if ($event_label === '') {
+            try {
+                $prototype = getItemForItemtype($itemtype);
+                if (!$prototype instanceof \CommonDBTM) {
+                    continue;
+                }
+                $where = ['is_deleted' => 0];
+                if ($prototype->isEntityAssign()) {
+                    $where['entities_id'] = $entities_id;
+                } elseif ($entities_id !== 0) {
+                    continue;
+                }
+                $rows = $DB->request([
+                    'SELECT' => ['id', 'name'],
+                    'FROM' => $prototype::getTable(),
+                    'WHERE' => $where,
+                    'ORDER' => ['name'],
+                    'LIMIT' => 250,
+                ]);
+
+                foreach ($rows as $row) {
+                    $id = (int) ($row['id'] ?? 0);
+                    if ($id <= 0) {
+                        continue;
+                    }
+                    $item = getItemForItemtype($itemtype);
+                    if (!$item instanceof \CommonDBTM
+                        || !$item->getFromDB($id)
+                        || !$item->can($id, UPDATE)
+                        || CredentialItem::resolveParentEntityID($item) !== $entities_id
+                    ) {
+                        continue;
+                    }
+                    $type_label = $itemtype::getTypeName(1);
+                    $item_label = trim((string) $item->getName());
+                    $options[] = [
+                        'value' => $itemtype . '|' . $id,
+                        'label' => $type_label . ' — ' . ($item_label !== '' ? $item_label : '#' . $id) . ' (#' . $id . ')',
+                    ];
+                    if (count($options) >= 500) {
+                        break 2;
+                    }
+                }
+            } catch (\Throwable) {
+                // Unsupported/abstract item types are skipped; restoration still
+                // validates the submitted target independently on the server.
                 continue;
             }
-            $itemtype = (string) ($row['itemtype'] ?? '');
-            $items_id = (int) ($row['items_id'] ?? 0);
-
-            // Show only events whose credential or originating GLPI item is
-            // currently readable in the active entity scope. This prevents the
-            // audit panel from revealing IDs or activity from inaccessible entities.
-            if ($itemtype === Credential::class) {
-                $credential = new Credential();
-                if (!$credential->getFromDB($items_id)
-                    || !Session::haveAccessToEntity((int) ($credential->fields['entities_id'] ?? -1))
-                ) {
-                    continue;
-                }
-                $credential_id = $items_id;
-                $item_name = (string) ($credential->fields['name'] ?? __('Credential record', 'credentials'));
-            } else {
-                if (!CredentialItem::isSupportedItemtype($itemtype)) {
-                    continue;
-                }
-                $item = CredentialItem::loadReadableItem($itemtype, $items_id);
-                if ($item === null || !Session::haveAccessToEntity(CredentialItem::resolveParentEntityID($item))) {
-                    continue;
-                }
-                $credential_id = (int) trim((string) ($row['new_value'] ?? ''), "# \\t\\n\\r\\0\\x0B");
-                $item_name = (string) $item->getName();
-            }
-
-            $events[] = [
-                'date' => (string) ($row['date_mod'] ?? ''),
-                'user' => (string) ($row['user_name'] ?? ''),
-                'event' => $event_label,
-                'credential_id' => max(0, $credential_id),
-                'item' => $item_name,
-            ];
         }
 
-        return $events;
+        usort($options, static fn(array $a, array $b): int => strnatcasecmp($a['label'], $b['label']));
+        return $options;
     }
 
     /** Restore an archived credential by explicitly attaching it to a valid item. */
@@ -253,6 +262,82 @@ final class CredentialAdminService
         }
     }
 
+    /**
+     * Permanently remove one archived credential immediately, without applying retention.
+     * The record must be archived, belong to an accessible entity and have no remaining links.
+     */
+    public static function purgeArchivedCredential(int $credential_id): bool
+    {
+        global $DB;
+
+        if ($credential_id <= 0) {
+            return false;
+        }
+        if (!Session::haveRight(Credential::$rightname, READ)
+            || !Session::haveRight(Credential::$rightname, DELETE)
+        ) {
+            throw new \RuntimeException(__('You do not have permission to permanently delete archived credentials.', 'credentials'));
+        }
+
+        $probe = new Credential();
+        if (!$probe->getFromDB($credential_id)) {
+            return false;
+        }
+        $entity_id = (int) ($probe->fields['entities_id'] ?? -1);
+        if ($entity_id < 0 || !Session::haveAccessToEntity($entity_id)) {
+            throw new \RuntimeException(__('You do not have access to this archived credential.', 'credentials'));
+        }
+
+        $DB->beginTransaction();
+        try {
+            if (!CredentialItemLink::lockCredential($credential_id, $entity_id, false)) {
+                $DB->rollBack();
+                return false;
+            }
+
+            $credential = new Credential();
+            if (!$credential->getFromDB($credential_id)
+                || (int) ($credential->fields['entities_id'] ?? -1) !== $entity_id
+                || (int) ($credential->fields['is_deleted'] ?? 0) !== 1
+            ) {
+                $DB->rollBack();
+                return false;
+            }
+
+            // Never permanently delete a credential while any asset/user relationship remains.
+            if (CredentialItemLink::getLinksForCredentialForUpdate($credential_id) !== []) {
+                throw new \RuntimeException(__('This archived credential is still linked to an item. Remove its links before permanently deleting it.', 'credentials'));
+            }
+
+            // Keep a secret-free native audit record before removing the credential row.
+            if (!CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_PURGED)) {
+                throw new \RuntimeException('Unable to record archived credential deletion history.');
+            }
+
+            if ($DB->delete(CredentialItemLink::getTable(), [
+                'plugin_credentials_credentials_id' => $credential_id,
+            ]) === false
+                || $DB->delete('glpi_plugin_credentials_reminders', [
+                    'plugin_credentials_credentials_id' => $credential_id,
+                ]) === false
+                || $DB->delete(Credential::getTable(), [
+                    'id' => $credential_id,
+                    'entities_id' => $entity_id,
+                    'is_deleted' => 1,
+                ]) === false
+                || $DB->getAffectedRows() !== 1
+            ) {
+                throw new \RuntimeException('Unable to permanently remove archived credential.');
+            }
+
+            $DB->commit();
+            return true;
+        } catch (\Throwable $exception) {
+            $DB->rollBack();
+            throw $exception;
+        }
+    }
+
     /** Permanently remove only archived, unlinked credentials older than the configured age. */
     public static function purgeEligible(int $retention_days): int
     {
@@ -284,11 +369,17 @@ final class CredentialAdminService
             return 0;
         }
 
+        // Candidate rows were enumerated before the transaction. Lock every
+        // candidate parent row, in ascending ID order, before the first consistent
+        // read. This prevents a REPEATABLE READ snapshot from predating later locks.
+        usort($candidates, static fn(array $a, array $b): int => $a[0] <=> $b[0]);
         $DB->beginTransaction();
         $purged = 0;
         try {
+            $locked_ids = CredentialItemLink::lockCredentials(array_column($candidates, 0));
+            $locked_set = array_fill_keys($locked_ids, true);
             foreach ($candidates as [$id, $entity]) {
-                if (!CredentialItemLink::lockCredential($id, $entity, false)) {
+                if (!isset($locked_set[$id])) {
                     continue;
                 }
                 $credential = new Credential();

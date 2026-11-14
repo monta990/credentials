@@ -65,9 +65,16 @@ final class CredentialTransfer
             throw new \RuntimeException('Cloned item entity does not match the destination entity.');
         }
 
+        // Read the candidate IDs before opening the transaction. Inside the
+        // transaction each credential is write-locked before any consistent read.
+        $credential_ids = self::getCredentialIDsForItem($itemtype, $item_id);
         $DB->beginTransaction();
         try {
-            self::copyItemRelationships($itemtype, $item_id, $new_id, $source_entity, $destination_entity);
+            // Lock every source credential before the first consistent read. A
+            // per-row lock/read loop would create an old REPEATABLE READ snapshot
+            // after the first row and then wait for subsequent rows against it.
+            $locked_ids = CredentialItemLink::lockCredentials($credential_ids);
+            self::copyItemRelationships($itemtype, $item_id, $new_id, $source_entity, $destination_entity, $locked_ids);
             $DB->commit();
         } catch (\Throwable $exception) {
             $DB->rollBack();
@@ -84,11 +91,14 @@ final class CredentialTransfer
     {
         global $DB;
 
+        $credential_ids = self::getCredentialIDsForItem($itemtype, $items_id);
         $DB->beginTransaction();
         try {
-            $credential_ids = self::getCredentialIDsForItem($itemtype, $items_id);
-            foreach ($credential_ids as $credential_id) {
-                $credential = self::lockAndReadCredential($credential_id, $itemtype, $items_id);
+            // Acquire all parent row locks in sorted order before any consistent
+            // SELECT, avoiding stale snapshots on later credentials.
+            $locked_ids = CredentialItemLink::lockCredentials($credential_ids);
+            foreach ($locked_ids as $credential_id) {
+                $credential = self::readCredentialAfterLock($credential_id);
                 if ($credential === null) {
                     continue;
                 }
@@ -123,7 +133,10 @@ final class CredentialTransfer
                     if ($updated === false || $DB->getAffectedRows() !== 1) {
                         throw new \RuntimeException('Unable to move the credential to the destination entity.');
                     }
-                    if (!CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_UPDATED)) {
+                    if (
+                        !CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_UPDATED)
+                        || !CredentialHistory::recordForItem($itemtype, $items_id, Credential::HISTORY_UPDATED, $credential_id)
+                    ) {
                         throw new \RuntimeException('Unable to record the credential entity transfer.');
                     }
                     continue;
@@ -146,6 +159,7 @@ final class CredentialTransfer
                 if (
                     !CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_UPDATED)
                     || !CredentialHistory::recordForCredential($new_credential_id, Credential::HISTORY_CREATED)
+                    || !CredentialHistory::recordForItem($itemtype, $items_id, Credential::HISTORY_UPDATED, $new_credential_id)
                 ) {
                     throw new \RuntimeException('Unable to record the split credential transfer.');
                 }
@@ -168,11 +182,13 @@ final class CredentialTransfer
         int $destination_id,
         int $source_entity,
         int $destination_entity,
+        array $credential_ids,
     ): void {
         global $DB;
 
-        foreach (self::getCredentialIDsForItem($itemtype, $source_id) as $credential_id) {
-            $credential = self::lockAndReadCredential($credential_id, $itemtype, $source_id);
+        foreach ($credential_ids as $credential_id) {
+            // The caller acquired every parent lock before this method runs.
+            $credential = self::readCredentialAfterLock($credential_id);
             if ($credential === null) {
                 // The credential was deleted, archived or unlinked while this clone waited.
                 continue;
@@ -210,7 +226,10 @@ final class CredentialTransfer
             $action = $new_credential_id === $credential_id
                 ? Credential::HISTORY_LINKED
                 : Credential::HISTORY_CREATED;
-            if (!CredentialHistory::recordForCredential($new_credential_id, $action)) {
+            if (
+                !CredentialHistory::recordForCredential($new_credential_id, $action)
+                || !CredentialHistory::recordForItem($itemtype, $destination_id, $action, $new_credential_id)
+            ) {
                 throw new \RuntimeException('Unable to record the credential link created by the transfer.');
             }
         }
@@ -249,84 +268,17 @@ final class CredentialTransfer
      *
      * @return array<string, mixed>|null
      */
-    private static function lockAndReadCredential(int $credential_id, string $itemtype, int $items_id): ?array
+    private static function readCredentialAfterLock(int $credential_id): ?array
     {
-        global $DB;
-
-        $row = self::readCredential($credential_id);
-        if ($row === null || (int) $row['is_deleted'] !== 0) {
+        // The caller must have acquired ALL candidate locks in deterministic
+        // order before invoking this method. Keeping the read separate from lock
+        // acquisition prevents per-item locks from being interleaved with reads.
+        $row = CredentialItemLink::getCredentialForUpdate($credential_id);
+        if ($row === null || (int) ($row['is_deleted'] ?? 0) !== 0) {
             return null;
         }
 
-        $expected_entity = (int) $row['entities_id'];
-        if (!CredentialItemLink::lockCredential($credential_id, $expected_entity, true)) {
-            // The conditional UPDATE may have waited for a concurrent archive or unlink.
-            // Use current reads to distinguish stale transfer input from a real lock failure.
-            $current = CredentialItemLink::getCredentialForUpdate($credential_id);
-            if (
-                $current === null
-                || (int) $current['is_deleted'] !== 0
-                || (int) $current['entities_id'] !== $expected_entity
-            ) {
-                return null;
-            }
-
-            $current_links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
-            if (!self::containsLink($current_links, $itemtype, $items_id)) {
-                return null;
-            }
-
-            // The row and exact source relationship are still active. Do not hide
-            // an unexpected DB lock failure behind a stale-ID skip.
-            throw new \RuntimeException('Unable to lock active credential during entity transfer.');
-        }
-
-        $row = CredentialItemLink::getCredentialForUpdate($credential_id);
-        if (
-            $row === null
-            || (int) $row['is_deleted'] !== 0
-            || (int) $row['entities_id'] !== $expected_entity
-        ) {
-            throw new \RuntimeException('Credential changed while its entity transfer was being prepared.');
-        }
-
         return $row;
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private static function readCredential(int $credential_id): ?array
-    {
-        global $DB;
-
-        $iterator = $DB->request([
-            'SELECT' => [
-                'id',
-                'name',
-                'entities_id',
-                'login',
-                'password',
-                'url',
-                'notes',
-                'users_id',
-                'date_creation',
-                'date_mod',
-                'plugin_credentials_categories_id',
-                'date_expires',
-                'date_last_review',
-                'date_next_review',
-                'reviewer_users_id',
-                'is_deleted',
-            ],
-            'FROM' => Credential::getTable(),
-            'WHERE' => ['id' => $credential_id],
-            'LIMIT' => 1,
-        ]);
-        foreach ($iterator as $row) {
-            return $row;
-        }
-        return null;
     }
 
     /**

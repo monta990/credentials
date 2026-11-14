@@ -36,42 +36,102 @@ final class CredentialBackupService
             && Credential::isEncryptionReady();
     }
 
-    /** Create an authenticated, password-protected export file. */
+    /** Create an authenticated export and audit it in the same database transaction. */
     public static function createBackup(string $passphrase, bool $include_archived = true): string
     {
         self::validatePassphrase($passphrase);
         if (!self::isAvailable()) {
             throw new \RuntimeException(__('Secure backup is unavailable. Check the PHP Sodium extension and GLPI encryption key.', 'credentials'));
         }
-        if (!Session::haveRight(Credential::$rightname, READ)) {
-            throw new \RuntimeException(__('You do not have permission to read credentials for backup.', 'credentials'));
+        if (!Session::haveRight(Credential::$rightname, READ)
+            || !Session::haveRight(Credential::RIGHT_BACKUP, READ)
+            || !Session::haveRight(Credential::RIGHT_REVEAL, READ)
+        ) {
+            throw new \RuntimeException(__('Exporting credential secrets requires read access, backup permission and permission to reveal passwords.', 'credentials'));
         }
 
         global $DB;
-        $where = [];
-        if (!$include_archived) {
-            $where['is_deleted'] = 0;
+        // Candidate enumeration happens before the transaction. Acquire every
+        // candidate parent-row lock, in ascending ID order, before the first
+        // consistent SELECT inside the transaction. This avoids a REPEATABLE READ
+        // snapshot being created while later credential locks are still pending.
+        $candidate_ids = self::getBackupCandidateIDs($include_archived);
+        $candidate_ids = array_values(array_filter(
+            $candidate_ids,
+            static fn(array $candidate): bool => Session::haveAccessToEntity((int) $candidate['entities_id'])
+        ));
+        usort($candidate_ids, static fn(array $a, array $b): int => $a['id'] <=> $b['id']);
+
+        $DB->beginTransaction();
+        try {
+            $locked_ids = CredentialItemLink::lockCredentials(array_column($candidate_ids, 'id'));
+            if (count($locked_ids) !== count($candidate_ids)) {
+                throw new \RuntimeException(__('A credential changed or disappeared while the backup was being prepared. Retry the export.', 'credentials'));
+            }
+            $result = self::buildBackup($passphrase, $include_archived, $candidate_ids);
+            foreach ($result['credential_ids'] as $credential_id) {
+                $links = CredentialItemLink::getLinksForCredential($credential_id);
+                $recorded = $links !== []
+                    ? CredentialHistory::recordForLinkedItems($credential_id, Credential::HISTORY_EXPORTED)
+                    : CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_EXPORTED);
+                if (!$recorded) {
+                    throw new \RuntimeException(__('The export could not be recorded in GLPI history. No backup was delivered.', 'credentials'));
+                }
+            }
+            $DB->commit();
+            return $result['contents'];
+        } catch (\Throwable $exception) {
+            $DB->rollBack();
+            throw $exception;
         }
+    }
+
+    /** @return array<int, array{id:int,entities_id:int}> */
+    private static function getBackupCandidateIDs(bool $include_archived): array
+    {
+        global $DB;
+
+        $where = $include_archived ? [] : ['is_deleted' => 0];
         $iterator = $DB->request([
-            'SELECT' => [
-                'id', 'name', 'entities_id', 'login', 'password', 'url', 'notes',
-                'users_id', 'date_creation', 'date_mod', 'is_deleted',
-                'plugin_credentials_categories_id', 'date_expires', 'date_last_review',
-                'date_next_review', 'reviewer_users_id',
-            ],
+            'SELECT' => ['id', 'entities_id'],
             'FROM' => Credential::getTable(),
             'WHERE' => $where,
             'ORDER' => ['entities_id', 'id'],
         ]);
+        $candidates = [];
+        foreach ($iterator as $row) {
+            $candidates[] = ['id' => (int) $row['id'], 'entities_id' => (int) $row['entities_id']];
+        }
+        return $candidates;
+    }
+
+    /** Build the encrypted payload while the caller holds a consistent transaction. */
+    private static function buildBackup(string $passphrase, bool $include_archived, array $candidates): array
+    {
+        global $DB;
 
         $entries = [];
-        foreach ($iterator as $row) {
-            $entities_id = (int) $row['entities_id'];
-            if (!Session::haveAccessToEntity($entities_id)) {
+        $exported_ids = [];
+        foreach ($candidates as $candidate_row) {
+            $candidate_entity_id = (int) $candidate_row['entities_id'];
+            if (!Session::haveAccessToEntity($candidate_entity_id)) {
                 continue;
             }
 
-            $credential_id = (int) $row['id'];
+            $credential_id = (int) $candidate_row['id'];
+            // The export caller has already acquired ALL candidate locks before
+            // entering this method. Reads now share a snapshot created only after
+            // every lock wait has completed.
+            $row = CredentialItemLink::getCredentialForUpdate($credential_id);
+            if (!is_array($row) || (int) ($row['entities_id'] ?? -1) !== $candidate_entity_id) {
+                throw new \RuntimeException(__('A credential changed while the backup was being prepared. Retry the export.', 'credentials'));
+            }
+            $entities_id = (int) $row['entities_id'];
+            $archived = (int) ($row['is_deleted'] ?? 0) === 1;
+            if ($archived && !$include_archived) {
+                continue;
+            }
+
             $secrets = [];
             foreach (['login', 'password', 'url', 'notes'] as $field) {
                 $ciphertext = (string) ($row[$field] ?? '');
@@ -83,7 +143,7 @@ final class CredentialBackupService
             }
 
             $links = [];
-            foreach (CredentialItemLink::getLinksForCredential($credential_id) as $link) {
+            foreach (CredentialItemLink::getLinksForCredentialForUpdate($credential_id) as $link) {
                 $itemtype = (string) $link['itemtype'];
                 $items_id = (int) $link['items_id'];
                 if (!CredentialItem::isSupportedItemtype($itemtype)) {
@@ -103,7 +163,6 @@ final class CredentialBackupService
                 }
             }
 
-            $archived = (int) ($row['is_deleted'] ?? 0) === 1;
             // Active records must retain at least one valid association in a backup.
             if (!$archived && $links === []) {
                 continue;
@@ -111,10 +170,11 @@ final class CredentialBackupService
 
             $category = CredentialCategory::getById((int) ($row['plugin_credentials_categories_id'] ?? 0));
             $entries[] = [
-                'source_id' => $credential_id,
                 'name' => (string) $row['name'],
                 'entity' => self::entityPath($entities_id),
                 'category' => $category['name'] ?? '',
+                'category_comment' => $category['comment'] ?? '',
+                'category_scope' => (int) ($category['entities_id'] ?? $entities_id) === 0 ? 'global' : 'entity',
                 'login' => $secrets['login'],
                 'password' => $secrets['password'],
                 'url' => $secrets['url'],
@@ -123,11 +183,11 @@ final class CredentialBackupService
                 'date_last_review' => self::validDateOnly((string) ($row['date_last_review'] ?? '')),
                 'date_next_review' => self::validDateOnly((string) ($row['date_next_review'] ?? '')),
                 'reviewer' => self::userLogin((int) ($row['reviewer_users_id'] ?? 0)),
-                'date_creation' => (string) ($row['date_creation'] ?? ''),
-                'date_mod' => (string) ($row['date_mod'] ?? ''),
                 'archived' => $archived,
                 'links' => $links,
             ];
+
+            $exported_ids[] = $credential_id;
 
             if (count($entries) > self::MAX_ENTRIES) {
                 throw new \RuntimeException(__('The backup contains too many credentials. Export smaller groups of records.', 'credentials'));
@@ -181,7 +241,7 @@ final class CredentialBackupService
         if (strlen($envelope) > self::MAX_FILE_BYTES) {
             throw new \RuntimeException(__('The encrypted backup would exceed the 20 MB download limit. Export fewer credentials at a time.', 'credentials'));
         }
-        return $envelope;
+        return ['contents' => $envelope, 'credential_ids' => $exported_ids];
     }
 
     /**
@@ -197,7 +257,8 @@ final class CredentialBackupService
         if (!self::isAvailable()) {
             throw new \RuntimeException(__('Secure backup is unavailable. Check the PHP Sodium extension and GLPI encryption key.', 'credentials'));
         }
-        if (!Session::haveRight(Credential::$rightname, READ)
+        if (!Session::haveRight(Credential::RIGHT_BACKUP, READ)
+            || !Session::haveRight(Credential::$rightname, READ)
             || !Session::haveRight(Credential::$rightname, CREATE)
         ) {
             throw new \RuntimeException(__('You need read and create permissions for Credentials to import a backup.', 'credentials'));
@@ -287,8 +348,15 @@ final class CredentialBackupService
         try {
             foreach ($prepared as $entry) {
                 $category_id = $entry['category'] !== ''
-                    ? CredentialCategory::findOrCreateByName($entry['category'], $entry['entities_id'])
+                    ? CredentialCategory::findOrCreateByName(
+                        $entry['category'],
+                        $entry['category_scope'] === 'global' ? 0 : $entry['entities_id'],
+                        $entry['category_comment']
+                    )
                     : 0;
+                if ($entry['category'] !== '' && $category_id <= 0) {
+                    throw new \RuntimeException(__('An imported category could not be created. The import was cancelled.', 'credentials'));
+                }
 
                 $encrypted = [];
                 foreach (['login', 'password', 'url', 'notes'] as $field) {
@@ -527,6 +595,8 @@ final class CredentialBackupService
             'name' => trim($entry['name']),
             'entities_id' => $entities_id,
             'category' => mb_substr(trim((string) ($entry['category'] ?? '')), 0, 255),
+            'category_comment' => mb_substr(trim((string) ($entry['category_comment'] ?? '')), 0, 2000),
+            'category_scope' => ($entry['category_scope'] ?? 'entity') === 'global' ? 'global' : 'entity',
             'login' => $values['login'],
             'password' => $entry['password'],
             'url' => $values['url'],
@@ -535,8 +605,6 @@ final class CredentialBackupService
             'date_last_review' => $dates['date_last_review'],
             'date_next_review' => $dates['date_next_review'],
             'reviewer_users_id' => $reviewer_id,
-            'date_creation' => mb_substr((string) ($entry['date_creation'] ?? ''), 0, 19),
-            'date_mod' => mb_substr((string) ($entry['date_mod'] ?? ''), 0, 19),
             'archived' => $source_archived || $needs_relink,
             'needs_relink' => $needs_relink,
             'links' => $links,

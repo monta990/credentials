@@ -8,6 +8,8 @@
 
 namespace GlpiPlugin\Credentials;
 
+use Glpi\DBAL\QueryExpression;
+
 /** Lightweight category catalog scoped to GLPI entities. */
 final class CredentialCategory
 {
@@ -209,14 +211,15 @@ final class CredentialCategory
         });
     }
 
-    public static function findOrCreateByName(string $name, int $entities_id): int
+    public static function findOrCreateByName(string $name, int $entities_id, string $comment = ''): int
     {
         $name = trim($name);
-        if ($name === '' || mb_strlen($name) > 255 || $entities_id < 0) {
+        $comment = trim($comment);
+        if ($name === '' || mb_strlen($name) > 255 || mb_strlen($comment) > 2000 || $entities_id < 0) {
             return 0;
         }
 
-        return self::withEntityLock($entities_id, static function () use ($name, $entities_id): int {
+        return self::withEntityLock($entities_id, static function () use ($name, $entities_id, $comment): int {
             global $DB;
 
             $rows = $DB->request([
@@ -242,7 +245,7 @@ final class CredentialCategory
             $inserted = $DB->insert(self::getTable(), [
                 'name' => $name,
                 'entities_id' => $entities_id,
-                'comment' => '',
+                'comment' => $comment,
                 'date_creation' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
                 'date_mod' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
                 'is_deleted' => 0,
@@ -269,24 +272,22 @@ final class CredentialCategory
 
         $DB->beginTransaction();
         try {
-            $query = 'SELECT '
-                . \DBmysql::quoteName('id')
-                . ' FROM ' . \DBmysql::quoteName('glpi_entities')
-                . ' WHERE ' . \DBmysql::quoteName('id')
-                . ' = ' . \DBmysql::quoteValue($entities_id)
-                . ' FOR UPDATE';
-
-            $result = $DB->doQuery($query);
-            if ($result === false) {
+            // Serialize category writers using GLPI's DB abstraction. Updating the
+            // entity row to its existing value obtains an InnoDB write lock without
+            // changing core entity data or constructing raw SQL.
+            $locked = $DB->update('glpi_entities', [
+                'date_mod' => new QueryExpression(\DBmysql::quoteName('date_mod')),
+            ], ['id' => $entities_id]);
+            if ($locked === false) {
                 throw new \RuntimeException('Unable to lock the GLPI entity while updating credential categories.');
             }
 
-            try {
-                $entity = $DB->fetchAssoc($result);
-            } finally {
-                $DB->freeResult($result);
-            }
-
+            $entity = $DB->request([
+                'SELECT' => ['id'],
+                'FROM' => 'glpi_entities',
+                'WHERE' => ['id' => $entities_id],
+                'LIMIT' => 1,
+            ])->current();
             if (!is_array($entity)) {
                 $DB->rollBack();
                 return false;
@@ -296,12 +297,8 @@ final class CredentialCategory
             $DB->commit();
             return $value;
         } catch (\Throwable $exception) {
-            // beginTransaction() opens a transaction or a nested savepoint.
-            // rollBack() reverts only the level opened by this helper.
-            // DBmysql::isInTransaction() is private in GLPI 12.
             $DB->rollBack();
             throw $exception;
         }
     }
-
 }

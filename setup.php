@@ -14,7 +14,7 @@ use GlpiPlugin\Credentials\CredentialItem;
 use GlpiPlugin\Credentials\CredentialTicketTab;
 use GlpiPlugin\Credentials\Profile;
 
-define('PLUGIN_CREDENTIALS_VERSION', '0.0.36');
+define('PLUGIN_CREDENTIALS_VERSION', '0.0.54');
 define('PLUGIN_CREDENTIALS_MIN_GLPI', '12.0.0');
 define('PLUGIN_CREDENTIALS_MAX_GLPI', '12.0.99');
 
@@ -57,7 +57,7 @@ function plugin_init_credentials(): void
     // display getHistoryEntry().
     Plugin::registerClass(Credential::class, ['notificationtemplates_types' => true]);
     Plugin::registerClass(Profile::class, ['addtabon' => \Profile::class]);
-    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['credentials'][] = 'js/credentials.js';
+    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['credentials'][] = 'js/credentials.js?v=' . PLUGIN_CREDENTIALS_VERSION;
     $PLUGIN_HOOKS[Hooks::ADD_CSS]['credentials'][] = 'css/credentials.css?v=' . PLUGIN_CREDENTIALS_VERSION;
 
     $PLUGIN_HOOKS[Hooks::ITEM_TRANSFER]['credentials'] = 'plugin_credentials_item_transfer';

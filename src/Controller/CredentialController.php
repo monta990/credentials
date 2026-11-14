@@ -373,6 +373,7 @@ final class CredentialController extends AbstractController
             'link_count' => $link_count,
             'linked_items_url' => $linked_items_url,
             'detail_js_url' => PLUGIN_CREDENTIALS_WEBDIR . '/js/credential-details.js?v=' . PLUGIN_CREDENTIALS_VERSION,
+            'frame_js_url' => PLUGIN_CREDENTIALS_WEBDIR . '/js/credential-frame.js?v=' . PLUGIN_CREDENTIALS_VERSION,
             'details' => $details,
             'details_error' => $details_error,
             'has_password' => $credential_id > 0 && (string) ($credential->fields['password'] ?? '') !== '',
@@ -392,10 +393,13 @@ final class CredentialController extends AbstractController
         ]);
     }
 
-    #[Route('/Credential/LinkedItems', name: 'credentials_linked_items', methods: ['GET'])]
+    #[Route('/Credential/LinkedItems', name: 'credentials_linked_items', methods: ['GET', 'POST'])]
     public function linkedItems(Request $request): Response
     {
         Security::requireRight(READ);
+        if ($request->isMethod('POST')) {
+            Security::requireRight(UPDATE);
+        }
         Security::requireReauthentication();
 
         $itemtype = $request->query->getString('itemtype');
@@ -417,6 +421,100 @@ final class CredentialController extends AbstractController
             || !$credential->can($credential_id, READ)
         ) {
             throw new \Glpi\Exception\Http\AccessDeniedHttpException();
+        }
+
+        $source_can_update = $source_item->can($items_id, UPDATE);
+        $can_manage_links = $source_can_update
+            && Session::haveRight(Credential::$rightname, UPDATE)
+            && $credential->can($credential_id, UPDATE);
+
+        if ($request->isMethod('POST')) {
+            if (!$can_manage_links) {
+                throw new \Glpi\Exception\Http\AccessDeniedHttpException();
+            }
+
+            $target_itemtype = $request->request->getString('target_itemtype');
+            $target_items_id = $request->request->getInt('target_items_id');
+            $target_item = CredentialItem::loadReadableItem($target_itemtype, $target_items_id);
+            $entity_id = (int) $credential->fields['entities_id'];
+
+            if (
+                $target_item === null
+                || CredentialItem::resolveParentEntityID($target_item) !== $entity_id
+                || !$target_item->can($target_items_id, UPDATE)
+            ) {
+                Session::addMessageAfterRedirect(
+                    __('The selected item is not available in this entity or you do not have permission to update it.', 'credentials'),
+                    false,
+                    ERROR
+                );
+            } else {
+                global $DB;
+                $DB->beginTransaction();
+                try {
+                    if (!CredentialItemLink::lockCredential($credential_id, $entity_id, true)) {
+                        throw new \RuntimeException(__('The credential is no longer available for linking.', 'credentials'));
+                    }
+
+                    $locked_credential = new Credential();
+                    $live_source = CredentialItem::loadReadableItem($itemtype, $items_id);
+                    $live_target = CredentialItem::loadReadableItem($target_itemtype, $target_items_id);
+                    if (
+                        !$locked_credential->getFromDB($credential_id)
+                        || (int) ($locked_credential->fields['is_deleted'] ?? 0) !== 0
+                        || (int) ($locked_credential->fields['entities_id'] ?? -1) !== $entity_id
+                        || !$locked_credential->can($credential_id, UPDATE)
+                        || $live_source === null
+                        || !$live_source->can($items_id, UPDATE)
+                        || $live_target === null
+                        || CredentialItem::resolveParentEntityID($live_target) !== $entity_id
+                        || !$live_target->can($target_items_id, UPDATE)
+                    ) {
+                        throw new \RuntimeException(__('The selected item or credential is no longer available for linking.', 'credentials'));
+                    }
+
+                    if (CredentialItemLink::exists($credential_id, $target_itemtype, $target_items_id)) {
+                        throw new \RuntimeException(__('This item is already linked to this credential.', 'credentials'));
+                    }
+
+                    $new_link = new CredentialItemLink();
+                    if (!$new_link->add([
+                        'plugin_credentials_credentials_id' => $credential_id,
+                        'itemtype' => $target_itemtype,
+                        'items_id' => $target_items_id,
+                        'date_creation' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
+                    ]) || !CredentialHistory::recordForItem(
+                        $target_itemtype,
+                        $target_items_id,
+                        Credential::HISTORY_LINKED,
+                        $credential_id,
+                    )) {
+                        throw new \RuntimeException(__('The item could not be linked or recorded in GLPI history. No changes were saved.', 'credentials'));
+                    }
+
+                    $DB->commit();
+                    Session::addMessageAfterRedirect(__('The item was linked successfully.', 'credentials'), false, INFO);
+                } catch (\Throwable $exception) {
+                    $DB->rollBack();
+                    Session::addMessageAfterRedirect($exception instanceof \RuntimeException
+                        ? $exception->getMessage()
+                        : __('The item could not be linked or recorded in GLPI history. No changes were saved.', 'credentials'), false, ERROR);
+                }
+            }
+
+            $redirect_url = self::routeUrl('Credential/LinkedItems', [
+                'itemtype' => $itemtype,
+                'items_id' => $items_id,
+                'credential_id' => $credential_id,
+                'context_ticket_id' => $context_ticket_id ?: null,
+                '_in_modal' => $is_in_modal ? 1 : null,
+            ]);
+            $redirect = new \Symfony\Component\HttpFoundation\RedirectResponse($redirect_url, Response::HTTP_SEE_OTHER);
+            $redirect->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            $redirect->headers->set('Pragma', 'no-cache');
+            $redirect->headers->set('X-Content-Type-Options', 'nosniff');
+            $redirect->headers->set('Referrer-Policy', 'no-referrer');
+            return $redirect;
         }
 
         $rows = [];
@@ -449,6 +547,32 @@ final class CredentialController extends AbstractController
         });
 
         $modal_title = __('Linked items', 'credentials') . ' — ' . (string) $credential->fields['name'];
+        $item_picker_markup = '';
+        if ($can_manage_links) {
+            $item_picker_markup = (string) \Dropdown::showSelectItemFromItemtypes([
+                'itemtype_name' => 'target_itemtype',
+                'items_id_name' => 'target_items_id',
+                'itemtypes' => CredentialItem::getSupportedItemtypes(),
+                'entity_restrict' => (int) $credential->fields['entities_id'],
+                'checkright' => true,
+                'display_emptychoice' => true,
+                'display' => false,
+                'width' => '100%',
+                'container_css_class' => 'w-100',
+                'aria_label' => __('Item type', 'credentials'),
+                'specific_tags_items_id_dropdown' => [
+                    'required' => true,
+                    'aria-label' => __('Select the item to link', 'credentials'),
+                ],
+            ]);
+        }
+        $link_action_url = self::routeUrl('Credential/LinkedItems', [
+            'itemtype' => $itemtype,
+            'items_id' => $items_id,
+            'credential_id' => $credential_id,
+            'context_ticket_id' => $context_ticket_id ?: null,
+            '_in_modal' => $is_in_modal ? 1 : null,
+        ]);
         $back_url = self::routeUrl('Credential/Details', [
             'itemtype' => $itemtype,
             'items_id' => $items_id,
@@ -464,6 +588,9 @@ final class CredentialController extends AbstractController
             'back_url' => $back_url,
             'frame_js_url' => PLUGIN_CREDENTIALS_WEBDIR . '/js/credential-frame.js?v=' . PLUGIN_CREDENTIALS_VERSION,
             'rows' => $rows,
+            'can_manage_links' => $can_manage_links,
+            'item_picker_markup' => $item_picker_markup,
+            'link_action_url' => $link_action_url,
             'visible_count' => count($rows),
             'total_count' => count($rows) + $hidden_count,
             'hidden_count' => $hidden_count,
@@ -707,13 +834,23 @@ final class CredentialController extends AbstractController
                             // parent reloaded after the credential row lock.
                             $input['id'] = $credential_id;
                             unset($input['entities_id']);
+                            $previous_review_date = (string) ($locked_credential->fields['date_last_review'] ?? '');
+                            $next_review_date = (string) ($input['date_last_review'] ?? '');
+                            $review_was_recorded = $next_review_date !== '' && $previous_review_date !== $next_review_date;
                             $saved = (bool) $locked_credential->update($input);
-                            return $saved && CredentialHistory::recordForItem(
-                                $itemtype,
-                                $items_id,
-                                Credential::HISTORY_UPDATED,
+                            if (!$saved || !CredentialHistory::recordForLinkedItems(
                                 $credential_id,
-                            ) ? $credential_id : 0;
+                                Credential::HISTORY_UPDATED,
+                            )) {
+                                return 0;
+                            }
+                            if ($review_was_recorded && !CredentialHistory::recordForLinkedItems(
+                                $credential_id,
+                                Credential::HISTORY_REVIEWED,
+                            )) {
+                                return 0;
+                            }
+                            return $credential_id;
                         }
 
                         $new_id = (int) $credential->add($input);

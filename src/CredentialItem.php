@@ -75,6 +75,78 @@ final class CredentialItem extends CommonDBTM
         return in_array($itemtype, self::getSupportedItemtypes(), true);
     }
 
+    /**
+     * Return active credentials that the current user may reuse on another item
+     * in the same entity. Secret columns are never selected or decrypted.
+     *
+     * @return array<int, array{id:int,name:string,category_id:int}>
+     */
+    public static function getAvailableCredentialsForLinking(
+        string $itemtype,
+        int $items_id,
+        int $entities_id,
+    ): array {
+        global $DB;
+
+        if (
+            !self::isSupportedItemtype($itemtype)
+            || $items_id <= 0
+            || $entities_id < 0
+            || !Session::haveRight(Credential::$rightname, CREATE)
+            || !Session::haveAccessToEntity($entities_id)
+        ) {
+            return [];
+        }
+
+        $existing_ids = [];
+        $existing = $DB->request([
+            'SELECT' => ['plugin_credentials_credentials_id'],
+            'FROM' => CredentialItemLink::getTable(),
+            'WHERE' => [
+                'itemtype' => $itemtype,
+                'items_id' => $items_id,
+            ],
+        ]);
+        foreach ($existing as $link) {
+            $existing_ids[(int) $link['plugin_credentials_credentials_id']] = true;
+        }
+
+        $available = [];
+        $iterator = $DB->request([
+            'SELECT' => ['id', 'name', 'plugin_credentials_categories_id'],
+            'FROM' => Credential::getTable(),
+            'WHERE' => [
+                'entities_id' => $entities_id,
+                'is_deleted' => 0,
+            ],
+            'ORDER' => ['name'],
+        ]);
+
+        foreach ($iterator as $row) {
+            $credential_id = (int) $row['id'];
+            if (isset($existing_ids[$credential_id])) {
+                continue;
+            }
+
+            $credential = new Credential();
+            if (
+                !$credential->getFromDB($credential_id)
+                || !$credential->can($credential_id, READ)
+                || !CredentialItemLink::userCanReachCredential($credential_id)
+            ) {
+                continue;
+            }
+
+            $available[] = [
+                'id' => $credential_id,
+                'name' => (string) $row['name'],
+                'category_id' => (int) ($row['plugin_credentials_categories_id'] ?? 0),
+            ];
+        }
+
+        return $available;
+    }
+
     /** Load a supported parent object and enforce its native READ right. */
     public static function loadReadableItem(string $itemtype, int $items_id): ?CommonDBTM
     {
@@ -143,8 +215,8 @@ final class CredentialItem extends CommonDBTM
             $add_modal_markup = \Ajax::createIframeModalWindow($add_modal_id, $form_base, [
                 'display' => false,
                 'title' => __('Add credential', 'credentials'),
-                'width' => 1100,
-                'height' => 760,
+                'width' => 950,
+                'height' => 620,
                 'reloadonclose' => false,
             ]);
         }
@@ -172,7 +244,7 @@ final class CredentialItem extends CommonDBTM
                 'links_modal_id' => $links_modal_id,
                 'links_modal_markup' => \Ajax::createIframeModalWindow($links_modal_id, $links_url, [
                     'display' => false,
-                    'title' => __('Linked items', 'credentials') . ' — #' . $credential_id,
+                    'title' => __('Linked items', 'credentials') . ' — ' . (string) $label['name'],
                     'width' => 900,
                     'height' => 620,
                     'reloadonclose' => false,
@@ -181,8 +253,8 @@ final class CredentialItem extends CommonDBTM
                 'detail_modal_markup' => \Ajax::createIframeModalWindow($detail_modal_id, $details_url, [
                     'display' => false,
                     'title' => __('Credential details', 'credentials') . ' — ' . (string) $label['name'],
-                    'width' => 1100,
-                    'height' => 760,
+                    'width' => 950,
+                    'height' => 530,
                     'reloadonclose' => false,
                 ]),
             ];
@@ -192,8 +264,8 @@ final class CredentialItem extends CommonDBTM
                 $row['edit_modal_markup'] = \Ajax::createIframeModalWindow($edit_modal_id, $edit_url, [
                     'display' => false,
                     'title' => __('Edit credential', 'credentials') . ' — ' . (string) $label['name'],
-                    'width' => 1100,
-                    'height' => 760,
+                    'width' => 950,
+                    'height' => 620,
                     'reloadonclose' => false,
                 ]);
                 if (CredentialLinkPolicy::canUnlink($row['link_count'])) {
@@ -206,8 +278,14 @@ final class CredentialItem extends CommonDBTM
             $rows[] = $row;
         }
 
+        $linkable_credentials = $can_create
+            ? self::getAvailableCredentialsForLinking($itemtype, $items_id, $entity_id)
+            : [];
+
         TemplateRenderer::getInstance()->display('@credentials/credential/item_tab.html.twig', [
             'rows' => $rows,
+            'linkable_credentials' => $linkable_credentials,
+            'categories' => CredentialCategory::getOptions($entity_id),
             'can_create' => $can_create,
             'can_update' => $can_update,
             'can_delete' => $can_delete,

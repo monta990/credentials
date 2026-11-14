@@ -1,6 +1,7 @@
+
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 0.0.36\n"
+"Project-Id-Version: Credentials 0.0.54\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-05 18:00-0700\n"
 "PO-Revision-Date: 2026-11-05 21:10-0700\n"
@@ -20,35 +21,121 @@ msgstr ""
 "Una credencial se puede vincular a varios elementos. Debes tener acceso a ella a través de otro "
 "elemento vinculado."
 
+msgid "A credential changed while the backup was being prepared. Retry the export."
+msgstr ""
+"Una credencial cambió mientras se preparaba la copia de seguridad. Vuelve a intentar la "
+"exportación."
+
+msgid "A credential could not be created. The import was cancelled."
+msgstr "No se ha podido crear una credencial. Se ha cancelado la importación."
+
+msgid "A credential could not be decrypted. No backup file was created."
+msgstr "No se pudo descifrar una credencial. No se creó el archivo de copia de seguridad."
+
+msgid "A lifecycle notification exists, but it does not have an email template assigned."
+msgstr "Existe una notificación del ciclo de vida, pero no tiene asignada una plantilla de correo."
+
 msgid "A protected credential is no longer linked to any item."
-msgstr "Una credencial protegida ha quedado sin elementos vinculados."
+msgstr "Una credencial protegida ha dejado de estar vinculada a cualquier elemento."
 
 msgid "A protected credential password was revealed."
-msgstr "Se mostró la contraseña de una credencial protegida."
+msgstr "Se ha revelado la contraseña de una credencial protegida."
+
+msgid "A protected credential review was recorded."
+msgstr "Se ha registrado la revisión de una credencial protegida."
 
 msgid "A protected credential was created."
-msgstr "Se creó una credencial protegida."
+msgstr "Se ha creado una credencial protegida."
 
 msgid "A protected credential was deleted."
-msgstr "Se eliminó una credencial protegida."
+msgstr "Se ha eliminado una credencial protegida."
+
+msgid "A protected credential was exported to an encrypted backup."
+msgstr "Se ha exportado una credencial protegida a una copia de seguridad cifrada."
+
+msgid "A protected credential was imported from a backup."
+msgstr "Se ha importado una credencial protegida desde una copia de seguridad."
 
 msgid "A protected credential was linked."
-msgstr "Se vinculó una credencial protegida."
+msgstr "Se ha vinculado una credencial protegida."
+
+msgid "A protected credential was restored and linked to an item."
+msgstr "Se ha restaurado una credencial protegida y se ha vinculado a un elemento."
 
 msgid "A protected credential was unlinked."
-msgstr "Se desvinculó una credencial protegida."
+msgstr "Se ha desvinculado una credencial protegida."
 
 msgid "A protected credential was updated."
-msgstr "Se actualizó una credencial protegida."
+msgstr "Se ha actualizado una credencial protegida."
+
+msgid "Action"
+msgstr "Acción"
 
 msgid "Actions"
 msgstr "Acciones"
 
+msgid "Active credentials"
+msgstr "Credenciales activas"
+
+msgid "Add a linked item"
+msgstr "Añadir un elemento vinculado"
+
+msgid "Add category"
+msgstr "Añadir categoría"
+
 msgid "Add credential"
 msgstr "Agregar credencial"
 
+msgid "All categories"
+msgstr "Todas las categorías"
+
 msgid "Allow"
 msgstr "Permitir"
+
+msgid "An archived credential could not be restored from the backup. The import was cancelled."
+msgstr ""
+"No se ha podido restaurar una credencial archivada desde la copia de seguridad. Se ha cancelado "
+"la importación."
+
+msgid "An archived protected credential was permanently deleted."
+msgstr "Se ha eliminado definitivamente una credencial protegida archivada."
+
+msgid ""
+"An imported credential could not be encrypted with the GLPI security key. The import was "
+"cancelled."
+msgstr ""
+"No se ha podido cifrar una credencial importada con la clave de GLPI. Se ha cancelado la "
+"importación."
+
+msgid "An update is available."
+msgstr "Hay una actualización disponible."
+
+msgid "Archive retention settings were saved."
+msgstr "Se ha guardado la configuración de conservación de archivos."
+
+msgid "Archived / modified"
+msgstr "Archivada / modificada"
+
+msgid "Archived credential permanently deleted."
+msgstr "La credencial archivada se eliminó definitivamente."
+
+msgid "Archived credentials"
+msgstr "Credenciales archivadas"
+
+msgid "Archived credentials and retention"
+msgstr "Credenciales archivadas y conservación"
+
+msgid ""
+"Archived records are kept in the GLPI trash and are never erased automatically. The retention "
+"period controls when records become eligible for bulk deletion. An authorized administrator can "
+"also permanently delete an individual archived credential at any time, without waiting for the "
+"retention period, provided it has no remaining item links."
+msgstr ""
+"Los registros archivados se conservan en la papelera de GLPI y nunca se eliminan automáticamente."
+" El periodo de conservación determina cuándo los registros pueden incluirse en la eliminación "
+"masiva. Un administrador autorizado también puede eliminar definitivamente una credencial "
+"archivada individual en cualquier momento, sin esperar al periodo de conservación, siempre que no"
+" conserve vínculos con elementos."
 
 msgid "Associated item"
 msgstr "Elemento asociado"
@@ -59,23 +146,116 @@ msgstr "Asociada a"
 msgid "Authenticate and view all ticket credentials"
 msgstr "Volver a autenticarse y ver todas las credenciales del ticket"
 
+msgid "Available"
+msgstr "Disponible"
+
+msgid "Back to credential"
+msgstr "Volver a la credencial"
+
 msgid "Back to item"
 msgstr "Volver al elemento"
 
 msgid "Back to ticket"
 msgstr "Volver al ticket"
 
+msgid ""
+"Backup and import are unavailable. Check that Sodium is enabled in PHP, the GLPI encryption key "
+"is available, and your profile has the backup permission."
+msgstr ""
+"La copia de seguridad y la importación no están disponibles. Comprueba que Sodium esté habilitado"
+" en PHP, que la clave de cifrado de GLPI esté disponible y que tu perfil tenga el permiso "
+"correspondiente."
+
+msgid "Backup file"
+msgstr "Archivo de copia de seguridad"
+
+msgid "Backup password"
+msgstr "Contraseña de la copia de seguridad"
+
+msgid ""
+"Backups are encrypted with a password you choose. The file does not contain readable passwords. "
+"Keep the backup password safe; it cannot be recovered if lost."
+msgstr ""
+"Las copias de seguridad se cifran con una contraseña que tú eliges. El archivo no contiene "
+"contraseñas legibles. Guarda bien esa contraseña; no se puede recuperar si la pierdes."
+
 msgid "Cancel"
 msgstr "Cancelar"
 
+msgid "Cannot unlink the last linked item. Delete the credential instead."
+msgstr "No se puede desvincular el último elemento vinculado. Elimina la credencial en su lugar."
+
+msgid "Category"
+msgstr "Categoría"
+
+msgid "Category created successfully."
+msgstr "La categoría se ha creado correctamente."
+
+msgid "Category deleted successfully."
+msgstr "La categoría se ha eliminado correctamente."
+
+msgid "Category is required."
+msgstr "La categoría es obligatoria."
+
+msgid "Category name"
+msgstr "Nombre de la categoría"
+
+msgid "Category scope"
+msgstr "Ámbito de la categoría"
+
+msgid "Category updated successfully."
+msgstr "La categoría se ha actualizado correctamente."
+
+msgid "Changelog"
+msgstr "Historial de cambios"
+
+msgid "Check for updates"
+msgstr "Buscar actualizaciones"
+
+msgid "Choose the GLPI item type first. The next selector will show items available in this entity."
+msgstr ""
+"Primero selecciona el tipo de elemento de GLPI. El siguiente selector mostrará los elementos "
+"disponibles en esta entidad."
+
+msgid "Clipboard access is unavailable. Select the password and copy it manually."
+msgstr "El acceso al portapapeles no está disponible. Selecciona la contraseña y cópiala manualmente."
+
 msgid "Clipboard access was denied by the browser."
 msgstr "El navegador denegó el acceso al portapapeles."
+
+msgid "Clipboard access was denied. Select the password and copy it manually."
+msgstr ""
+"El navegador ha denegado el acceso al portapapeles. Selecciona la contraseña y cópiala "
+"manualmente."
+
+msgid "Close"
+msgstr "Cerrar"
+
+msgid "Confirm backup password"
+msgstr "Confirmar contraseña de la copia de seguridad"
 
 msgid "Copied"
 msgstr "Copiado"
 
 msgid "Copy password"
 msgstr "Copiar contraseña"
+
+msgid "Create an encrypted backup of credentials in the entities you can access."
+msgstr "Crea una copia de seguridad cifrada de las credenciales de las entidades a las que tienes acceso."
+
+msgid ""
+"Create an encrypted backup of credentials in the entities you can access. Export also requires "
+"the separate Reveal credential passwords permission."
+msgstr ""
+"Crea una copia de seguridad cifrada de las credenciales de las entidades a las que tienes acceso."
+" La exportación también requiere el permiso independiente para revelar contraseñas."
+
+msgid ""
+"Create categories to help your team organize credentials, such as Network, ERP, Email, Cloud "
+"services or Servers."
+msgstr ""
+"Crea categorías para organizar las credenciales, por ejemplo: Redes, ERP, Correo, Servicios en la"
+" nube o Servidores."
 
 msgid "Credential"
 msgid_plural "Credentials"
@@ -84,6 +264,12 @@ msgstr[1] "Credenciales"
 
 msgid "Credential ID"
 msgstr "ID de credencial"
+
+msgid "Credential activity history"
+msgstr "Historial de actividad de credenciales"
+
+msgid "Credential categories"
+msgstr "Categorías de credenciales"
 
 msgid "Credential data cannot be decrypted until the GLPI security key is available."
 msgstr ""
@@ -101,25 +287,146 @@ msgstr ""
 "Los datos de la credencial y la contraseña se cifran con la clave de seguridad de la instancia de"
 " GLPI antes de almacenarse."
 
+msgid ""
+"Credential information is protected using the GLPI instance security key. Always back up the GLPI"
+" database and its matching key together."
+msgstr ""
+"La información de las credenciales está protegida con la clave de seguridad de la instancia de "
+"GLPI. Haz siempre la copia de seguridad de la base de datos y de su clave correspondiente en "
+"conjunto."
+
 msgid "Credential names are listed here. Open an entry to view protected details."
 msgstr "Aquí se muestra la lista de credenciales. Abre una para consultar sus datos protegidos."
 
+msgid "Credential overview"
+msgstr "Resumen de credenciales"
+
+msgid "Credential record"
+msgstr "Registro de credencial"
+
+msgid "Credential restored and linked successfully."
+msgstr "La credencial se ha restaurado y vinculado correctamente."
+
+msgid "Credential updated successfully."
+msgstr "La credencial se actualizó correctamente."
+
 msgid "Credentials"
 msgstr "Credenciales"
+
+msgid "Credentials configuration"
+msgstr "Configuración de Credentials"
+
+msgid "Credentials configuration sections"
+msgstr "Secciones de configuración de Credentials"
+
+msgid "Credentials is already up to date."
+msgstr "Credentials ya está actualizado."
+
+msgid "Credentials is up to date."
+msgstr "Credentials está actualizado."
 
 msgid "Credentials linked to requester users and associated ticket items are shown here."
 msgstr ""
 "Aquí se muestran las credenciales vinculadas a los usuarios solicitantes y a los elementos "
 "asociados al ticket."
 
+msgid ""
+"Credentials with an expired date or a review date within the next 30 days are listed here. "
+"Maintain the dates and responsible person in the credential itself."
+msgstr ""
+"Aquí aparecen las credenciales caducadas o cuya revisión debe realizarse dentro de los próximos "
+"30 días. Actualiza las fechas y la persona responsable en la propia credencial."
+
+msgid "Current"
+msgstr "Vigente"
+
+msgid "Current entity"
+msgstr "Entidad actual"
+
+msgid "Current item"
+msgstr "Elemento actual"
+
+msgid "Date"
+msgstr "Fecha"
+
+msgid "Days before expiration or review"
+msgstr "Días de antelación para el vencimiento o la revisión"
+
+msgid "Delete"
+msgstr "Eliminar"
+
 msgid "Delete credential"
 msgstr "Eliminar credencial"
+
+msgid "Delete now"
+msgstr "Eliminar ahora"
+
+msgid "Delete this category? Categories used by credentials cannot be deleted."
+msgstr "¿Eliminar esta categoría? No se pueden eliminar categorías que estén en uso."
 
 msgid "Delete this credential for all linked items? This cannot be undone."
 msgstr "¿Eliminar esta credencial de todos los elementos vinculados? Esta acción no se puede deshacer."
 
+msgid "Description"
+msgstr "Descripción"
+
+msgid "Download encrypted backup"
+msgstr "Descargar copia cifrada"
+
+msgid "Edit category"
+msgstr "Editar categoría"
+
 msgid "Edit credential"
 msgstr "Editar credencial"
+
+msgid "Eligible"
+msgstr "Lista"
+
+msgid "Eligible for permanent deletion"
+msgstr "Listas para eliminación definitiva"
+
+msgid "Enable lifecycle email reminders"
+msgstr "Activar avisos de ciclo de vida por correo"
+
+#, python-format
+msgid "Entry %d was skipped because its data or linked items could not be matched."
+msgstr ""
+"Se ha omitido el registro %d porque no ha sido posible validar sus datos o relacionar sus "
+"elementos."
+
+msgid "Expiration and review follow-up"
+msgstr "Vigencia y seguimiento de revisiones"
+
+msgid "Expiration date"
+msgstr "Fecha de caducidad"
+
+msgid "Expired"
+msgstr "Caducada"
+
+msgid "Expired credentials"
+msgstr "Credenciales caducadas"
+
+msgid "Expiring soon"
+msgstr "Próxima a caducar"
+
+msgid "Expiring within 30 days"
+msgstr "Caducan en los próximos 30 días"
+
+msgid "Export and import credentials"
+msgstr "Exportar e importar credenciales"
+
+msgid "Export credentials"
+msgstr "Exportar credenciales"
+
+msgid ""
+"Exporting credential secrets requires read access, backup permission and permission to reveal "
+"passwords."
+msgstr ""
+"Para exportar secretos de credenciales se requiere permiso de lectura, permiso de copia de "
+"seguridad y permiso para revelar contraseñas."
+
+msgid "Filter credentials by category, then choose the credential by name."
+msgstr "Filtra las credenciales por categoría y después selecciona la credencial por su nombre."
 
 msgid "GLPI could not write the access event to the item history, so the password was not revealed."
 msgstr ""
@@ -127,14 +434,120 @@ msgstr ""
 "la contraseña.GLPI no pudo registrar el acceso en el historial del elemento, por lo que no se "
 "mostró la contraseña."
 
+msgid "GLPI email notifications are disabled. Reminders will not be queued until you enable them in GLPI."
+msgstr ""
+"Las notificaciones por correo de GLPI están desactivadas. No se pondrán avisos en cola hasta que "
+"las actives en GLPI."
+
+msgid "GLPI email notifications are enabled."
+msgstr "Las notificaciones por correo de GLPI están activadas."
+
+msgid "GLPI encryption key"
+msgstr "Clave de cifrado de GLPI"
+
+msgid "General settings"
+msgstr "Configuración general"
+
+msgid "GitHub could not be reached. The update check will be available again later."
+msgstr "No se pudo conectar con GitHub. La búsqueda estará disponible más adelante."
+
+msgid "GitHub could not be reached. Try again later."
+msgstr "No se pudo conectar con GitHub. Inténtalo más tarde."
+
+msgid "GitHub is unavailable. The last known version is shown below and will be checked again later."
+msgstr ""
+"GitHub no está disponible. Se muestra la última versión conocida y se volverá a consultar más "
+"adelante."
+
+msgid "Global"
+msgstr "Global"
+
 msgid "Hide password"
 msgstr "Ocultar contraseña"
+
+msgid "ID"
+msgstr "ID"
+
+msgid "Import backup"
+msgstr "Importar copia de seguridad"
+
+msgid ""
+"Import completed: %1$d credentials created, %2$d archived, %3$d needing manual relinking, %4$d "
+"skipped."
+msgstr ""
+"Importación completada: se han creado %1$d credenciales, %2$d quedaron archivadas, %3$d necesitan"
+" vinculación manual y se omitieron %4$d."
+
+msgid "Import completed: %1$d credentials created, %2$d entries skipped."
+msgstr "Importación finalizada: se han creado %1$d credenciales y se han omitido %2$d registros."
+
+msgid "Import creates new credential records; it never overwrites existing records."
+msgstr "La importación crea registros nuevos y nunca sobrescribe los existentes."
+
+msgid ""
+"Import creates new credential records; it never overwrites existing records. Linked items must "
+"exist in this GLPI instance and match the backup item type, ID and name."
+msgstr ""
+"La importación crea registros nuevos y nunca sobrescribe los existentes. Los elementos vinculados"
+" deben existir en esta instancia de GLPI y coincidir con el tipo, ID y nombre incluidos en la "
+"copia."
+
+msgid ""
+"Import creates new credential records; it never overwrites existing records. Linked items must "
+"exist in this GLPI instance and match the backup item type, ID and name. Import does not require "
+"the Reveal credential passwords permission."
+msgstr ""
+"La importación crea nuevas credenciales; nunca sobrescribe las existentes. Los elementos "
+"vinculados deben existir en esta instancia de GLPI y coincidir con el tipo, ID y nombre de la "
+"copia de seguridad. La importación no requiere el permiso para revelar contraseñas."
+
+msgid "Import credentials"
+msgstr "Importar credenciales"
+
+msgid ""
+"Imported passwords and protected details are encrypted again with this GLPI instance security "
+"key. Archived entries remain archived until an administrator restores them by linking an "
+"available item."
+msgstr ""
+"Las contraseñas y los datos protegidos importados se vuelven a cifrar con la clave de seguridad "
+"de esta instancia de GLPI. Los registros archivados permanecen archivados hasta que un "
+"administrador los restaure vinculándolos a un elemento disponible."
+
+msgid "Include archived credentials"
+msgstr "Incluir credenciales archivadas"
+
+msgid "Installed version"
+msgstr "Versión instalada"
+
+msgid "Item ID"
+msgstr "ID del elemento"
+
+msgid "Item name"
+msgstr "Nombre del elemento"
+
+msgid "Item type"
+msgstr "Tipo de elemento"
+
+msgid "Last checked"
+msgstr "Última consulta"
+
+msgid "Last reviewed"
+msgstr "Última revisión"
 
 msgid "Last update"
 msgstr "Última actualización"
 
+msgid "Latest version"
+msgstr "Última versión"
+
 msgid "Leave blank to keep the current password."
 msgstr "Déjalo en blanco para conservar la contraseña actual."
+
+msgid "Lifecycle email reminders"
+msgstr "Avisos de ciclo de vida por correo"
+
+msgid "Lifecycle reminder settings were saved."
+msgstr "Se ha guardado la configuración de avisos del ciclo de vida."
 
 msgid "Link"
 msgstr "Vincular"
@@ -142,11 +555,57 @@ msgstr "Vincular"
 msgid "Link an existing credential"
 msgstr "Vincular una credencial existente"
 
+msgid "Link item"
+msgstr "Vincular elemento"
+
+msgid "Linked items"
+msgstr "Elementos vinculados"
+
+msgid "Manage categories, reviews, archived records, backups and plugin updates."
+msgstr ""
+"Administra categorías, revisiones, registros archivados, copias de seguridad y actualizaciones "
+"del complemento."
+
+msgid ""
+"Manage categories, reviews, archived records, backups and plugin updates. Activity is available "
+"in the native History tab of each linked item."
+msgstr ""
+"Gestiona categorías, revisiones, registros archivados, copias de seguridad y actualizaciones del "
+"plugin. La actividad está disponible en la pestaña Historial nativa de cada elemento vinculado."
+
+msgid ""
+"Manage categories, reviews, backups and plugin updates. Archived credentials have their own tab. "
+"Activity is available in the native History tab of each linked item."
+msgstr ""
+"Gestiona categorías, revisiones, copias de seguridad y actualizaciones del plugin. Las "
+"credenciales archivadas tienen su propia pestaña. La actividad está disponible en la pestaña "
+"Historial nativa de cada elemento vinculado."
+
 msgid "Name"
 msgstr "Nombre"
 
 msgid "Name is required."
 msgstr "El nombre es obligatorio."
+
+msgid "Next review"
+msgstr "Próxima revisión"
+
+msgid "Next review date"
+msgstr "Fecha de próxima revisión"
+
+msgid "No active Credential lifecycle notification was found for the active entity."
+msgstr ""
+"No se ha encontrado una notificación activa del ciclo de vida de Credential para la entidad "
+"activa."
+
+msgid "No categories have been created for this entity yet."
+msgstr "Todavía no hay categorías para esta entidad."
+
+msgid "No category"
+msgstr "Sin categoría"
+
+msgid "No credential activity has been recorded yet."
+msgstr "Todavía no hay actividad de credenciales registrada."
 
 msgid "No credentials are associated with this item yet."
 msgstr "Todavía no hay credenciales asociadas a este elemento."
@@ -154,14 +613,43 @@ msgstr "Todavía no hay credenciales asociadas a este elemento."
 msgid "No credentials were found for the ticket requesters or associated items."
 msgstr "No se encontraron credenciales para los solicitantes ni para los elementos asociados al ticket."
 
+msgid "No eligible credentials are available to link."
+msgstr "No hay credenciales disponibles que puedas vincular."
+
+msgid "No eligible destination items are available in this entity."
+msgstr ""
+"No hay elementos de destino disponibles en esta entidad para los que tengas permiso de "
+"actualización."
+
+msgid "No expiration or review items need attention at this time."
+msgstr "No hay vencimientos ni revisiones que requieran atención por ahora."
+
+msgid "No linked items are available to display."
+msgstr "No hay elementos vinculados disponibles para mostrar."
+
+msgid "No password is stored for this credential."
+msgstr "No hay una contraseña guardada para esta credencial."
+
+msgid "Not assigned"
+msgstr "Sin asignar"
+
 msgid "Notes"
 msgstr "Notas"
 
 msgid "One or more fields exceed their maximum allowed length."
 msgstr "Uno o más campos superan la longitud máxima permitida."
 
+msgid "Overdue dates are always included, regardless of this look-ahead period."
+msgstr "Las fechas vencidas siempre se incluyen, independientemente del periodo de antelación."
+
 msgid "Password"
 msgstr "Contraseña"
+
+msgid "Password copied to clipboard."
+msgstr "Contraseña copiada al portapapeles."
+
+msgid "Password hidden."
+msgstr "Contraseña oculta."
 
 msgid "Password is hidden until you request it."
 msgstr "La contraseña permanece oculta hasta que solicites mostrarla."
@@ -175,17 +663,165 @@ msgstr "La contraseña es demasiado larga. La longitud máxima admitida es de 48
 msgid "Password revealed"
 msgstr "Contraseña revelada"
 
+msgid "Password revealed."
+msgstr "Contraseña mostrada."
+
+msgid "Permanent deletion is disabled while retention is set to keep records indefinitely."
+msgstr ""
+"La eliminación definitiva está deshabilitada porque la conservación está configurada como "
+"indefinida."
+
+msgid "Permanently delete eligible archived credentials"
+msgstr "Eliminar definitivamente las credenciales que cumplan el plazo"
+
+msgid ""
+"Permanently delete this archived credential now? This bypasses the retention period and cannot be"
+" undone."
+msgstr ""
+"¿Eliminar definitivamente esta credencial archivada ahora? Esta acción omite el periodo de "
+"conservación y no se puede deshacer."
+
+#, python-format
+msgid "Permanently deleted %d archived credentials."
+msgstr "Se han eliminado definitivamente %d credenciales archivadas."
+
+msgid "Plugin updates"
+msgstr "Actualizaciones del complemento"
+
+msgid "Protected backup"
+msgstr "Copia de seguridad protegida"
+
+msgid "Published"
+msgstr "Publicado"
+
+msgid ""
+"Recent credential actions recorded in GLPI history. Passwords and protected values are never "
+"displayed here."
+msgstr ""
+"Acciones recientes de credenciales registradas en el historial de GLPI. Aquí nunca se muestran "
+"contraseñas ni datos protegidos."
+
+msgid "Related item"
+msgstr "Elemento relacionado"
+
+msgid "Relationship"
+msgstr "Relación"
+
 msgid "Requester"
 msgstr "Solicitante"
 
-msgid "Reveal password"
-msgstr "Mostrar contraseña"
+msgid "Requesting password…"
+msgstr "Solicitando contraseña…"
+
+msgid "Restore"
+msgstr "Restaurar"
+
+msgid "Restore by linking to an item"
+msgstr "Restaurar vinculando a un elemento"
+
+msgid "Retained"
+msgstr "En conservación"
+
+msgid "Retention"
+msgstr "Conservación"
+
+msgid "Retention must be between 0 and 3,650 days. Use 0 to keep archived credentials indefinitely."
+msgstr ""
+"El periodo de conservación debe estar entre 0 y 3.650 días. Usa 0 para conservar las credenciales"
+" archivadas indefinidamente."
+
+msgid "Retention period (days)"
+msgstr "Periodo de conservación (días)"
 
 msgid "Reveal credential passwords"
 msgstr "Mostrar contraseñas de credenciales"
 
+msgid "Reveal password"
+msgstr "Mostrar contraseña"
+
+msgid "Reveal the password before copying it."
+msgstr "Muestra la contraseña antes de copiarla."
+
+msgid "Revealed password"
+msgstr "Contraseña mostrada"
+
+msgid "Review and expiration dates must use a valid calendar date."
+msgstr "Las fechas de caducidad y revisión deben ser fechas válidas."
+
+msgid ""
+"Review dates and the responsible person are reminders for administrators. They do not change or "
+"rotate passwords automatically."
+msgstr ""
+"Las fechas y la persona responsable de revisión son recordatorios para los administradores. No "
+"modifican ni rotan contraseñas automáticamente."
+
+msgid "Review due soon"
+msgstr "Revisión próxima"
+
+msgid "Review overdue"
+msgstr "Revisión atrasada"
+
+msgid "Review responsible"
+msgstr "Responsable de revisión"
+
+msgid "Reviews due within 30 days"
+msgstr "Revisiones en los próximos 30 días"
+
+msgid "Reviews overdue"
+msgstr "Revisiones atrasadas"
+
 msgid "Save"
 msgstr "Guardar"
+
+msgid "Save changes"
+msgstr "Guardar cambios"
+
+msgid "Save reminder settings"
+msgstr "Guardar configuración de avisos"
+
+msgid "Save retention settings"
+msgstr "Guardar conservación"
+
+msgid "Scope"
+msgstr "Ámbito"
+
+msgid "Search credentials by name"
+msgstr "Buscar credenciales por nombre"
+
+msgid "Secure backup is unavailable. Check the PHP Sodium extension and GLPI encryption key."
+msgstr ""
+"La copia de seguridad segura no está disponible. Comprueba la extensión Sodium de PHP y la clave "
+"de cifrado de GLPI."
+
+msgid "Select a credential"
+msgstr "Selecciona una credencial"
+
+msgid "Select a valid Credentials backup file smaller than 20 MB."
+msgstr "Selecciona un archivo de copia de seguridad de Credentials válido y menor de 20 MB."
+
+msgid "Select a valid category for this credential entity."
+msgstr "Selecciona una categoría válida para la entidad de esta credencial."
+
+msgid "Select a valid item in the same entity."
+msgstr "Selecciona un elemento válido de la misma entidad."
+
+msgid "Select an available GLPI user as the review responsible person."
+msgstr "Selecciona un usuario de GLPI disponible como responsable de revisión."
+
+msgid "Select destination item"
+msgstr "Selecciona el elemento de destino"
+
+msgid "Select item type"
+msgstr "Selecciona el tipo de elemento"
+
+msgid "Select the item to link"
+msgstr "Selecciona el elemento que deseas vincular"
+
+msgid "Show linked items"
+msgstr "Mostrar elementos vinculados"
+
+msgid "Show linked items for credential"
+msgstr "Mostrar elementos vinculados de la credencial"
 
 msgid ""
 "Some credentials for requester users or ticket items require native GLPI re-authentication before"
@@ -194,6 +830,9 @@ msgstr ""
 "Algunas credenciales de los usuarios solicitantes o de los elementos del ticket requieren la "
 "reautenticación nativa de GLPI antes de mostrarse."
 
+msgid "Some linked items are hidden because you do not have permission to read them."
+msgstr "Algunos elementos vinculados están ocultos porque no tienes permiso para consultarlos."
+
 msgid ""
 "Some requester users or ticket items remain unavailable after re-authentication because your "
 "profile cannot read them."
@@ -201,12 +840,39 @@ msgstr ""
 "Algunos usuarios solicitantes o elementos del ticket siguen sin estar disponibles después de "
 "reautenticarte porque tu perfil no tiene permiso para consultarlos."
 
+msgid "Status"
+msgstr "Estado"
+
 msgid ""
 "Stored credential details could not be decrypted. Editing is disabled to prevent accidental data "
 "loss."
 msgstr ""
 "No se han podido descifrar los datos de la credencial almacenada. Se ha deshabilitado la edición "
 "para evitar una pérdida accidental de datos."
+
+msgid "System status"
+msgstr "Estado del sistema"
+
+msgid "The Credential lifecycle email notification is correctly configured for the active entity."
+msgstr ""
+"La notificación por correo del ciclo de vida de Credential está correctamente configurada para la"
+" entidad activa."
+
+msgid "The Credentials automatic action is disabled or blocked in GLPI."
+msgstr "La tarea automática de Credentials está desactivada o bloqueada en GLPI."
+
+msgid "The Credentials automatic action is not registered."
+msgstr "La tarea automática de Credentials no está registrada."
+
+msgid "The Credentials automatic action is registered and enabled."
+msgstr "La tarea automática de Credentials está registrada y activada."
+
+msgid ""
+"The GLPI email notification mode is disabled. Enable the email notification mode in GLPI before "
+"reminders can be queued."
+msgstr ""
+"El canal de notificaciones por correo de GLPI está desactivado. Actívalo en GLPI antes de poner "
+"los avisos en cola."
 
 msgid ""
 "The GLPI security key is not configured or cannot be read. Ask your administrator to configure "
@@ -220,6 +886,58 @@ msgstr ""
 "La clave de seguridad de GLPI no está disponible o no es válida. Contacta al administrador de "
 "GLPI.La clave de seguridad de GLPI no está disponible o no es válida. Contacta al administrador "
 "de GLPI."
+
+msgid ""
+"The archived credential could not be permanently deleted. It may have changed or may no longer "
+"exist."
+msgstr ""
+"No se pudo eliminar definitivamente la credencial archivada. Es posible que haya cambiado o que "
+"ya no exista."
+
+msgid ""
+"The archived credential could not be restored. Select an available item in the same entity and "
+"verify your permissions."
+msgstr ""
+"No se pudo restaurar la credencial archivada. Selecciona un elemento disponible de la misma "
+"entidad y comprueba tus permisos."
+
+msgid "The backup contains too many credentials. Export smaller groups of records."
+msgstr "La copia de seguridad contiene demasiadas credenciales. Exporta grupos de registros más pequeños."
+
+msgid "The backup could not be created. No file was downloaded."
+msgstr "No se ha podido crear la copia de seguridad. No se ha descargado ningún archivo."
+
+msgid "The backup could not be imported. No changes were retained."
+msgstr "No se pudo importar la copia de seguridad. No se han conservado cambios."
+
+msgid "The backup file could not be read."
+msgstr "No se pudo leer el archivo de copia de seguridad."
+
+msgid "The backup file is damaged or incomplete."
+msgstr "El archivo de copia de seguridad está dañado o incompleto."
+
+msgid "The backup password is incorrect or the file has been modified."
+msgstr "La contraseña de la copia de seguridad es incorrecta o el archivo se ha modificado."
+
+msgid "The backup passwords do not match."
+msgstr "Las contraseñas de la copia de seguridad no coinciden."
+
+msgid "The category could not be created. Check its name and make sure it is not already in use."
+msgstr "No se pudo crear la categoría. Revisa el nombre y confirma que no exista otra igual."
+
+msgid ""
+"The category could not be updated. Check its name, entity access and make sure it is not already "
+"in use by another category."
+msgstr ""
+"No se ha podido actualizar la categoría. Comprueba el nombre y el acceso a la entidad, y "
+"asegúrate de que no exista otra categoría con el mismo nombre."
+
+msgid ""
+"The configured period applies to email reminders. Dashboard status indicators keep their existing"
+" 30-day definition."
+msgstr ""
+"El periodo configurado se aplica a los avisos por correo. Los indicadores del panel mantienen su "
+"definición actual de 30 días."
 
 msgid "The credential could not be created or recorded in GLPI history. No credential was saved."
 msgstr ""
@@ -257,20 +975,126 @@ msgstr ""
 "guardaron los cambios.No fue posible actualizar la credencial ni registrar el evento en el "
 "historial de GLPI. No se guardaron los cambios."
 
+msgid "The credential is no longer available for linking."
+msgstr "La credencial ya no está disponible para vincularse."
+
+msgid "The decrypted backup content is not valid."
+msgstr "El contenido descifrado de la copia de seguridad no es válido."
+
+msgid "The email notification is present, but the Review responsible recipient is not configured."
+msgstr "La notificación por correo existe, pero no tiene configurado el destinatario Review responsible."
+
+msgid "The encrypted backup would exceed the 20 MB download limit. Export fewer credentials at a time."
+msgstr ""
+"La copia de seguridad cifrada superaría el límite de 20 MB. Exporta menos credenciales por "
+"archivo."
+
+msgid "The export could not be recorded in GLPI history. No backup was delivered."
+msgstr ""
+"No se pudo registrar la exportación en el historial de GLPI. No se entregó ninguna copia de "
+"seguridad."
+
+msgid "The import could not be written to GLPI history. The import was cancelled."
+msgstr "No se ha podido registrar la importación en el historial de GLPI. Se ha cancelado la operación."
+
+msgid "The import could not link or audit a credential. The import was cancelled."
+msgstr "No se ha podido vincular ni auditar una credencial. Se ha cancelado la importación."
+
+msgid "The item could not be linked or recorded in GLPI history. No changes were saved."
+msgstr ""
+"No fue posible vincular el elemento ni registrar el evento en el historial de GLPI. No se "
+"guardaron cambios."
+
+msgid "The item was linked successfully."
+msgstr "El elemento se vinculó correctamente."
+
+msgid "The password could not be revealed. Please reauthenticate and try again."
+msgstr "No se pudo mostrar la contraseña. Vuelve a autenticarte e inténtalo de nuevo."
+
 msgid "The password is encrypted with the GLPI instance security key before it is stored."
 msgstr "La contraseña se cifra con la clave de seguridad de la instancia GLPI antes de guardarse."
+
+msgid "The reminder period must be between 1 and 365 days."
+msgstr "El periodo de avisos debe estar entre 1 y 365 días."
+
+msgid ""
+"The requested administrative action could not be completed. No sensitive information was "
+"displayed."
+msgstr ""
+"No se ha podido completar la acción administrativa solicitada. No se ha mostrado información "
+"sensible."
+
+msgid "The selected backup file is empty or exceeds the 20 MB limit."
+msgstr "El archivo de copia de seguridad está vacío o supera el límite de 20 MB."
 
 msgid "The selected credential is not available to your account."
 msgstr "La credencial seleccionada no está disponible para tu cuenta."
 
+msgid "The selected file is not a supported Credentials backup."
+msgstr "El archivo seleccionado no es una copia de seguridad de Credentials compatible."
+
+msgid "The selected item is not available in this entity or you do not have permission to update it."
+msgstr "El elemento seleccionado no está disponible en esta entidad o no tienes permiso para actualizarlo."
+
+msgid "The selected item or credential is no longer available for linking."
+msgstr "El elemento o la credencial seleccionados ya no están disponibles para vincularse."
+
 msgid "The stored password could not be decrypted. Contact your GLPI administrator."
 msgstr "No se pudo descifrar la contraseña almacenada. Contacta al administrador de GLPI."
+
+msgid "The update check looks for published stable releases. It never installs an update automatically."
+msgstr "La búsqueda consulta versiones estables publicadas. Nunca instala actualizaciones automáticamente."
+
+msgid "There are no archived credentials in the current entity scope."
+msgstr "No hay credenciales archivadas en el ámbito de la entidad actual."
+
+msgid "There are no stable releases published on GitHub yet."
+msgstr "Todavía no hay versiones estables publicadas en GitHub."
+
+msgid ""
+"This archived credential is still linked to an item. Remove its links before permanently deleting"
+" it."
+msgstr ""
+"Esta credencial archivada todavía está vinculada a un elemento. Elimina sus vínculos antes de "
+"borrarla definitivamente."
+
+msgid "This category cannot be deleted while credentials use it."
+msgstr "No se puede eliminar esta categoría mientras esté asignada a alguna credencial."
+
+msgid ""
+"This credential has only one linked item. It cannot be unlinked because credentials must always "
+"belong to at least one item. Delete the credential instead, if you have permission."
+msgstr ""
+"Esta credencial está vinculada a un único elemento. No se puede desvincular porque las "
+"credenciales siempre deben pertenecer al menos a un elemento. Elimina la credencial si tienes "
+"permiso."
+
+msgid ""
+"This is the only item linked to this credential. It cannot be unlinked because credentials must "
+"always belong to at least one item. Delete the credential instead, if you have permission."
+msgstr ""
+"Este es el único elemento vinculado a la credencial. No se puede desvincular porque toda "
+"credencial debe pertenecer al menos a un elemento. Si tienes permiso, elimina la credencial "
+"completa."
+
+msgid "This item is already linked to this credential."
+msgstr "Este elemento ya está vinculado a esta credencial."
+
+msgid ""
+"This permanently deletes archived credentials older than the retention period. This cannot be "
+"undone. Continue?"
+msgstr ""
+"Esta acción elimina definitivamente las credenciales archivadas que superen el periodo de "
+"conservación. No se puede deshacer. ¿Continuar?"
 
 msgid "Ticket credentials"
 msgstr "Credenciales del ticket"
 
 msgid "Ticket item"
 msgstr "Elemento del ticket"
+
+msgid "Type a credential name..."
+msgstr "Escribe el nombre de una credencial..."
 
 msgid "URL"
 msgstr "URL"
@@ -284,620 +1108,71 @@ msgstr "No se pudieron cifrar los datos de la credencial con la clave de segurid
 msgid "Unable to encrypt the password with the GLPI security key."
 msgstr "No se pudo cifrar la contraseña con la clave de seguridad de GLPI."
 
+msgid "Unavailable"
+msgstr "No disponible"
+
 msgid "Unlink"
 msgstr "Desvincular"
 
 msgid "Unlink this credential from the current item?"
 msgstr "¿Desvincular esta credencial del elemento actual?"
 
-msgid "Username"
-msgstr "Usuario"
-
-msgid "View details"
-msgstr "Ver detalles"
-
-msgid "Close"
-msgstr "Cerrar"
-msgid "Linked items"
-msgstr "Elementos vinculados"
-
-msgid "This credential has only one linked item. It cannot be unlinked because credentials must always belong to at least one item. Delete the credential instead, if you have permission."
-msgstr "Esta credencial está vinculada a un único elemento. No se puede desvincular porque las credenciales siempre deben pertenecer al menos a un elemento. Elimina la credencial si tienes permiso."
-
-msgid "Cannot unlink the last linked item. Delete the credential instead."
-msgstr "No se puede desvincular el último elemento vinculado. Elimina la credencial en su lugar."
-
-msgid "Use the ID shown in the credentials list to link an existing entry."
-msgstr "Utiliza el ID que aparece en la lista de credenciales para vincular una entrada existente."
-
-msgid "The password could not be revealed. Please reauthenticate and try again."
-msgstr "No se pudo mostrar la contraseña. Vuelve a autenticarte e inténtalo de nuevo."
-
-msgid "Requesting password…"
-msgstr "Solicitando contraseña…"
-
-msgid "Password revealed."
-msgstr "Contraseña mostrada."
-
-msgid "Password hidden."
-msgstr "Contraseña oculta."
-
-msgid "Password copied to clipboard."
-msgstr "Contraseña copiada al portapapeles."
-
-msgid "Reveal the password before copying it."
-msgstr "Muestra la contraseña antes de copiarla."
-
-msgid "Clipboard access is unavailable. Select the password and copy it manually."
-msgstr "El acceso al portapapeles no está disponible. Selecciona la contraseña y cópiala manualmente."
-
-msgid "Clipboard access was denied. Select the password and copy it manually."
-msgstr "El navegador ha denegado el acceso al portapapeles. Selecciona la contraseña y cópiala manualmente."
-
-msgid "Revealed password"
-msgstr "Contraseña mostrada"
-
-msgid "You do not have permission to reveal this password."
-msgstr "No tienes permiso para mostrar esta contraseña."
-
-msgid "Current item"
-msgstr "Elemento actual"
-
-msgid "No linked items are available to display."
-msgstr "No hay elementos vinculados disponibles para mostrar."
-
-msgid "Some linked items are hidden because you do not have permission to read them."
-msgstr "Algunos elementos vinculados están ocultos porque no tienes permiso para consultarlos."
-
-msgid "Show linked items for credential"
-msgstr "Mostrar elementos vinculados de la credencial"
-
-msgid "Back to credential"
-msgstr "Volver a la credencial"
-
-msgid "Item type"
-msgstr "Tipo de elemento"
-
-msgid "Item ID"
-msgstr "ID del elemento"
-
-msgid "Item name"
-msgstr "Nombre del elemento"
-
-msgid "Relationship"
-msgstr "Relación"
-
-msgid "Credential updated successfully."
-msgstr "La credencial se actualizó correctamente."
-
-msgid "visible linked items"
-msgstr "elementos vinculados visibles"
-
-msgid "linked items are hidden because you do not have permission to read them."
-msgstr "elementos vinculados están ocultos porque no tienes permiso para consultarlos."
-
-msgid "Credentials configuration"
-msgstr "Configuración de Credentials"
-
-msgid "Manage categories, reviews, archived records, backups and plugin updates."
-msgstr "Administra categorías, revisiones, registros archivados, copias de seguridad y actualizaciones del complemento."
-
-msgid "Installed version"
-msgstr "Versión instalada"
-
-msgid "Plugin updates"
-msgstr "Actualizaciones del complemento"
-
-msgid "An update is available."
-msgstr "Hay una actualización disponible."
-
-msgid "Latest version"
-msgstr "Última versión"
-
-msgid "Credentials is up to date."
-msgstr "Credentials está actualizado."
-
-msgid "There are no stable releases published on GitHub yet."
-msgstr "Todavía no hay versiones estables publicadas en GitHub."
-
-msgid "GitHub is unavailable. The last known version is shown below and will be checked again later."
-msgstr "GitHub no está disponible. Se muestra la última versión conocida y se volverá a consultar más adelante."
-
-msgid "GitHub could not be reached. Try again later."
-msgstr "No se pudo conectar con GitHub. Inténtalo más tarde."
-
-msgid "Published"
-msgstr "Publicado"
-
-msgid "Last checked"
-msgstr "Última consulta"
-
-msgid "Check for updates"
-msgstr "Buscar actualizaciones"
-
-msgid "View GitHub releases"
-msgstr "Ver publicaciones en GitHub"
-
-msgid "Changelog"
-msgstr "Historial de cambios"
-
-msgid "The update check looks for published stable releases. It never installs an update automatically."
-msgstr "La búsqueda consulta versiones estables publicadas. Nunca instala actualizaciones automáticamente."
-
-msgid "Credential overview"
-msgstr "Resumen de credenciales"
-
-msgid "Active credentials"
-msgstr "Credenciales activas"
-
-msgid "Archived credentials"
-msgstr "Credenciales archivadas"
-
-msgid "Expired credentials"
-msgstr "Credenciales caducadas"
-
-msgid "Expiring within 30 days"
-msgstr "Caducan en los próximos 30 días"
-
-msgid "Reviews overdue"
-msgstr "Revisiones atrasadas"
-
-msgid "Reviews due within 30 days"
-msgstr "Revisiones en los próximos 30 días"
-
-msgid "Credential categories"
-msgstr "Categorías de credenciales"
-
-msgid "Create categories to help your team organize credentials, such as Network, ERP, Email, Cloud services or Servers."
-msgstr "Crea categorías para organizar las credenciales, por ejemplo: Redes, ERP, Correo, Servicios en la nube o Servidores."
-
-msgid "Category name"
-msgstr "Nombre de la categoría"
-
-msgid "Description"
-msgstr "Descripción"
-
-msgid "Add category"
-msgstr "Añadir categoría"
-
-msgid "Category"
-msgstr "Categoría"
-
-msgid "Scope"
-msgstr "Ámbito"
-
-msgid "Global"
-msgstr "Global"
-
-msgid "Current entity"
-msgstr "Entidad actual"
-
-msgid "Delete"
-msgstr "Eliminar"
-
-msgid "Delete this category? Categories used by credentials cannot be deleted."
-msgstr "¿Eliminar esta categoría? No se pueden eliminar categorías que estén en uso."
-
-msgid "No categories have been created for this entity yet."
-msgstr "Todavía no hay categorías para esta entidad."
-
-msgid "Expiration and review follow-up"
-msgstr "Vigencia y seguimiento de revisiones"
-
-msgid "Credentials with an expired date or a review date within the next 30 days are listed here. Maintain the dates and responsible person in the credential itself."
-msgstr "Aquí aparecen las credenciales caducadas o cuya revisión debe realizarse dentro de los próximos 30 días. Actualiza las fechas y la persona responsable en la propia credencial."
-
-msgid "Status"
-msgstr "Estado"
-
-msgid "Expiration date"
-msgstr "Fecha de caducidad"
-
-msgid "Next review"
-msgstr "Próxima revisión"
-
-msgid "ID"
-msgstr "ID"
-
-msgid "No expiration or review items need attention at this time."
-msgstr "No hay vencimientos ni revisiones que requieran atención por ahora."
-
-msgid "Credential activity history"
-msgstr "Historial de actividad de credenciales"
-
-msgid "Recent credential actions recorded in GLPI history. Passwords and protected values are never displayed here."
-msgstr "Acciones recientes de credenciales registradas en el historial de GLPI. Aquí nunca se muestran contraseñas ni datos protegidos."
-
-msgid "Date"
-msgstr "Fecha"
-
-msgid "User"
-msgstr "Usuario"
-
-msgid "Action"
-msgstr "Acción"
-
-msgid "Related item"
-msgstr "Elemento relacionado"
-
-msgid "No credential activity has been recorded yet."
-msgstr "Todavía no hay actividad de credenciales registrada."
-
-msgid "Archived credentials and retention"
-msgstr "Credenciales archivadas y conservación"
-
-msgid "Archived records are kept in the GLPI trash. They are not automatically erased. Configure how long they should be retained before an administrator can permanently delete eligible records."
-msgstr "Los registros archivados se conservan en la papelera de GLPI y no se eliminan automáticamente. Define cuánto tiempo deben conservarse antes de que un administrador pueda eliminarlos definitivamente."
-
-msgid "Retention period (days)"
-msgstr "Periodo de conservación (días)"
-
-msgid "Use 0 to keep archived credentials indefinitely."
-msgstr "Usa 0 para conservar las credenciales archivadas indefinidamente."
-
-msgid "Save retention settings"
-msgstr "Guardar conservación"
-
-msgid "Eligible for permanent deletion"
-msgstr "Listas para eliminación definitiva"
-
-msgid "Archived / modified"
-msgstr "Archivada / modificada"
-
-msgid "Retention"
-msgstr "Conservación"
-
-msgid "Restore by linking to an item"
-msgstr "Restaurar vinculando a un elemento"
-
-msgid "Eligible"
-msgstr "Lista"
-
-msgid "Retained"
-msgstr "En conservación"
-
-msgid "Select item type"
-msgstr "Selecciona el tipo de elemento"
-
-msgid "Restore"
-msgstr "Restaurar"
-
-msgid "There are no archived credentials in the current entity scope."
-msgstr "No hay credenciales archivadas en el ámbito de la entidad actual."
-
-msgid "This permanently deletes archived credentials older than the retention period. This cannot be undone. Continue?"
-msgstr "Esta acción elimina definitivamente las credenciales archivadas que superen el periodo de conservación. No se puede deshacer. ¿Continuar?"
-
-msgid "Permanently delete eligible archived credentials"
-msgstr "Eliminar definitivamente las credenciales que cumplan el plazo"
-
-msgid "Export and import credentials"
-msgstr "Exportar e importar credenciales"
-
-msgid "Protected backup"
-msgstr "Copia de seguridad protegida"
-
-msgid "Backups are encrypted with a password you choose. The file does not contain readable passwords. Keep the backup password safe; it cannot be recovered if lost."
-msgstr "Las copias de seguridad se cifran con una contraseña que tú eliges. El archivo no contiene contraseñas legibles. Guarda bien esa contraseña; no se puede recuperar si la pierdes."
-
-msgid "Backup and import are unavailable. Check that Sodium is enabled in PHP, the GLPI encryption key is available, and your profile has the backup permission."
-msgstr "La copia de seguridad y la importación no están disponibles. Comprueba que Sodium esté habilitado en PHP, que la clave de cifrado de GLPI esté disponible y que tu perfil tenga el permiso correspondiente."
-
-msgid "Export credentials"
-msgstr "Exportar credenciales"
-
-msgid "Create an encrypted backup of credentials in the entities you can access."
-msgstr "Crea una copia de seguridad cifrada de las credenciales de las entidades a las que tienes acceso."
-
-msgid "Backup password"
-msgstr "Contraseña de la copia de seguridad"
-
-msgid "Confirm backup password"
-msgstr "Confirmar contraseña de la copia de seguridad"
-
-msgid "Include archived credentials"
-msgstr "Incluir credenciales archivadas"
-
-msgid "Download encrypted backup"
-msgstr "Descargar copia cifrada"
-
-msgid "Import credentials"
-msgstr "Importar credenciales"
-
-msgid "Import creates new credential records; it never overwrites existing records. Linked items must exist in this GLPI instance and match the backup item type, ID and name."
-msgstr "La importación crea registros nuevos y nunca sobrescribe los existentes. Los elementos vinculados deben existir en esta instancia de GLPI y coincidir con el tipo, ID y nombre incluidos en la copia."
-
-msgid "Backup file"
-msgstr "Archivo de copia de seguridad"
-
-msgid "Import backup"
-msgstr "Importar copia de seguridad"
-
-msgid "Imported passwords and protected details are encrypted again with this GLPI instance security key. Archived entries remain archived until an administrator restores them by linking an available item."
-msgstr "Las contraseñas y los datos protegidos importados se vuelven a cifrar con la clave de seguridad de esta instancia de GLPI. Los registros archivados permanecen archivados hasta que un administrador los restaure vinculándolos a un elemento disponible."
-
-msgid "System status"
-msgstr "Estado del sistema"
-
-msgid "Available"
-msgstr "Disponible"
-
-msgid "Unavailable"
-msgstr "No disponible"
-
-msgid "GLPI encryption key"
-msgstr "Clave de cifrado de GLPI"
-
-msgid "Credential information is protected using the GLPI instance security key. Always back up the GLPI database and its matching key together."
-msgstr "La información de las credenciales está protegida con la clave de seguridad de la instancia de GLPI. Haz siempre la copia de seguridad de la base de datos y de su clave correspondiente en conjunto."
-
-msgid "Category is required."
-msgstr "La categoría es obligatoria."
-
-msgid "No category"
-msgstr "Sin categoría"
-
-msgid "Last reviewed"
-msgstr "Última revisión"
-
-msgid "Next review date"
-msgstr "Fecha de próxima revisión"
-
-msgid "Review responsible"
-msgstr "Responsable de revisión"
-
-msgid "Not assigned"
-msgstr "Sin asignar"
-
-msgid "Review dates and the responsible person are reminders for administrators. They do not change or rotate passwords automatically."
-msgstr "Las fechas y la persona responsable de revisión son recordatorios para los administradores. No modifican ni rotan contraseñas automáticamente."
-
-msgid "Current"
-msgstr "Vigente"
-
-msgid "Expired"
-msgstr "Caducada"
-
-msgid "Review overdue"
-msgstr "Revisión atrasada"
-
-msgid "Expiring soon"
-msgstr "Próxima a caducar"
-
-msgid "Review due soon"
-msgstr "Revisión próxima"
-
-msgid "Select a valid category for this credential entity."
-msgstr "Selecciona una categoría válida para la entidad de esta credencial."
-
-msgid "Review and expiration dates must use a valid calendar date."
-msgstr "Las fechas de caducidad y revisión deben ser fechas válidas."
-
-msgid "Select an available GLPI user as the review responsible person."
-msgstr "Selecciona un usuario de GLPI disponible como responsable de revisión."
-
-msgid "Version %s is available."
-msgstr "La versión %s está disponible."
-
-msgid "GitHub could not be reached. The update check will be available again later."
-msgstr "No se pudo conectar con GitHub. La búsqueda estará disponible más adelante."
-
-msgid "Retention must be between 0 and 3,650 days. Use 0 to keep archived credentials indefinitely."
-msgstr "El periodo de conservación debe estar entre 0 y 3.650 días. Usa 0 para conservar las credenciales archivadas indefinidamente."
-
-msgid "Archive retention settings were saved."
-msgstr "Se ha guardado la configuración de conservación de archivos."
-
-msgid "The category could not be created. Check its name and make sure it is not already in use."
-msgstr "No se pudo crear la categoría. Revisa el nombre y confirma que no exista otra igual."
-
-msgid "Category created successfully."
-msgstr "La categoría se ha creado correctamente."
-
-msgid "This category cannot be deleted while credentials use it."
-msgstr "No se puede eliminar esta categoría mientras esté asignada a alguna credencial."
-
-msgid "Category deleted successfully."
-msgstr "La categoría se ha eliminado correctamente."
-
-msgid "The archived credential could not be restored. Select an available item in the same entity and verify your permissions."
-msgstr "No se pudo restaurar la credencial archivada. Selecciona un elemento disponible de la misma entidad y comprueba tus permisos."
-
-msgid "Credential restored and linked successfully."
-msgstr "La credencial se ha restaurado y vinculado correctamente."
-
-msgid "Permanent deletion is disabled while retention is set to keep records indefinitely."
-msgstr "La eliminación definitiva está deshabilitada porque la conservación está configurada como indefinida."
-
-msgid "Permanently deleted %d archived credentials."
-msgstr "Se han eliminado definitivamente %d credenciales archivadas."
-
-msgid "The backup passwords do not match."
-msgstr "Las contraseñas de la copia de seguridad no coinciden."
-
-msgid "Select a valid Credentials backup file smaller than 20 MB."
-msgstr "Selecciona un archivo de copia de seguridad de Credentials válido y menor de 20 MB."
-
-msgid "The backup file could not be read."
-msgstr "No se pudo leer el archivo de copia de seguridad."
-
-msgid "Import completed: %1$d credentials created, %2$d entries skipped."
-msgstr "Importación finalizada: se han creado %1$d credenciales y se han omitido %2$d registros."
-
-msgid "The backup could not be imported. No changes were retained."
-msgstr "No se pudo importar la copia de seguridad. No se han conservado cambios."
-
-msgid "Secure backup is unavailable. Check the PHP Sodium extension and GLPI encryption key."
-msgstr "La copia de seguridad segura no está disponible. Comprueba la extensión Sodium de PHP y la clave de cifrado de GLPI."
-
-msgid "You do not have permission to read credentials for backup."
-msgstr "No tienes permiso para consultar credenciales y crear una copia de seguridad."
-
-msgid "A credential could not be decrypted. No backup file was created."
-msgstr "No se pudo descifrar una credencial. No se creó el archivo de copia de seguridad."
-
-msgid "The backup contains too many credentials. Export smaller groups of records."
-msgstr "La copia de seguridad contiene demasiadas credenciales. Exporta grupos de registros más pequeños."
-
-msgid "You need read and create permissions for Credentials to import a backup."
-msgstr "Necesitas permisos de lectura y creación de credenciales para importar una copia de seguridad."
-
-msgid "The selected backup file is empty or exceeds the 20 MB limit."
-msgstr "El archivo de copia de seguridad está vacío o supera el límite de 20 MB."
-
-msgid "The selected file is not a supported Credentials backup."
-msgstr "El archivo seleccionado no es una copia de seguridad de Credentials compatible."
-
-msgid "The backup file is damaged or incomplete."
-msgstr "El archivo de copia de seguridad está dañado o incompleto."
-
-msgid "The backup password is incorrect or the file has been modified."
-msgstr "La contraseña de la copia de seguridad es incorrecta o el archivo se ha modificado."
-
-msgid "The decrypted backup content is not valid."
-msgstr "El contenido descifrado de la copia de seguridad no es válido."
-
-msgid "Entry %d was skipped because its data or linked items could not be matched."
-msgstr "Se ha omitido el registro %d porque no ha sido posible validar sus datos o relacionar sus elementos."
-
-msgid "An imported credential could not be encrypted with the GLPI security key. The import was cancelled."
-msgstr "No se ha podido cifrar una credencial importada con la clave de GLPI. Se ha cancelado la importación."
-
-msgid "A credential could not be created. The import was cancelled."
-msgstr "No se ha podido crear una credencial. Se ha cancelado la importación."
-
-msgid "An archived credential could not be restored from the backup. The import was cancelled."
-msgstr "No se ha podido restaurar una credencial archivada desde la copia de seguridad. Se ha cancelado la importación."
-
-msgid "The import could not be written to GLPI history. The import was cancelled."
-msgstr "No se ha podido registrar la importación en el historial de GLPI. Se ha cancelado la operación."
-
-msgid "The import could not link or audit a credential. The import was cancelled."
-msgstr "No se ha podido vincular ni auditar una credencial. Se ha cancelado la importación."
+msgid ""
+"Use 0 to exclude archived credentials from retention-based bulk deletion indefinitely. Individual"
+" deletion by an authorized administrator remains available."
+msgstr ""
+"Usa 0 para excluir indefinidamente las credenciales archivadas de la eliminación masiva por "
+"conservación. Un administrador autorizado todavía puede eliminar credenciales individuales."
 
 msgid "Use a backup password with at least 12 characters."
 msgstr "Usa una contraseña de copia de seguridad de al menos 12 caracteres."
 
-msgid "A protected credential was imported from a backup."
-msgstr "Se ha importado una credencial protegida desde una copia de seguridad."
+msgid "Use the ID shown in the credentials list to link an existing entry."
+msgstr "Utiliza el ID que aparece en la lista de credenciales para vincular una entrada existente."
 
-msgid "A protected credential was restored and linked to an item."
-msgstr "Se ha restaurado una credencial protegida y se ha vinculado a un elemento."
+msgid "User"
+msgstr "Usuario"
 
-msgid "An archived protected credential was permanently deleted."
-msgstr "Se ha eliminado definitivamente una credencial protegida archivada."
+msgid "Username"
+msgstr "Usuario"
 
-msgid "Credential record"
-msgstr "Registro de credencial"
+#, python-format
+msgid "Version %s is available."
+msgstr "La versión %s está disponible."
 
-msgid "The requested administrative action could not be completed. No sensitive information was displayed."
-msgstr "No se ha podido completar la acción administrativa solicitada. No se ha mostrado información sensible."
+msgid "View GitHub releases"
+msgstr "Ver publicaciones en GitHub"
 
-msgid "The backup could not be created. No file was downloaded."
-msgstr "No se ha podido crear la copia de seguridad. No se ha descargado ningún archivo."
+msgid "View details"
+msgstr "Ver detalles"
 
-msgid "Import creates new credential records; it never overwrites existing records."
-msgstr "La importación crea registros nuevos y nunca sobrescribe los existentes."
-
-msgid "Select a valid item in the same entity."
-msgstr "Selecciona un elemento válido de la misma entidad."
-
-msgid "Category scope"
-msgstr "Ámbito de la categoría"
-
-msgid "The encrypted backup would exceed the 20 MB download limit. Export fewer credentials at a time."
-msgstr "La copia de seguridad cifrada superaría el límite de 20 MB. Exporta menos credenciales por archivo."
-
-msgid "Credentials is already up to date."
-msgstr "Credentials ya está actualizado."
-
-msgid "No password is stored for this credential."
-msgstr "No hay una contraseña guardada para esta credencial."
-
-msgid "This is the only item linked to this credential. It cannot be unlinked because credentials must always belong to at least one item. Delete the credential instead, if you have permission."
-msgstr "Este es el único elemento vinculado a la credencial. No se puede desvincular porque toda credencial debe pertenecer al menos a un elemento. Si tienes permiso, elimina la credencial completa."
-
-msgid "Show linked items"
-msgstr "Mostrar elementos vinculados"
-
-msgid "Import completed: %1$d credentials created, %2$d archived, %3$d needing manual relinking, %4$d skipped."
-msgstr "Importación completada: se han creado %1$d credenciales, %2$d quedaron archivadas, %3$d necesitan vinculación manual y se omitieron %4$d."
+msgid "You do not have access to this archived credential."
+msgstr "No tienes acceso a esta credencial archivada."
 
 msgid "You do not have permission to permanently delete archived credentials."
 msgstr "No tienes permiso para eliminar definitivamente credenciales archivadas."
 
-msgid "Your profile does not have permission to view individual credentials."
-msgstr "Tu perfil no tiene permiso para consultar los detalles de las credenciales."
+msgid "You do not have permission to read credentials for backup."
+msgstr "No tienes permiso para consultar credenciales y crear una copia de seguridad."
 
-msgid "Your profile does not have permission to view credential activity."
-msgstr "Tu perfil no tiene permiso para consultar la actividad de credenciales."
+msgid "You do not have permission to reveal this password."
+msgstr "No tienes permiso para mostrar esta contraseña."
+
+msgid "You need read and create permissions for Credentials to import a backup."
+msgstr "Necesitas permisos de lectura y creación de credenciales para importar una copia de seguridad."
 
 msgid "Your profile does not have permission to view archived credential details."
 msgstr "Tu perfil no tiene permiso para consultar los detalles de credenciales archivadas."
 
-msgid "Lifecycle email reminders"
-msgstr "Avisos de ciclo de vida por correo"
+msgid "Your profile does not have permission to view credential activity."
+msgstr "Tu perfil no tiene permiso para consultar la actividad de credenciales."
 
-msgid "Enable lifecycle email reminders"
-msgstr "Activar avisos de ciclo de vida por correo"
+msgid "Your profile does not have permission to view individual credentials."
+msgstr "Tu perfil no tiene permiso para consultar los detalles de las credenciales."
 
-msgid "Days before expiration or review"
-msgstr "Días de antelación para el vencimiento o la revisión"
+msgid "linked items are hidden because you do not have permission to read them."
+msgstr "elementos vinculados están ocultos porque no tienes permiso para consultarlos."
 
-msgid "Save reminder settings"
-msgstr "Guardar configuración de avisos"
-
-msgid "Overdue dates are always included, regardless of this look-ahead period."
-msgstr "Las fechas vencidas siempre se incluyen, independientemente del periodo de antelación."
-
-msgid "GLPI email notifications are enabled."
-msgstr "Las notificaciones por correo de GLPI están activadas."
-
-msgid "GLPI email notifications are disabled. Reminders will not be queued until you enable them in GLPI."
-msgstr "Las notificaciones por correo de GLPI están desactivadas. No se pondrán avisos en cola hasta que las actives en GLPI."
-
-msgid "The Credentials automatic action is registered and enabled."
-msgstr "La tarea automática de Credentials está registrada y activada."
-
-msgid "The Credentials automatic action is disabled or blocked in GLPI."
-msgstr "La tarea automática de Credentials está desactivada o bloqueada en GLPI."
-
-msgid "The Credentials automatic action is not registered."
-msgstr "La tarea automática de Credentials no está registrada."
-
-msgid "The configured period applies to email reminders. Dashboard status indicators keep their existing 30-day definition."
-msgstr "El periodo configurado se aplica a los avisos por correo. Los indicadores del panel mantienen su definición actual de 30 días."
-
-msgid "The reminder period must be between 1 and 365 days."
-msgstr "El periodo de avisos debe estar entre 1 y 365 días."
-
-msgid "Lifecycle reminder settings were saved."
-msgstr "Se ha guardado la configuración de avisos del ciclo de vida."
-
-msgid "The Credential lifecycle email notification is correctly configured for the active entity."
-msgstr "La notificación por correo del ciclo de vida de Credential está correctamente configurada para la entidad activa."
-
-msgid "No active Credential lifecycle notification was found for the active entity."
-msgstr "No se ha encontrado una notificación activa del ciclo de vida de Credential para la entidad activa."
-
-msgid "A lifecycle notification exists, but it does not have an email template assigned."
-msgstr "Existe una notificación del ciclo de vida, pero no tiene asignada una plantilla de correo."
-
-msgid "The email notification is present, but the Review responsible recipient is not configured."
-msgstr "La notificación por correo existe, pero no tiene configurado el destinatario Review responsible."
-
-msgid "The GLPI email notification mode is disabled. Enable the email notification mode in GLPI before reminders can be queued."
-msgstr "El canal de notificaciones por correo de GLPI está desactivado. Actívalo en GLPI antes de poner los avisos en cola."
-
-msgid "Edit category"
-msgstr "Editar categoría"
-
-msgid "Save changes"
-msgstr "Guardar cambios"
-
-msgid "Category updated successfully."
-msgstr "La categoría se ha actualizado correctamente."
-
-msgid "The category could not be updated. Check its name, entity access and make sure it is not already in use by another category."
-msgstr "No se ha podido actualizar la categoría. Comprueba el nombre y el acceso a la entidad, y asegúrate de que no exista otra categoría con el mismo nombre."
+msgid "visible linked items"
+msgstr "elementos vinculados visibles"
 

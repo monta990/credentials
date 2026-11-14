@@ -32,6 +32,8 @@ final class Credential extends CommonDBTM
     public const HISTORY_IMPORTED = 8;
     public const HISTORY_RESTORED = 9;
     public const HISTORY_PURGED = 10;
+    public const HISTORY_EXPORTED = 11;
+    public const HISTORY_REVIEWED = 12;
 
     /** Keep change history for non-secret fields, never retain credential values in glpi_logs. */
     public bool $dohistory = true;
@@ -187,6 +189,8 @@ final class Credential extends CommonDBTM
             self::HISTORY_IMPORTED => __s('A protected credential was imported from a backup.', 'credentials'),
             self::HISTORY_RESTORED => __s('A protected credential was restored and linked to an item.', 'credentials'),
             self::HISTORY_PURGED => __s('An archived protected credential was permanently deleted.', 'credentials'),
+            self::HISTORY_EXPORTED => __s('A protected credential was exported to an encrypted backup.', 'credentials'),
+            self::HISTORY_REVIEWED => __s('A protected credential review was recorded.', 'credentials'),
             default                => '',
         };
     }
@@ -204,15 +208,9 @@ final class Credential extends CommonDBTM
             self::HISTORY_IMPORTED,
             self::HISTORY_RESTORED,
             self::HISTORY_PURGED,
+            self::HISTORY_EXPORTED,
+            self::HISTORY_REVIEWED,
         ], true);
-    }
-
-    /** Check for an active relationship within an explicitly accessible entity. */
-    public static function hasCredentialsForItem(string $itemtype, int $items_id, int $entities_id): bool
-    {
-        // Reuse the same supported-item, profile-right and entity checks as tab counts.
-        // Requiring an entity avoids an unscoped existence query across GLPI entities.
-        return self::getActiveIDsForItem($itemtype, $items_id, $entities_id) !== [];
     }
 
     public static function isEncryptionReady(): bool
