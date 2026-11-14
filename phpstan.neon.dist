@@ -1,8 +1,3 @@
-includes:
-    - .ci/glpi/vendor/glpi-project/phpstan-glpi/extension.neon
-    - .ci/glpi/vendor/phpstan/phpstan-deprecation-rules/rules.neon
-    - .ci/glpi/vendor/thecodingmachine/phpstan-safe-rule/phpstan-safe-rule.neon
-
 parameters:
     level: 5
     phpVersion: 80300
@@ -18,6 +13,3 @@ parameters:
         - .ci/glpi/stubs/plugins_migrations_classes.php
     tmpDir: .cache/phpstan
     treatPhpDocTypesAsCertain: false
-    glpi:
-        glpiPath: .ci/glpi
-        glpiVersion: '12.0.0'
