@@ -13,6 +13,14 @@ namespace {
         public static function haveRight(...$args): bool { return true; }
     }
 
+    class DBmysql
+    {
+        public static function quoteName(string $name): string
+        {
+            return chr(96) . str_replace(chr(96), chr(96) . chr(96), $name) . chr(96);
+        }
+    }
+
     final class FakeQueryExpression
     {
         public function __construct(public string $expression) {}
