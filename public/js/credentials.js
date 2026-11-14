@@ -58,6 +58,41 @@
                 return;
             }
 
+            if (event.data.action === 'resizeModal') {
+                const iframe = modal.querySelector('iframe[data-testid="modal-iframe"], iframe');
+                const requestedHeight = Number(event.data.height);
+                if (
+                    !iframe
+                    || iframe.contentWindow !== event.source
+                    || !Number.isFinite(requestedHeight)
+                    || requestedHeight < 160
+                ) {
+                    return;
+                }
+
+                // Leave room for the native modal header, padding and screen edges.
+                // Long forms remain scrollable inside the iframe on smaller screens.
+                const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 700;
+                const maxFrameHeight = Math.max(220, Math.floor(viewportHeight - 120));
+                const frameHeight = Math.min(Math.ceil(requestedHeight), maxFrameHeight);
+                iframe.style.height = frameHeight + 'px';
+                iframe.style.maxHeight = 'calc(100vh - 7.5rem)';
+                iframe.style.display = 'block';
+                iframe.style.width = '100%';
+
+                const modalBody = modal.querySelector('.modal-body');
+                if (modalBody) {
+                    modalBody.style.maxHeight = 'calc(100vh - 5rem)';
+                    modalBody.style.overflowY = 'auto';
+                }
+
+                const modalInstance = window.bootstrap?.Modal?.getInstance(modal);
+                if (modalInstance && typeof modalInstance.handleUpdate === 'function') {
+                    modalInstance.handleUpdate();
+                }
+                return;
+            }
+
             if (event.data.action === 'closeModal') {
                 const dismiss = modal.querySelector('.modal-header [data-bs-dismiss="modal"], .modal-header .btn-close');
                 if (dismiss) {
@@ -122,6 +157,45 @@
             }
         });
     }
+
+    // Category-first and name filtering for the reusable credential selector.
+    // Keep the select native so GLPI styling and browser keyboard navigation work.
+    const filterLinkableCredentials = (form) => {
+        if (!(form instanceof HTMLFormElement)) return;
+        const categorySelect = form.querySelector('[data-credentials-category-filter]');
+        const nameFilter = form.querySelector('[data-credentials-name-filter]');
+        const credentialSelect = form.querySelector('[name="credential_id"]');
+        if (!(categorySelect instanceof HTMLSelectElement) || !(credentialSelect instanceof HTMLSelectElement)) return;
+
+        const categoryId = categorySelect.value;
+        const search = nameFilter instanceof HTMLInputElement ? nameFilter.value.trim().toLocaleLowerCase() : '';
+        for (const option of credentialSelect.options) {
+            if (option.value === '') continue;
+            const categoryMatches = categoryId === 'all' || option.dataset.categoryId === categoryId;
+            const nameMatches = search === '' || option.textContent.toLocaleLowerCase().includes(search);
+            const matches = categoryMatches && nameMatches;
+            option.hidden = !matches;
+            option.disabled = !matches;
+        }
+
+        const selected = credentialSelect.selectedOptions[0];
+        if (selected && (selected.hidden || selected.disabled)) {
+            credentialSelect.value = '';
+        }
+        credentialSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    document.addEventListener('change', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLSelectElement) || !target.matches('[data-credentials-category-filter]')) return;
+        filterLinkableCredentials(target.closest('form'));
+    });
+
+    document.addEventListener('input', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement) || !target.matches('[data-credentials-name-filter]')) return;
+        filterLinkableCredentials(target.closest('form'));
+    });
 
     // Confirm mutations rendered in the parent AJAX tab. Forms inside the
     // credential details iframe own their confirmation handler locally.

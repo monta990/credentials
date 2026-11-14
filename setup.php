@@ -11,10 +11,11 @@ global $CFG_GLPI;
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Credentials\Credential;
 use GlpiPlugin\Credentials\CredentialItem;
+use GlpiPlugin\Credentials\CredentialITILTab;
 use GlpiPlugin\Credentials\CredentialTicketTab;
 use GlpiPlugin\Credentials\Profile;
 
-define('PLUGIN_CREDENTIALS_VERSION', '0.0.36');
+define('PLUGIN_CREDENTIALS_VERSION', '0.0.60');
 define('PLUGIN_CREDENTIALS_MIN_GLPI', '12.0.0');
 define('PLUGIN_CREDENTIALS_MAX_GLPI', '12.0.99');
 
@@ -47,17 +48,18 @@ function plugin_init_credentials(): void
     // GLPI configuration entry for the independent administration page.
     $PLUGIN_HOOKS[Hooks::CONFIG_PAGE]['credentials'] = 'config';
 
-    // Core assets plus GLPI 12 custom asset itemtypes exposed through asset_types.
-    // Registration is repeated at POST_INIT so dynamically registered asset classes
-    // are also picked up once their definitions have been loaded.
+    // GLPI users, the native phone-line management itemtype, and supported assets
+    // exposed through asset_types. Registration is repeated at POST_INIT so
+    // dynamically registered asset classes are also picked up when available.
     CredentialItem::registerTabs();
     CredentialTicketTab::register();
+    CredentialITILTab::register();
     // Register the CommonDBTM itemtype because GLPI's native Log history links
     // plugin events to Credential::class and resolves the linked itemtype to
     // display getHistoryEntry().
     Plugin::registerClass(Credential::class, ['notificationtemplates_types' => true]);
     Plugin::registerClass(Profile::class, ['addtabon' => \Profile::class]);
-    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['credentials'][] = 'js/credentials.js';
+    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT]['credentials'][] = 'js/credentials.js?v=' . PLUGIN_CREDENTIALS_VERSION;
     $PLUGIN_HOOKS[Hooks::ADD_CSS]['credentials'][] = 'css/credentials.css?v=' . PLUGIN_CREDENTIALS_VERSION;
 
     $PLUGIN_HOOKS[Hooks::ITEM_TRANSFER]['credentials'] = 'plugin_credentials_item_transfer';
@@ -72,6 +74,7 @@ function plugin_credentials_postinit(): void
 {
     \GlpiPlugin\Credentials\CredentialItem::registerTabs();
     \GlpiPlugin\Credentials\CredentialTicketTab::register();
+    \GlpiPlugin\Credentials\CredentialITILTab::register();
 }
 
 /**

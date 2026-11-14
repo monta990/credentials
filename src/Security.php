@@ -27,42 +27,11 @@ final class Security
         Session::checkRight(Credential::$rightname, $right);
     }
 
-    public static function escape(string $value): string
-    {
-        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    }
-
     public static function routeUrl(string $path, array $query = []): string
     {
         $query = array_filter($query, static fn($value): bool => $value !== null);
         return PLUGIN_CREDENTIALS_WEBDIR . '/' . ltrim($path, '/')
             . ($query !== [] ? '?' . http_build_query($query) : '');
-    }
-
-    /** Redirect to an updated detail view while preserving the iframe modal context. */
-    public static function redirectToCredentialDetails(
-        string $itemtype,
-        int $items_id,
-        int $credential_id,
-        int $context_ticket_id = 0,
-        bool $is_in_modal = false,
-    ): Response {
-        $item = CredentialItem::loadReadableItem($itemtype, $items_id);
-        if ($item === null || $credential_id <= 0 || !CredentialItemLink::exists($credential_id, $itemtype, $items_id)) {
-            throw new \Glpi\Exception\Http\AccessDeniedHttpException();
-        }
-
-        $query = [
-            'itemtype' => $itemtype,
-            'items_id' => $items_id,
-            'id' => $credential_id,
-            'context_ticket_id' => $context_ticket_id > 0 ? $context_ticket_id : null,
-            '_in_modal' => $is_in_modal ? 1 : null,
-            'changed' => $is_in_modal ? 1 : null,
-        ];
-        $response = new RedirectResponse(self::routeUrl('Credential/Details', $query), Response::HTTP_SEE_OTHER);
-        self::setNoStoreHeaders($response);
-        return $response;
     }
 
     /**

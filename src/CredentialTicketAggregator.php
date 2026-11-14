@@ -9,8 +9,8 @@
 namespace GlpiPlugin\Credentials;
 
 /**
- * Merge credential labels found through multiple ticket sources (requesters and
- * linked assets) into one row per credential. This class is deliberately free of
+ * Merge credential labels found through multiple ITIL sources (requesters and
+ * linked items) into one row per credential. This class is deliberately free of
  * GLPI runtime dependencies so the aggregation invariant can be regression-tested.
  */
 final class CredentialTicketAggregator

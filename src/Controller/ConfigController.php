@@ -11,7 +11,6 @@ namespace GlpiPlugin\Credentials\Controller;
 use Glpi\Controller\AbstractController;
 use GlpiPlugin\Credentials\Credential;
 use GlpiPlugin\Credentials\CredentialCategory;
-use GlpiPlugin\Credentials\CredentialItem;
 use GlpiPlugin\Credentials\Security;
 use GlpiPlugin\Credentials\Service\CredentialAdminService;
 use GlpiPlugin\Credentials\Service\CredentialBackupService;
@@ -38,6 +37,10 @@ final class ConfigController extends AbstractController
         if ($request->isMethod('POST')) {
             Security::requireReauthentication();
             $action = $request->request->getString('action');
+            $redirect_tab = $request->request->getString('tab', 'general');
+            if (!in_array($redirect_tab, ['general', 'archived'], true)) {
+                $redirect_tab = 'general';
+            }
             $entity_id = max(0, (int) ($_SESSION['glpiactive_entity'] ?? 0));
 
             try {
@@ -113,14 +116,24 @@ final class ConfigController extends AbstractController
                         break;
 
                     case 'restore':
-                        if (!CredentialAdminService::restore(
-                            $request->request->getInt('credential_id'),
-                            $request->request->getString('itemtype'),
-                            $request->request->getInt('items_id')
-                        )) {
+                        $target = $request->request->getString('restore_target');
+                        [$restore_itemtype, $restore_items_id] = array_pad(explode('|', $target, 2), 2, '');
+                        if (!ctype_digit($restore_items_id) || (int) $restore_items_id <= 0
+                            || !CredentialAdminService::restore(
+                                $request->request->getInt('credential_id'),
+                                $restore_itemtype,
+                                (int) $restore_items_id
+                            )) {
                             throw new \RuntimeException(__('The archived credential could not be restored. Select an available item in the same entity and verify your permissions.', 'credentials'));
                         }
                         Session::addMessageAfterRedirect(__('Credential restored and linked successfully.', 'credentials'), false, INFO);
+                        break;
+
+                    case 'purge_archived_one':
+                        if (!CredentialAdminService::purgeArchivedCredential($request->request->getInt('credential_id'))) {
+                            throw new \RuntimeException(__('The archived credential could not be permanently deleted. It may have changed or may no longer exist.', 'credentials'));
+                        }
+                        Session::addMessageAfterRedirect(__('Archived credential permanently deleted.', 'credentials'), false, INFO);
                         break;
 
                     case 'purge_archived':
@@ -143,7 +156,12 @@ final class ConfigController extends AbstractController
                 Session::addMessageAfterRedirect(__('The requested administrative action could not be completed. No sensitive information was displayed.', 'credentials'), false, ERROR);
             }
 
-            return $this->redirectToConfig();
+            return $this->redirectToConfig($redirect_tab);
+        }
+
+        $active_tab = $request->query->getString('tab', 'general');
+        if (!in_array($active_tab, ['general', 'archived'], true)) {
+            $active_tab = 'general';
         }
 
         $active_entity = max(0, (int) ($_SESSION['glpiactive_entity'] ?? 0));
@@ -163,16 +181,9 @@ final class ConfigController extends AbstractController
             $retention_days
         );
 
-        $item_types = [];
-        foreach (CredentialItem::getSupportedItemtypes() as $itemtype) {
-            $item_types[] = [
-                'value' => $itemtype,
-                'label' => $itemtype::getTypeName(1),
-            ];
-        }
-
         $response = $this->renderPage($request, [
             'installed_version' => PLUGIN_CREDENTIALS_VERSION,
+            'active_tab' => $active_tab,
             'update' => $update,
             'dashboard' => $dashboard,
             'retention_days' => $retention_days,
@@ -182,11 +193,9 @@ final class ConfigController extends AbstractController
             'reminder_task_registered' => $reminder_task_registered,
             'reminder_task_enabled' => $reminder_task_enabled,
             'notification_setup' => $notification_setup,
-            'item_types' => $item_types,
-            'backup_available' => CredentialBackupService::isAvailable()
-                && Session::haveRight(Credential::RIGHT_BACKUP, READ)
-                && Session::haveRight(Credential::$rightname, READ),
+            'backup_available' => CredentialBackupService::isAvailable(),
             'can_backup' => Session::haveRight(Credential::RIGHT_BACKUP, READ)
+                && Session::haveRight(Credential::RIGHT_REVEAL, READ)
                 && Session::haveRight(Credential::$rightname, READ),
             'can_import' => Session::haveRight(Credential::RIGHT_BACKUP, READ)
                 && Session::haveRight(Credential::$rightname, READ)
@@ -210,6 +219,8 @@ final class ConfigController extends AbstractController
         Session::checkLoginUser();
         Session::checkRight('config', UPDATE);
         Session::checkRight(Credential::RIGHT_BACKUP, READ);
+        Session::checkRight(Credential::RIGHT_REVEAL, READ);
+        Session::checkRight(Credential::$rightname, READ);
         Security::requireReauthentication();
 
         $passphrase = $request->request->getString('backup_password');
@@ -312,9 +323,14 @@ final class ConfigController extends AbstractController
         ]);
     }
 
-    private function redirectToConfig(): RedirectResponse
+    private function redirectToConfig(string $tab = 'general'): RedirectResponse
     {
-        return new RedirectResponse(PLUGIN_CREDENTIALS_WEBDIR . '/config', Response::HTTP_SEE_OTHER, [
+        if (!in_array($tab, ['general', 'archived'], true)) {
+            $tab = 'general';
+        }
+        $url = PLUGIN_CREDENTIALS_WEBDIR . '/config' . ($tab === 'archived' ? '?tab=archived' : '');
+
+        return new RedirectResponse($url, Response::HTTP_SEE_OTHER, [
             'Cache-Control' => 'no-store',
             'Referrer-Policy' => 'no-referrer',
         ]);
