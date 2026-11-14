@@ -36,6 +36,7 @@ function plugin_credentials_install(): bool
         `date_creation` TIMESTAMP NULL DEFAULT NULL,
         `date_mod` TIMESTAMP NULL DEFAULT NULL,
         `link_lock_token` VARCHAR(255) NOT NULL DEFAULT '',
+        `links_count` INT UNSIGNED NOT NULL DEFAULT 0,
         `plugin_credentials_categories_id` INT UNSIGNED NOT NULL DEFAULT 0,
         `date_expires` DATE DEFAULT NULL,
         `date_last_review` DATE DEFAULT NULL,
@@ -107,6 +108,12 @@ function plugin_credentials_install(): bool
         'string',
         ['value' => '']
     );
+    // Store an authoritative relationship count on the credential parent. This
+    // lets ITEM_PURGE serialize on the credential without locking all other
+    // relationship rows after that parent lock.
+    $credential_table = Credential::getTable();
+    $links_count_field_exists = $DB->getField($credential_table, 'links_count') !== null;
+    $migration->addField($credential_table, 'links_count', 'integer', ['value' => 0]);
     // Keep plugin foreign-key columns aligned with GLPI's configured key sign.
     // `integer` creates a signed INT and triggers GLPI 12 schema warnings. The
     // `fkey` migration type uses DBConnection::getDefaultPrimaryKeySignOption().
@@ -135,6 +142,24 @@ function plugin_credentials_install(): bool
     $migration->addRight(Credential::RIGHT_REVEAL, READ, ['config' => READ | UPDATE]);
     $migration->addRight(Credential::RIGHT_BACKUP, READ, ['config' => READ | UPDATE]);
     $migration->executeMigration();
+    if (!$links_count_field_exists) {
+        $link_counts = [];
+        $link_iterator = $DB->request([
+            'SELECT' => ['plugin_credentials_credentials_id'],
+            'FROM' => 'glpi_plugin_credentials_items',
+        ]);
+        foreach ($link_iterator as $link_row) {
+            $credential_id = (int) ($link_row['plugin_credentials_credentials_id'] ?? 0);
+            if ($credential_id > 0) {
+                $link_counts[$credential_id] = ($link_counts[$credential_id] ?? 0) + 1;
+            }
+        }
+        foreach ($link_counts as $credential_id => $count) {
+            if ($DB->update($credential_table, ['links_count' => $count], ['id' => $credential_id]) === false) {
+                return false;
+            }
+        }
+    }
     Profile::initProfile();
 
     // Keep lifecycle reminders inside GLPI's native automatic-action scheduler.
