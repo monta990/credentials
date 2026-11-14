@@ -276,7 +276,13 @@ final class CredentialBackupService
         }
 
         if ($prepared === []) {
-            return ['imported' => 0, 'skipped' => $skipped, 'errors' => $errors];
+            return [
+                'imported' => 0,
+                'archived' => 0,
+                'needs_relink' => 0,
+                'skipped' => $skipped,
+                'errors' => $errors,
+            ];
         }
 
         global $DB;
