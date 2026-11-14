@@ -544,7 +544,7 @@ final class CredentialController extends AbstractController
 
             $rows[] = [
                 'itemtype' => $linked_type,
-                'type_name' => $linked_type::getTypeName(1),
+                'type_name' => $linked_item::getTypeName(1),
                 'items_id' => $linked_id,
                 'name' => (string) $linked_item->getName(),
                 'url' => $linked_item->getLinkURL(),
