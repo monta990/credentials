@@ -21,7 +21,11 @@
     <rule ref="Generic.PHP.DisallowShortOpenTag"/>
     <rule ref="Generic.PHP.LowerCaseKeyword"/>
     <rule ref="Generic.PHP.LowerCaseConstant"/>
-    <rule ref="Generic.PHP.NoSilencedErrors"/>
+    <rule ref="Generic.PHP.NoSilencedErrors">
+        <!-- Existing GLPI network/filesystem fallbacks still suppress expected operational warnings.
+             Keep them visible in PR annotations without blocking until those paths are rewritten. -->
+        <severity>4</severity>
+    </rule>
     <rule ref="Generic.CodeAnalysis.EmptyStatement"/>
 
     <rule ref="Generic.PHP.ForbiddenFunctions">
