@@ -237,7 +237,7 @@ namespace {
     // Last-link decisions use the count on the credential parent and must not
     // re-lock child relationship rows after acquiring that parent lock.
     $DB->requests = [];
-    $count = \GlpiPlugin\\Credentials\\CredentialItemLink::countForCredentialForUpdate(17);
+    $count = \GlpiPlugin\Credentials\CredentialItemLink::countForCredentialForUpdate(17);
     $count_query = $DB->requests[0] ?? [];
     if ($count !== 2
         || ($count_query['FROM'] ?? null) !== 'glpi_plugin_credentials_credentials'
@@ -254,7 +254,7 @@ namespace {
         ['plugin_credentials_credentials_id' => 18, 'itemtype' => 'Computer', 'items_id' => 31],
         ['plugin_credentials_credentials_id' => 18, 'itemtype' => 'User', 'items_id' => 8],
     ];
-    $link_counts = \GlpiPlugin\\Credentials\\CredentialItemLink::getCredentialLinkCountsForItemForUpdate('User', 7);
+    $link_counts = \GlpiPlugin\Credentials\CredentialItemLink::getCredentialLinkCountsForItemForUpdate('User', 7);
     $counts_query = $DB->requests[0] ?? [];
     if ($link_counts !== [17 => 2]
         || ($counts_query['FROM'] ?? null) !== 'glpi_plugin_credentials_items'
@@ -266,7 +266,7 @@ namespace {
 
     $DB->credential_row['links_count'] = 2;
     $DB->affected_rows = 1;
-    \GlpiPlugin\\Credentials\\CredentialItemLink::adjustLinkCount(17, -1);
+    \GlpiPlugin\Credentials\CredentialItemLink::adjustLinkCount(17, -1);
     $count_update = $DB->updates[count($DB->updates) - 1] ?? null;
     if (!is_array($count_update)
         || ($count_update['table'] ?? null) !== 'glpi_plugin_credentials_credentials'
