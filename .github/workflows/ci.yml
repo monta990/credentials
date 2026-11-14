@@ -115,7 +115,7 @@ jobs:
           phpcs --standard=phpcs.xml.dist --report=checkstyle --no-cache | cs2pr
 
       - name: PHPStan static analysis
-        run: .ci/glpi/vendor/bin/phpstan analyse --configuration=phpstan.neon.dist --error-format=github --no-progress --memory-limit=1G
+        run: .ci/glpi/vendor/bin/phpstan analyse --configuration=phpstan.neon.dist --error-format=table --no-progress --memory-limit=1G
 
   package:
     name: Build installable test package
