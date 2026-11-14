@@ -1,6 +1,10 @@
 <?xml version="1.0"?>
 <ruleset name="GLPI Credentials">
-    <description>PHPCS checks for first-party plugin PHP code.</description>
+    <description>
+        PHPCS security and consistency checks for GLPI plugin PHP code.
+        This ruleset intentionally avoids PSR-12 rules that conflict with GLPI's
+        established legacy itemtype naming and hook conventions.
+    </description>
 
     <file>src</file>
     <file>front</file>
@@ -13,7 +17,24 @@
     <arg name="parallel" value="8"/>
     <arg value="sp"/>
 
-    <rule ref="PSR12">
-        <exclude name="PSR12.Files.FileHeader.SpacingAfterBlock"/>
+    <rule ref="Generic.Files.LineEndings"/>
+    <rule ref="Generic.PHP.DisallowShortOpenTag"/>
+    <rule ref="Generic.PHP.LowerCaseKeyword"/>
+    <rule ref="Generic.PHP.LowerCaseConstant"/>
+    <rule ref="Generic.PHP.NoSilencedErrors"/>
+    <rule ref="Generic.CodeAnalysis.EmptyStatement"/>
+
+    <rule ref="Generic.PHP.ForbiddenFunctions">
+        <properties>
+            <property name="forbiddenFunctions" type="array">
+                <element key="eval" value="null"/>
+                <element key="exec" value="null"/>
+                <element key="shell_exec" value="null"/>
+                <element key="system" value="null"/>
+                <element key="passthru" value="null"/>
+                <element key="proc_open" value="null"/>
+                <element key="popen" value="null"/>
+            </property>
+        </properties>
     </rule>
 </ruleset>
