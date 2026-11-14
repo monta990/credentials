@@ -251,25 +251,19 @@ if ($history_call === '' || !str_contains($history_call, 'credential_id') || str
 }
 
 $credential_model = file_get_contents($root . '/src/Credential.php');
-$active_ids_source = '';
-if (is_string($credential_model)) {
-    $active_ids_start = strpos($credential_model, 'public static function getActiveIDsForItem(');
-    $active_ids_end = $active_ids_start !== false
-        ? strpos($credential_model, 'public static function getCountForItem(', $active_ids_start)
-        : false;
-    if ($active_ids_start !== false && $active_ids_end !== false) {
-        $active_ids_source = substr($credential_model, $active_ids_start, $active_ids_end - $active_ids_start);
-    }
-}
 $active_id_requirements = [
-    'explicit item/entity parameters' => preg_match(
-        '~getActiveIDsForItem\(\s*string \$itemtype,\s*int \$items_id,\s*int \$entities_id\s*\): array~',
-        $active_ids_source
+    'explicit item/entity parameters' => is_string($credential_model) && preg_match(
+        '~function getActiveIDsForItem\\(\\s*string \\$itemtype,\\s*int \\$items_id,\\s*int \\$entities_id\\s*\\): array~',
+        $credential_model
     ) === 1,
-    'current user entity access check' => str_contains($active_ids_source, 'Session::haveAccessToEntity($entities_id)'),
-    'credential entity scope' => str_contains($active_ids_source, "'entities_id' => $entities_id,"),
-    'active-only credential filter' => str_contains($active_ids_source, "'is_deleted' => 0,"),
-    'active IDs return' => str_contains($active_ids_source, 'return $active_ids;'),
+    'current user entity access check' => is_string($credential_model)
+        && str_contains($credential_model, 'Session::haveAccessToEntity($entities_id)'),
+    'credential entity scope' => is_string($credential_model)
+        && str_contains($credential_model, "'entities_id' => $entities_id,"),
+    'active-only credential filter' => is_string($credential_model)
+        && str_contains($credential_model, "'is_deleted' => 0,"),
+    'active IDs return' => is_string($credential_model)
+        && str_contains($credential_model, 'return $active_ids;'),
 ];
 foreach ($active_id_requirements as $requirement => $present) {
     if (!$present) {
