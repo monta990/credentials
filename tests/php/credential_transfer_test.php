@@ -253,7 +253,7 @@ namespace GlpiPlugin\Credentials {
         public static function lockItemForUpdate(string $itemtype, int $items_id, ?int $expected_entity_id = null): bool
         {
             $item = getItemForItemtype($itemtype);
-            if (!$item instanceof \\CommonDBTM || !$item->getFromDB($items_id)) {
+            if (!$item instanceof \CommonDBTM || !$item->getFromDB($items_id)) {
                 return false;
             }
             return $expected_entity_id === null
