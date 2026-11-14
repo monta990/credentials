@@ -241,7 +241,7 @@ namespace GlpiPlugin\Credentials {
             $DB->runBeforeLock();
             if ($DB->forceNextLockFailure) {
                 $DB->forceNextLockFailure = false;
-                throw new \\RuntimeException('Unable to acquire the credential write lock.');
+                throw new \RuntimeException('Unable to acquire the credential write lock.');
             }
             $ok = $DB->update(Credential::getTable(), ['link_lock_token' => bin2hex(random_bytes(16))], $where);
             $locked = $ok !== false && $DB->getAffectedRows() === 1;
