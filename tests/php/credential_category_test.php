@@ -25,6 +25,15 @@ final class DBmysql
     }
 }
 
+final class FakeQueryExpression
+{
+    public function __construct(public string $expression) {}
+    public function getValue(): string { return $this->expression; }
+    public function getParams(): array { return []; }
+}
+
+class_alias(FakeQueryExpression::class, 'Glpi\\DBAL\\QueryExpression');
+
 final class FakeCategoryResult
 {
     private bool $read = false;
@@ -149,6 +158,12 @@ final class FakeCategoryDB
     {
         $this->queryLog[] = 'REQUEST';
         $table = (string) ($criteria['FROM'] ?? '');
+        if ($table === 'glpi_entities') {
+            $entityId = (int) ($criteria['WHERE']['id'] ?? -1);
+            return new FakeCategoryIterator(
+                in_array($entityId, $this->existingEntities, true) ? [['id' => $entityId]] : []
+            );
+        }
         $rows = $this->tables[$table] ?? [];
         foreach (($criteria['WHERE'] ?? []) as $field => $expected) {
             $rows = array_values(array_filter(
@@ -183,6 +198,20 @@ final class FakeCategoryDB
 
     public function update(string $table, array $data, array $where): bool
     {
+        if ($table === 'glpi_entities') {
+            $entityId = (int) ($where['id'] ?? -1);
+            if ($this->failEntityLock) {
+                throw new RuntimeException('Simulated entity lock query failure');
+            }
+            $this->entityLocks[] = $entityId;
+            if (is_callable($this->beforeEntityLock)) {
+                $callback = $this->beforeEntityLock;
+                $this->beforeEntityLock = null;
+                $callback($this, $entityId);
+            }
+            return in_array($entityId, $this->existingEntities, true);
+        }
+
         $this->updates[] = ['table' => $table, 'data' => $data, 'where' => $where];
         $changed = false;
         foreach ($this->tables[$table] ?? [] as $index => $row) {
