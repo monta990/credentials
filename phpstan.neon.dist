@@ -1,0 +1,23 @@
+parameters:
+    level: 5
+    phpVersion: 80300
+    paths:
+        - src
+        - front
+        - setup.php
+        - hook.php
+    tmpDir: .cache/phpstan
+    treatPhpDocTypesAsCertain: false
+    reportUnmatchedIgnoredErrors: false
+
+    # GLPI supplies these symbols at runtime. The plugin repository is tested
+    # without booting an installed GLPI instance, so unresolved core symbols
+    # are excluded while PHPStan still checks types and control flow inside
+    # the plugin's own classes and functions.
+    ignoreErrors:
+        - identifier: class.notFound
+        - identifier: classConstant.notFound
+        - identifier: constant.notFound
+        - identifier: function.notFound
+        - identifier: method.notFound
+        - identifier: property.notFound
