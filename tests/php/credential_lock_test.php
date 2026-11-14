@@ -6,6 +6,27 @@ namespace {
     class CommonDBTM
     {
         public static function getTable($classname = null): string { return ''; }
+        /** @var array<string,mixed> */
+        public array $fields = [];
+        public function getFromResultSet(array $row): void { $this->fields = $row; }
+    }
+
+    class CommonDBConnexity extends CommonDBTM {}
+
+    class CommonDBChild extends CommonDBConnexity
+    {
+        public static string $items_id = 'databaseinstances_id';
+        public static string $itemtype = 'DatabaseInstance';
+        public static function getTable($classname = null): string { return 'glpi_databases'; }
+        public static function getIndexName(): string { return 'id'; }
+    }
+
+    class Database extends CommonDBChild {}
+
+    class DatabaseInstance extends CommonDBTM
+    {
+        public static function getTable($classname = null): string { return 'glpi_databaseinstances'; }
+        public static function getIndexName(): string { return 'id'; }
     }
 
     class Session
@@ -34,16 +55,8 @@ namespace {
     {
         /** @param list<array<string,mixed>> $rows */
         public function __construct(private array $rows) {}
-
-        public function current(): ?array
-        {
-            return $this->rows[0] ?? null;
-        }
-
-        public function getIterator(): Traversable
-        {
-            yield from $this->rows;
-        }
+        public function current(): ?array { return $this->rows[0] ?? null; }
+        public function getIterator(): Traversable { yield from $this->rows; }
     }
 
     final class FakeCredentialLockDB
@@ -56,6 +69,8 @@ namespace {
         public array $locking_links = [];
         /** @var array<string,mixed> */
         public array $credential_row = [];
+        /** @var array<string,array<string,mixed>> */
+        public array $item_rows = [];
         public int $affected_rows = 1;
 
         public function update(string $table, array $values, array $where): bool
@@ -64,10 +79,7 @@ namespace {
             return true;
         }
 
-        public function getAffectedRows(): int
-        {
-            return $this->affected_rows;
-        }
+        public function getAffectedRows(): int { return $this->affected_rows; }
 
         public function request(array $criteria): FakeCredentialLockIterator
         {
@@ -84,6 +96,16 @@ namespace {
                         : []
                 );
             }
+            if ($table === 'glpi_databases') {
+                $id = (int) ($criteria['WHERE']['id'] ?? 0);
+                $row = $this->item_rows['Database#' . $id] ?? null;
+                return new FakeCredentialLockIterator(is_array($row) ? [$row] : []);
+            }
+            if ($table === 'glpi_databaseinstances') {
+                $id = (int) ($criteria['WHERE']['id'] ?? 0);
+                $row = $this->item_rows['DatabaseInstance#' . $id] ?? null;
+                return new FakeCredentialLockIterator(is_array($row) ? [$row] : []);
+            }
             throw new RuntimeException('Unexpected locking-read table: ' . $table);
         }
     }
@@ -92,22 +114,28 @@ namespace {
 namespace GlpiPlugin\Credentials {
     final class Credential
     {
-        public static function getTable(): string
-        {
-            return 'glpi_plugin_credentials_credentials';
-        }
+        public static function getTable(): string { return 'glpi_plugin_credentials_credentials'; }
     }
 
     final class CredentialItem
     {
         public static function isSupportedItemtype(string $itemtype): bool
         {
-            return $itemtype === 'User';
+            return in_array($itemtype, ['User', 'Database'], true);
         }
     }
 }
 
 namespace {
+    function getItemForItemtype(string $itemtype): ?\CommonDBTM
+    {
+        return match ($itemtype) {
+            'Database' => new \Database(),
+            'DatabaseInstance' => new \DatabaseInstance(),
+            default => null,
+        };
+    }
+
     require_once __DIR__ . '/../../src/CredentialItemLink.php';
 
     $DB = new FakeCredentialLockDB();
@@ -191,9 +219,7 @@ namespace {
         throw new RuntimeException('Credential data must be read by its exact parent ID after acquiring its write lock.');
     }
 
-    // Regression: Database is a CommonDBChild. Its parent-ID probe must itself
-    // be a locking/current read, not a consistent SELECT that establishes the
-    // REPEATABLE READ snapshot before the parent lock wait.
+    // Database child: the initial FK probe must not create a consistent snapshot.
     $DB->requests = [];
     $DB->item_rows = [
         'Database#88' => ['id' => 88, 'databaseinstances_id' => 21, 'name' => 'ERP database'],
@@ -202,6 +228,7 @@ namespace {
     if (!\GlpiPlugin\Credentials\CredentialItemLink::lockItemForUpdate('Database', 88, 4)) {
         throw new RuntimeException('Database child item should lock when its parent and child rows are available.');
     }
+
     $probe = $DB->requests[0] ?? [];
     $probe_order = $probe['ORDER'][0] ?? null;
     if (($probe['FROM'] ?? null) !== 'glpi_databases'
@@ -211,6 +238,7 @@ namespace {
     ) {
         throw new RuntimeException('CommonDBChild parent-ID probe must be a DBAL current/locking read.');
     }
+
     $parent_lock = $DB->requests[1] ?? [];
     $child_lock = $DB->requests[2] ?? [];
     if (($parent_lock['FROM'] ?? null) !== 'glpi_databaseinstances'
@@ -229,5 +257,5 @@ namespace {
         throw new RuntimeException('Current locking reads must use GLPI DBAL QueryExpression, not direct SQL execution.');
     }
 
-    echo "Credential row-lock API, DBAL current-read query and active/entity guard regression: OK\\n";
+    echo "Credential row-lock API, DBAL current-read query and active/entity guard regression: OK\n";
 }
