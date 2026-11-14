@@ -104,7 +104,7 @@ namespace {
 
     $DB = new FakeCredentialLockDB();
 
-    if (!\\GlpiPlugin\\Credentials\\CredentialItemLink::lockCredential(17, 4, true)) {
+    if (!\GlpiPlugin\Credentials\\CredentialItemLink::lockCredential(17, 4, true)) {
         throw new RuntimeException('An affected credential row must be locked successfully.');
     }
     $write = $DB->updates[0] ?? null;
@@ -117,12 +117,12 @@ namespace {
     }
 
     $DB->affected_rows = 0;
-    if (\\GlpiPlugin\\Credentials\\CredentialItemLink::lockCredential(18, 4, true)) {
+    if (\GlpiPlugin\Credentials\\CredentialItemLink::lockCredential(18, 4, true)) {
         throw new RuntimeException('A missing, archived or moved credential row must not be treated as locked.');
     }
 
     $updates_before_invalid_id = count($DB->updates);
-    if (\\GlpiPlugin\\Credentials\\CredentialItemLink::lockCredential(0)
+    if (\GlpiPlugin\Credentials\\CredentialItemLink::lockCredential(0)
         || count($DB->updates) !== $updates_before_invalid_id
     ) {
         throw new RuntimeException('Invalid credential IDs must not be locked or written.');
@@ -133,7 +133,7 @@ namespace {
         ['itemtype' => 'User', 'items_id' => 7],
         ['itemtype' => 'User', 'items_id' => 7],
     ];
-    $links = \\GlpiPlugin\\Credentials\\CredentialItemLink::getLinksForCredentialForUpdate(17);
+    $links = \GlpiPlugin\Credentials\\CredentialItemLink::getLinksForCredentialForUpdate(17);
     if ($links !== [
         ['itemtype' => 'Computer', 'items_id' => 31],
         ['itemtype' => 'User', 'items_id' => 7],
@@ -166,7 +166,7 @@ namespace {
         'date_mod' => '2026-11-09 10:00:00',
         'is_deleted' => 0,
     ];
-    $credential = \\GlpiPlugin\\Credentials\\CredentialItemLink::getCredentialForUpdate(17);
+    $credential = \GlpiPlugin\Credentials\\CredentialItemLink::getCredentialForUpdate(17);
     if (!is_array($credential)
         || ($credential['password'] ?? null) !== 'glpikey-password-ciphertext-current'
         || ($credential['login'] ?? null) !== 'glpikey-login-ciphertext-current'
