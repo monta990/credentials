@@ -98,9 +98,21 @@ namespace {
         private int $affected_rows = 0;
         /** @var array<string,mixed>|null */
         public ?array $item_row = ['id' => 7, 'entities_id' => 4, 'name' => 'ERP'];
-        public ?array $database_probe = ['databaseinstances_id' => 50];
-        public ?array $database_parent_row = ['id' => 50, 'entities_id' => 8, 'name' => 'SQL Server'];
-        public ?array $database_child_row = ['id' => 12, 'databaseinstances_id' => 50, 'name' => 'ERP DB'];
+        /** @var array<int,array<string,mixed>> */
+        public array $database_probe_rows = [
+            12 => ['databaseinstances_id' => 50],
+            13 => ['databaseinstances_id' => 90],
+        ];
+        /** @var array<int,array<string,mixed>> */
+        public array $database_parent_rows = [
+            50 => ['id' => 50, 'entities_id' => 8, 'name' => 'SQL Server A'],
+            90 => ['id' => 90, 'entities_id' => 8, 'name' => 'SQL Server B'],
+        ];
+        /** @var array<int,array<string,mixed>> */
+        public array $database_child_rows = [
+            12 => ['id' => 12, 'databaseinstances_id' => 50, 'name' => 'ERP DB A'],
+            13 => ['id' => 13, 'databaseinstances_id' => 90, 'name' => 'ERP DB B'],
+        ];
         /** @var list<array<string,mixed>> */
         public array $link_rows = [
             ['itemtype' => 'Computer', 'items_id' => 10],
@@ -123,13 +135,20 @@ namespace {
             if ($table === 'glpi_computers') {
                 $rows = $this->item_row === null ? [] : [$this->item_row];
             } elseif ($table === 'glpi_databaseinstances') {
-                $rows = $this->database_parent_row === null ? [] : [$this->database_parent_row];
+                $where = $criteria['WHERE'] ?? [];
+                $id = (int) ($where['glpi_databaseinstances.id'] ?? $where['id'] ?? 0);
+                $row = $this->database_parent_rows[$id] ?? null;
+                $rows = is_array($row) ? [$row] : [];
             } elseif ($table === 'glpi_databases') {
-                if (!empty($criteria['ORDER'])) {
-                    $rows = $this->database_child_row === null ? [] : [$this->database_child_row];
+                $where = $criteria['WHERE'] ?? [];
+                $select = $criteria['SELECT'] ?? [];
+                if ($select === ['databaseinstances_id'] && isset($where['id'])) {
+                    $row = $this->database_probe_rows[(int) $where['id']] ?? null;
                 } else {
-                    $rows = $this->database_probe === null ? [] : [$this->database_probe];
+                    $id = (int) ($where['glpi_databases.id'] ?? $where['id'] ?? 0);
+                    $row = $this->database_child_rows[$id] ?? null;
                 }
+                $rows = is_array($row) ? [$row] : [];
             } elseif ($table === 'glpi_plugin_credentials_items'
                 && isset($criteria['WHERE']['plugin_credentials_credentials_id'])) {
                 $rows = $this->link_rows;
@@ -231,14 +250,42 @@ namespace {
     $child_lock_requests = $db->requests;
     check(count($child_lock_requests) === 3
         && ($child_lock_requests[0]['FROM'] ?? '') === 'glpi_databases'
+        && ($child_lock_requests[0]['SELECT'] ?? []) === ['databaseinstances_id']
+        && !isset($child_lock_requests[0]['ORDER'])
         && ($child_lock_requests[1]['FROM'] ?? '') === 'glpi_databaseinstances'
         && str_contains($child_lock_requests[1]['ORDER'][0]->getValue(), 'FOR UPDATE')
         && ($child_lock_requests[2]['FROM'] ?? '') === 'glpi_databases'
         && str_contains($child_lock_requests[2]['ORDER'][0]->getValue(), 'FOR UPDATE'),
-        'CommonDBChild lock order is parent current-read first and child current-read second');
-    $db->database_child_row = ['id' => 12, 'databaseinstances_id' => 51, 'name' => 'ERP DB'];
-    check(!\GlpiPlugin\Credentials\CredentialItemLink::lockItemForUpdate(\Database::class, 12, 8), 'CommonDBChild foreign-key changes during locking are rejected');
-    $db->database_child_row = ['id' => 12, 'databaseinstances_id' => 50, 'name' => 'ERP DB'];
+        'CommonDBChild resolves FK without locking the child, then locks parent and child');
+    $db->database_child_rows[12] = ['id' => 12, 'databaseinstances_id' => 51, 'name' => 'ERP DB'];
+    check(!CredentialItemLink::lockItemForUpdate(Database::class, 12, 8), 'CommonDBChild rejects an FK that changed after parent resolution');
+    $db->database_child_rows[12] = ['id' => 12, 'databaseinstances_id' => 50, 'name' => 'ERP DB'];
+
+    $db->requests = [];
+    $bulk_locked = CredentialItemLink::lockItemsForUpdate([
+        ['itemtype' => Database::class, 'items_id' => 13, 'entities_id' => 8],
+        ['itemtype' => Database::class, 'items_id' => 12, 'entities_id' => 8],
+    ]);
+    check($bulk_locked, 'bulk CommonDBChild lock succeeds when parent and child rows exist');
+    $bulk = $db->requests;
+    check(count($bulk) === 6
+        && ($bulk[0]['FROM'] ?? '') === 'glpi_databases'
+        && ($bulk[1]['FROM'] ?? '') === 'glpi_databases'
+        && ($bulk[2]['FROM'] ?? '') === 'glpi_databaseinstances'
+        && ($bulk[3]['FROM'] ?? '') === 'glpi_databaseinstances'
+        && ($bulk[4]['FROM'] ?? '') === 'glpi_databases'
+        && ($bulk[5]['FROM'] ?? '') === 'glpi_databases',
+        'bulk lock resolves all FKs, locks all parents, then all children');
+    $parent_ids = [
+        (int) ($bulk[2]['WHERE']['glpi_databaseinstances.id'] ?? 0),
+        (int) ($bulk[3]['WHERE']['glpi_databaseinstances.id'] ?? 0),
+    ];
+    $child_ids = [
+        (int) ($bulk[4]['WHERE']['glpi_databases.id'] ?? 0),
+        (int) ($bulk[5]['WHERE']['glpi_databases.id'] ?? 0),
+    ];
+    check($parent_ids === [50, 90], 'bulk parents lock by ascending parent ID despite reversed child input');
+    check($child_ids === [12, 13], 'bulk children lock by ascending child ID despite reversed child input');
 
     $root = dirname(__DIR__);
     $backup = file_get_contents($root . '/src/Service/CredentialBackupService.php');

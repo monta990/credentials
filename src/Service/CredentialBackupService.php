@@ -70,7 +70,7 @@ final class CredentialBackupService
             }
             $result = self::buildBackup($passphrase, $include_archived, $candidate_ids);
             foreach ($result['credential_ids'] as $credential_id) {
-                $links = CredentialItemLink::getLinksForCredential($credential_id);
+                $links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
                 $recorded = $links !== []
                     ? CredentialHistory::recordForLinkedItems($credential_id, Credential::HISTORY_EXPORTED)
                     : CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_EXPORTED);
@@ -120,8 +120,8 @@ final class CredentialBackupService
 
             $credential_id = (int) $candidate_row['id'];
             // The export caller has already acquired ALL candidate locks before
-            // entering this method. Reads now share a snapshot created only after
-            // every lock wait has completed.
+            // entering this method. Read the credential with FOR UPDATE so this
+            // remains current even inside an outer transaction with an older snapshot.
             $row = CredentialItemLink::getCredentialForUpdate($credential_id);
             if (!is_array($row) || (int) ($row['entities_id'] ?? -1) !== $candidate_entity_id) {
                 throw new \RuntimeException(__('A credential changed while the backup was being prepared. Retry the export.', 'credentials'));

@@ -221,8 +221,8 @@ final class CredentialAdminService
                 return false;
             }
 
-            $credential = new Credential();
-            if (!$credential->getFromDB($credential_id)
+            $credential = CredentialItemLink::loadCredentialForUpdate($credential_id);
+            if ($credential === null
                 || (int) ($credential->fields['is_deleted'] ?? 0) !== 1
                 || (int) ($credential->fields['entities_id'] ?? -1) !== $entity_id
                 || CredentialItemLink::getLinksForCredentialForUpdate($credential_id) !== []
@@ -299,8 +299,8 @@ final class CredentialAdminService
                 return false;
             }
 
-            $credential = new Credential();
-            if (!$credential->getFromDB($credential_id)
+            $credential = CredentialItemLink::loadCredentialForUpdate($credential_id);
+            if ($credential === null
                 || (int) ($credential->fields['entities_id'] ?? -1) !== $entity_id
                 || (int) ($credential->fields['is_deleted'] ?? 0) !== 1
             ) {
@@ -386,8 +386,8 @@ final class CredentialAdminService
                 if (!isset($locked_set[$id])) {
                     continue;
                 }
-                $credential = new Credential();
-                if (!$credential->getFromDB($id)
+                $credential = CredentialItemLink::loadCredentialForUpdate($id);
+                if ($credential === null
                     || (int) ($credential->fields['is_deleted'] ?? 0) !== 1
                     || (int) ($credential->fields['entities_id'] ?? -1) !== $entity
                     || (string) ($credential->fields['date_mod'] ?? '') >= $cutoff

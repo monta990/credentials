@@ -138,13 +138,13 @@ final class CredentialController extends AbstractController
                         // The candidate was checked before the transaction. Re-read
                         // its state after the row lock so an intervening archive or
                         // entity move cannot authorize a stale association.
-                        $locked_candidate = new Credential();
+                        $locked_candidate = CredentialItemLink::loadCredentialForUpdate($candidate_id);
                         if (
-                            !$locked_candidate->getFromDB($candidate_id)
+                            $locked_candidate === null
                             || (int) ($locked_candidate->fields['is_deleted'] ?? 0) !== 0
                             || (int) ($locked_candidate->fields['entities_id'] ?? 0) !== $parent_entity_id
                             || !$locked_candidate->can($candidate_id, READ)
-                            || !CredentialItemLink::userCanReachCredential($candidate_id)
+                            || !CredentialItemLink::userCanReachCredentialForUpdate($candidate_id)
                         ) {
                             return false;
                         }
@@ -152,7 +152,7 @@ final class CredentialController extends AbstractController
                         // A concurrent request may have created this same relation
                         // before our lock was acquired. Treat that as an idempotent
                         // success instead of attempting a duplicate insert.
-                        if (CredentialItemLink::exists($candidate_id, $itemtype, $items_id)) {
+                        if (CredentialItemLink::existsForUpdate($candidate_id, $itemtype, $items_id)) {
                             return true;
                         }
 
@@ -213,18 +213,18 @@ final class CredentialController extends AbstractController
                     // Repeat authorization and relation checks after locking. The
                     // pre-transaction object may have become archived, moved or
                     // detached while this request was waiting for the row lock.
-                    $locked_credential = new Credential();
+                    $locked_credential = CredentialItemLink::loadCredentialForUpdate($credential_id);
                     if (
-                        !$locked_credential->getFromDB($credential_id)
+                        $locked_credential === null
                         || (int) ($locked_credential->fields['is_deleted'] ?? 0) !== 0
                         || (int) ($locked_credential->fields['entities_id'] ?? 0) !== $parent_entity_id
                         || !$locked_credential->can($credential_id, $is_delete ? DELETE : READ)
-                        || !CredentialItemLink::exists($credential_id, $itemtype, $items_id)
+                        || !CredentialItemLink::existsForUpdate($credential_id, $itemtype, $items_id)
                     ) {
                         return false;
                     }
 
-                    if (!$is_delete && !CredentialLinkPolicy::canUnlink(CredentialItemLink::countForCredential($credential_id))) {
+                    if (!$is_delete && !CredentialLinkPolicy::canUnlink(CredentialItemLink::countForCredentialForUpdate($credential_id))) {
                         $last_link_blocked = true;
                         return false;
                     }
@@ -234,7 +234,7 @@ final class CredentialController extends AbstractController
                         // Deleting a credential is global to every linked item. Capture
                         // the relations first so every affected item's native history
                         // receives a secret-free deletion event in this transaction.
-                        $linked_items = CredentialItemLink::getLinksForCredential($credential_id);
+                        $linked_items = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
                         if ($linked_items === []) {
                             return false;
                         }
@@ -282,7 +282,7 @@ final class CredentialController extends AbstractController
 
                     // A last-link unlink is rejected above. Active credentials can
                     // therefore never become orphaned through the user interface.
-                    return CredentialItemLink::countForCredential($credential_id) > 0;
+                    return CredentialItemLink::countForCredentialForUpdate($credential_id) > 0;
                 });
 
                 if ($changed) {
@@ -466,11 +466,11 @@ final class CredentialController extends AbstractController
                         throw new \RuntimeException(__('The credential or selected item is no longer available for linking.', 'credentials'));
                     }
 
-                    $locked_credential = new Credential();
+                    $locked_credential = CredentialItemLink::loadCredentialForUpdate($credential_id);
                     $live_source = CredentialItem::loadReadableItem($itemtype, $items_id);
                     $live_target = CredentialItem::loadReadableItem($target_itemtype, $target_items_id);
                     if (
-                        !$locked_credential->getFromDB($credential_id)
+                        $locked_credential === null
                         || (int) ($locked_credential->fields['is_deleted'] ?? 0) !== 0
                         || (int) ($locked_credential->fields['entities_id'] ?? -1) !== $entity_id
                         || !$locked_credential->can($credential_id, UPDATE)
@@ -483,7 +483,7 @@ final class CredentialController extends AbstractController
                         throw new \RuntimeException(__('The selected item or credential is no longer available for linking.', 'credentials'));
                     }
 
-                    if (CredentialItemLink::exists($credential_id, $target_itemtype, $target_items_id)) {
+                    if (CredentialItemLink::existsForUpdate($credential_id, $target_itemtype, $target_items_id)) {
                         throw new \RuntimeException(__('This item is already linked to this credential.', 'credentials'));
                     }
 
@@ -838,13 +838,13 @@ final class CredentialController extends AbstractController
                             }
 
                             $live_parent = CredentialItem::loadReadableItem($itemtype, $items_id);
-                            $locked_credential = new Credential();
+                            $locked_credential = CredentialItemLink::loadCredentialForUpdate($credential_id);
                             if (
                                 $live_parent === null
                                 || CredentialItem::resolveParentEntityID($live_parent) !== $expected_entity_id
                                 || !$live_parent->can($items_id, UPDATE)
-                                || !CredentialItemLink::exists($credential_id, $itemtype, $items_id)
-                                || !$locked_credential->getFromDB($credential_id)
+                                || !CredentialItemLink::existsForUpdate($credential_id, $itemtype, $items_id)
+                                || $locked_credential === null
                                 || (int) ($locked_credential->fields['is_deleted'] ?? 0) !== 0
                                 || (int) ($locked_credential->fields['entities_id'] ?? 0) !== $expected_entity_id
                                 || !$locked_credential->can($credential_id, UPDATE)

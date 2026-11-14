@@ -57,7 +57,7 @@ final class CredentialHistory
             return false;
         }
 
-        $links = CredentialItemLink::getLinksForCredential($credential_id);
+        $links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
         if ($links === []) {
             return false;
         }
