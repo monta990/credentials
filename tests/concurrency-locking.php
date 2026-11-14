@@ -308,21 +308,45 @@ namespace {
 
     $purge_start = strpos($links_source, 'public static function cleanupForItem');
     $purge_transaction = strpos($links_source, '$DB->beginTransaction();', $purge_start);
-    $purge_candidates = strpos($links_source, 'self::getCredentialIDsForItemForUpdate($itemtype, $items_id)', $purge_transaction);
+    $purge_candidates = strpos($links_source, 'self::getCredentialLinkCountsForItemForUpdate($itemtype, $items_id)', $purge_transaction);
     $purge_credentials = strpos($links_source, 'self::lockCredential($credential_id)', $purge_candidates);
-    check($purge_transaction !== false && $purge_candidates !== false && $purge_credentials !== false && $purge_transaction < $purge_candidates && $purge_candidates < $purge_credentials,
-        'ITEM_PURGE starts its transaction, current-reads candidates, then locks credentials');
+    $purge_count_update = strpos($links_source, 'self::adjustLinkCount($credential_id, -$link_counts[$credential_id])', $purge_credentials);
+    $purge_late_relation_lock = strpos($links_source, 'self::getLinksForCredentialForUpdate($credential_id)', $purge_credentials);
+    check($purge_transaction !== false && $purge_candidates !== false && $purge_credentials !== false
+        && $purge_count_update !== false && $purge_late_relation_lock === false
+        && $purge_transaction < $purge_candidates && $purge_candidates < $purge_credentials && $purge_credentials < $purge_count_update,
+        'ITEM_PURGE locks its own relation rows before credentials, then decrements the parent count without locking other relations');
 
     check(substr_count($controller, 'CredentialItemLink::lockItemForUpdate(') >= 4,
-        'all controller link, unlink, move-target and create/update flows lock the GLPI item first');
-    check(str_contains($admin, 'lockItemForUpdate($itemtype, $items_id, $entity_id)')
-        && strpos($admin, 'lockItemForUpdate($itemtype, $items_id, $entity_id)') < strpos($admin, 'lockCredential($credential_id, $entity_id, false)'),
-        'archived credential restore locks its item before its credential');
+        'all controller link, unlink, move-target and create/update flows lock the GLPI item first');    $link_candidate_relation = strpos($controller, 'getLinksForCredentialForUpdate($candidate_id)');
+    $link_candidate_parent = strpos($controller, 'lockCredential($candidate_id, $parent_entity_id, true)');
+    $unlink_start = strpos($controller, "elseif ($request->request->has('unlink')");
+    $unlink_relation = strpos($controller, 'getLinksForCredentialForUpdate($credential_id)', $unlink_start);
+    $unlink_parent = strpos($controller, 'lockCredential($credential_id, $parent_entity_id, true)', $unlink_start);
+    check($link_candidate_relation !== false && $link_candidate_parent !== false && $link_candidate_relation < $link_candidate_parent
+        && $unlink_start !== false && $unlink_relation !== false && $unlink_parent !== false && $unlink_relation < $unlink_parent,
+        'controller link/unlink/delete flows lock relationship rows before the credential parent');
+    $restore_start = strpos($admin, 'public static function restore');
+    $restore_item = strpos($admin, 'lockItemForUpdate($itemtype, $items_id, $entity_id)', $restore_start);
+    $restore_relations = strpos($admin, 'getLinksForCredentialForUpdate($credential_id)', $restore_start);
+    $restore_parent = strpos($admin, 'lockCredential($credential_id, $entity_id, false)', $restore_start);
+    check($restore_item !== false && $restore_relations !== false && $restore_parent !== false
+        && $restore_item < $restore_relations && $restore_relations < $restore_parent,
+        'archived credential restore locks its item, relationships, then credential');
     check(strpos($backup, 'lockItemsForUpdate($item_locks)') < strpos($backup, 'foreach ($prepared as $entry)'),
         'backup import locks all destination items before it creates relationship rows');
-    check(str_contains($transfer, 'lockItemsForUpdate([')
-        && str_contains($transfer, 'getCredentialIDsForItemForUpdate($itemtype, $items_id)'),
-        'clone and move transfer lock items before current-reading their candidate relationships');
+    $backup_export_start = strpos($backup, 'public static function createBackup');
+    $backup_relations = strpos($backup, 'getLinksForCredentialsForUpdate(array_column($candidate_ids, \'id\'))', $backup_export_start);
+    $backup_parents = strpos($backup, 'lockCredentials(array_column($candidate_ids, \'id\'))', $backup_export_start);
+    check($backup_relations !== false && $backup_parents !== false && $backup_relations < $backup_parents,
+        'backup export locks relationship sets before credential parent rows');
+    $transfer_start = strpos($transfer, 'public static function handle');
+    $transfer_items = strpos($transfer, 'CredentialItemLink::lockItemsForUpdate([', $transfer_start);
+    $transfer_relations = strpos($transfer, 'CredentialItemLink::getLinksForCredentialsForUpdate($credential_ids)', $transfer_start);
+    $transfer_parents = strpos($transfer, 'CredentialItemLink::lockCredentials($credential_ids)', $transfer_start);
+    check($transfer_items !== false && $transfer_relations !== false && $transfer_parents !== false
+        && $transfer_items < $transfer_relations && $transfer_relations < $transfer_parents,
+        'clone and move transfer lock items, relationship sets and credential parents in one order');
     check(!str_contains($links_source, '$DB->doQuery('), 'runtime relationship reads no longer execute raw SQL');
     check(!str_contains(file_get_contents($root . '/src/CredentialCategory.php'), '$DB->doQuery('), 'category locking uses the GLPI DBAL builder instead of raw SQL');
     check(!str_contains($links_source, 'SELECT * FROM') && !str_contains($links_source, 'SELECT itemtype'), 'locking reads do not concatenate caller-supplied SQL identifiers or values');
