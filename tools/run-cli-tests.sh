@@ -28,4 +28,7 @@ for test_file in "${php_tests[@]}"; do
     php "$test_file"
 done
 
+# Cover the two-phase CommonDBChild lock order and FK revalidation regressions.
+php tests/concurrency-locking.php
+
 printf 'PHP %s CLI syntax and regression tests: OK\n' "$EXPECTED_MINOR"

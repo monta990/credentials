@@ -47,6 +47,30 @@ final class CredentialItemLink extends CommonDBTM
         return count($iterator) > 0;
     }
 
+    /**
+     * Check a relation with an InnoDB current read after locking its credential row.
+     * The ordinary exists() method remains non-locking for display/prechecks.
+     */
+    public static function existsForUpdate(int $credential_id, string $itemtype, int $items_id): bool
+    {
+        global $DB;
+        if ($credential_id <= 0 || $items_id <= 0 || !CredentialItem::isSupportedItemtype($itemtype)) {
+            return false;
+        }
+        $iterator = $DB->request([
+            'SELECT' => ['id'],
+            'FROM' => self::getTable(),
+            'WHERE' => [
+                'plugin_credentials_credentials_id' => $credential_id,
+                'itemtype' => $itemtype,
+                'items_id' => $items_id,
+            ],
+            'ORDER' => [new QueryExpression(\DBmysql::quoteName('id') . ' FOR UPDATE')],
+            'LIMIT' => 1,
+        ]);
+        return count($iterator) > 0;
+    }
+
     /** @return array<int, array{itemtype:string,items_id:int}> */
     public static function getLinksForCredential(int $credential_id): array
     {
@@ -151,102 +175,115 @@ final class CredentialItemLink extends CommonDBTM
     }
 
     /**
-     * Lock a supported GLPI item before locking or mutating its credential links.
+     * Resolve a requested item before acquiring row locks.
      *
-     * Lock order is always GLPI item row first, credential parent row second.
-     * GLPI deletes an item before invoking ITEM_PURGE but keeps that row lock
-     * until the surrounding transaction finishes. A link writer therefore either
-     * commits before the purge (and is found by its current-read enumeration), or
-     * waits for the purge and then finds that the item no longer exists.
+     * CommonDBChild parent IDs are read without locking here. They are lock-plan
+     * hints only: after all parents have been locked, each child is fetched with
+     * FOR UPDATE and its FK is revalidated. Any changed FK aborts the operation.
+     *
+     * @return array{itemtype:string,items_id:int,expected_entity_id:?int,item:CommonDBTM,parent_type:?string,parent_id:int,parent_field:?string,parent:?CommonDBTM}|null
+     */
+    private static function resolveItemLockPlan(
+        string $itemtype,
+        int $items_id,
+        ?int $expected_entity_id,
+    ): ?array {
+        if (!CredentialItem::isSupportedItemtype($itemtype) || $items_id <= 0) {
+            return null;
+        }
+        $item = getItemForItemtype($itemtype);
+        if (!$item instanceof CommonDBTM) {
+            return null;
+        }
+        $plan = [
+            'itemtype' => $itemtype,
+            'items_id' => $items_id,
+            'expected_entity_id' => $expected_entity_id,
+            'item' => $item,
+            'parent_type' => null,
+            'parent_id' => 0,
+            'parent_field' => null,
+            'parent' => null,
+        ];
+        if (!$item instanceof CommonDBChild) {
+            return $plan;
+        }
+
+        global $DB;
+        $parent_field = $item::$items_id;
+        $parent_type = (string) $item::$itemtype;
+        if ($parent_field === '' || $parent_type === '' || !is_a($parent_type, CommonDBTM::class, true)) {
+            return null;
+        }
+
+        // Do not lock a child while resolving its parent: that would invert
+        // parent-before-child ordering in a batch. This ordinary probe may create
+        // an RR snapshot, so later state decisions use current reads and the final
+        // child locking read revalidates the FK value.
+        $index = $item::getIndexName();
+        $probe = $DB->request([
+            'SELECT' => [$parent_field],
+            'FROM' => $item::getTable(),
+            'WHERE' => [$index => $items_id],
+            'LIMIT' => 1,
+        ])->current();
+        if (!is_array($probe)) {
+            return null;
+        }
+        $parent_id = (int) ($probe[$parent_field] ?? 0);
+        if ($parent_id <= 0) {
+            return null;
+        }
+        $parent = getItemForItemtype($parent_type);
+        if (!$parent instanceof CommonDBTM) {
+            return null;
+        }
+        $plan['parent_type'] = $parent_type;
+        $plan['parent_id'] = $parent_id;
+        $plan['parent_field'] = $parent_field;
+        $plan['parent'] = $parent;
+        return $plan;
+    }
+
+    /**
+     * Lock one supported GLPI item and, for CommonDBChild, its parent first.
      */
     public static function lockItemForUpdate(
         string $itemtype,
         int $items_id,
         ?int $expected_entity_id = null,
     ): bool {
-        if (!CredentialItem::isSupportedItemtype($itemtype) || $items_id <= 0) {
-            return false;
-        }
-
-        $item = getItemForItemtype($itemtype);
-        if (!$item instanceof CommonDBTM) {
-            return false;
-        }
-
-        $entity_id = 0;
-        if ($item instanceof CommonDBChild) {
-            // Read the parent ID first, then acquire locks in parent -> child order.
-            // Revalidate the foreign key from the locked child row afterwards.
-            global $DB;
-            $parent_field = $item::$items_id;
-            // A normal SELECT here would establish the transaction's
-            // REPEATABLE READ snapshot before waiting for the parent row lock.
-            // Use a current read for the FK probe, while preserving parent -> child
-            // lock order; the child is locked and the FK is revalidated below too.
-            $index = $item::getIndexName();
-            $probe = $DB->request([
-                'SELECT' => [$parent_field],
-                'FROM' => $item::getTable(),
-                'WHERE' => [$index => $items_id],
-                'ORDER' => [new QueryExpression(\DBmysql::quoteName($index) . ' FOR UPDATE')],
-            ])->current();
-            if (!is_array($probe)) {
-                return false;
-            }
-
-            $parent_id = (int) ($probe[$parent_field] ?? 0);
-            $parent_type = $item::$itemtype;
-            if ($parent_id <= 0 || !is_a($parent_type, CommonDBTM::class, true)) {
-                return false;
-            }
-            $parent = getItemForItemtype($parent_type);
-            if (!$parent instanceof CommonDBTM) {
-                return false;
-            }
-            $parent_row = self::getItemRowForUpdate($parent, $parent_id);
-            if ($parent_row === null) {
-                return false;
-            }
-            $parent->getFromResultSet($parent_row);
-
-            $row = self::getItemRowForUpdate($item, $items_id);
-            if ($row === null || (int) ($row[$parent_field] ?? 0) !== $parent_id) {
-                return false;
-            }
-            $item->getFromResultSet($row);
-            $entity_id = array_key_exists('entities_id', $row)
-                ? max(0, (int) $row['entities_id'])
-                : (array_key_exists('entities_id', $parent_row) ? max(0, (int) $parent_row['entities_id']) : 0);
-        } else {
-            $row = self::getItemRowForUpdate($item, $items_id);
-            if ($row === null) {
-                return false;
-            }
-            $item->getFromResultSet($row);
-            $entity_id = array_key_exists('entities_id', $row) ? max(0, (int) $row['entities_id']) : 0;
-        }
-
-        return $expected_entity_id === null || $entity_id === $expected_entity_id;
+        return self::lockItemsForUpdate([[
+            'itemtype' => $itemtype,
+            'items_id' => $items_id,
+            'entities_id' => $expected_entity_id,
+        ]]);
     }
 
     /**
-     * Lock a deterministic set of item rows before acquiring any credential locks.
+     * Lock a set in two phases: resolve all CommonDBChild parents, lock every
+     * unique parent in itemtype/ID order, then lock requested rows in itemtype/ID
+     * order. No child row is locked during parent resolution.
      *
-     * @param array<int,array{itemtype:string,items_id:int,entities_id?:int}> $items
+     * Batches whose child IDs map to parents in opposite orders cannot therefore
+     * hold parent locks in conflicting sequences. The final child current read
+     * revalidates each FK so stale probes fail closed.
+     *
+     * @param array<int,array{itemtype:string,items_id:int,entities_id?:int|null}> $items
      */
     public static function lockItemsForUpdate(array $items): bool
     {
         $normalized = [];
-        foreach ($items as $item) {
-            if (!is_array($item)
-                || !is_string($item['itemtype'] ?? null)
-                || !is_numeric($item['items_id'] ?? null)
+        foreach ($items as $entry) {
+            if (!is_array($entry)
+                || !is_string($entry['itemtype'] ?? null)
+                || !is_numeric($entry['items_id'] ?? null)
             ) {
                 return false;
             }
-            $itemtype = $item['itemtype'];
-            $items_id = (int) $item['items_id'];
-            $entity_id = isset($item['entities_id']) ? (int) $item['entities_id'] : null;
+            $itemtype = $entry['itemtype'];
+            $items_id = (int) $entry['items_id'];
+            $entity_id = isset($entry['entities_id']) ? (int) $entry['entities_id'] : null;
             if ($items_id <= 0 || ($entity_id !== null && $entity_id < 0)) {
                 return false;
             }
@@ -266,12 +303,66 @@ final class CredentialItemLink extends CommonDBTM
             [$a['itemtype'], $a['items_id']] <=> [$b['itemtype'], $b['items_id']]
         );
 
-        foreach ($normalized as $item) {
-            if (!self::lockItemForUpdate($item['itemtype'], $item['items_id'], $item['entities_id'])) {
+        // Resolve all parent IDs before taking the first row lock.
+        $plans = [];
+        /** @var array<string,array{itemtype:string,items_id:int,item:CommonDBTM}> $parents */
+        $parents = [];
+        foreach ($normalized as $entry) {
+            $plan = self::resolveItemLockPlan($entry['itemtype'], $entry['items_id'], $entry['entities_id']);
+            if ($plan === null) {
                 return false;
+            }
+            $plans[] = $plan;
+            if ($plan['parent_type'] !== null && $plan['parent'] instanceof CommonDBTM) {
+                $key = $plan['parent_type'] . '#' . $plan['parent_id'];
+                $parents[$key] = [
+                    'itemtype' => $plan['parent_type'],
+                    'items_id' => $plan['parent_id'],
+                    'item' => $plan['parent'],
+                ];
             }
         }
 
+        // Lock every parent globally and deterministically before any child row.
+        $parents = array_values($parents);
+        usort($parents, static fn(array $a, array $b): int =>
+            [$a['itemtype'], $a['items_id']] <=> [$b['itemtype'], $b['items_id']]
+        );
+        $parent_rows = [];
+        foreach ($parents as $parent_lock) {
+            $row = self::getItemRowForUpdate($parent_lock['item'], $parent_lock['items_id']);
+            if ($row === null) {
+                return false;
+            }
+            $parent_rows[$parent_lock['itemtype'] . '#' . $parent_lock['items_id']] = $row;
+        }
+
+        // With every parent held, lock requested rows and validate their current FKs.
+        foreach ($plans as $plan) {
+            $row = self::getItemRowForUpdate($plan['item'], $plan['items_id']);
+            if ($row === null) {
+                return false;
+            }
+            if ($plan['parent_type'] !== null) {
+                $key = $plan['parent_type'] . '#' . $plan['parent_id'];
+                $parent_row = $parent_rows[$key] ?? null;
+                if (!is_array($parent_row)
+                    || $plan['parent_field'] === null
+                    || (int) ($row[$plan['parent_field']] ?? 0) !== $plan['parent_id']
+                ) {
+                    return false;
+                }
+                $entity_id = array_key_exists('entities_id', $row)
+                    ? max(0, (int) $row['entities_id'])
+                    : (array_key_exists('entities_id', $parent_row) ? max(0, (int) $parent_row['entities_id']) : 0);
+            } else {
+                $entity_id = array_key_exists('entities_id', $row) ? max(0, (int) $row['entities_id']) : 0;
+            }
+            if ($plan['expected_entity_id'] !== null && $entity_id !== $plan['expected_entity_id']) {
+                return false;
+            }
+            $plan['item']->getFromResultSet($row);
+        }
         return true;
     }
 
@@ -311,41 +402,54 @@ final class CredentialItemLink extends CommonDBTM
     }
 
     /**
-     * Read credential fields after the caller has acquired its parent-row lock.
-     * For bulk transactions, all candidate parent locks must be acquired before
-     * any consistent SELECT so this read uses a post-lock InnoDB snapshot.
+     * Read credential fields with an InnoDB current read after locking the row,
+     * even when a prior FK-resolution SELECT established an older RR snapshot.
      *
      * @return array<string, mixed>|null
      */
     public static function getCredentialForUpdate(int $credential_id): ?array
     {
         global $DB;
-
         if ($credential_id <= 0) {
             return null;
         }
-
-        // The caller must hold the parent-row lock in the current transaction.
-        // The query builder keeps this read compatible with GLPI DBAL.
-        $columns = [
-            'id', 'name', 'entities_id', 'login', 'password', 'url', 'notes',
-            'users_id', 'date_creation', 'date_mod', 'plugin_credentials_categories_id',
-            'date_expires', 'date_last_review', 'date_next_review', 'reviewer_users_id',
-            'is_deleted',
-        ];
         $row = $DB->request([
-            'SELECT' => $columns,
+            'SELECT' => ['*'],
             'FROM' => Credential::getTable(),
             'WHERE' => ['id' => $credential_id],
+            'ORDER' => [new QueryExpression(\DBmysql::quoteName('id') . ' FOR UPDATE')],
             'LIMIT' => 1,
         ])->current();
-
         return is_array($row) ? $row : null;
+    }
+
+    /**
+     * Hydrate a GLPI Credential from its current row while its write lock is held.
+     * Avoid getFromDB() here because it may return a stale RR snapshot.
+     */
+    public static function loadCredentialForUpdate(int $credential_id): ?Credential
+    {
+        $row = self::getCredentialForUpdate($credential_id);
+        if ($row === null) {
+            return null;
+        }
+        $credential = new Credential();
+        $credential->getFromResultSet($row);
+        return $credential;
     }
 
     public static function countForCredential(int $credential_id): int
     {
         return count(self::getLinksForCredential($credential_id));
+    }
+
+    /**
+     * Count links with a current read after locking the credential row.
+     * Writers use this variant for last-link decisions.
+     */
+    public static function countForCredentialForUpdate(int $credential_id): int
+    {
+        return count(self::getLinksForCredentialForUpdate($credential_id));
     }
 
     /**
@@ -439,7 +543,9 @@ final class CredentialItemLink extends CommonDBTM
         }
 
         // Keep the invariant even if a future caller bypasses the controller.
-        if (!CredentialLinkPolicy::canUnlink(self::countForCredential($credential_id))) {
+        // The caller must hold the credential row lock; this current read then
+        // sees relationship deletes committed while it waited for that lock.
+        if (!CredentialLinkPolicy::canUnlink(self::countForCredentialForUpdate($credential_id))) {
             return false;
         }
 
@@ -475,6 +581,30 @@ final class CredentialItemLink extends CommonDBTM
 
         return false;
     }
+    /**
+     * Current-read reachability check for link transactions after locking the
+     * candidate credential row; it avoids reading an older RR snapshot.
+     */
+    public static function userCanReachCredentialForUpdate(int $credential_id): bool
+    {
+        global $DB;
+        if ($credential_id <= 0 || !Session::haveRight(Credential::$rightname, READ)) {
+            return false;
+        }
+        $iterator = $DB->request([
+            'SELECT' => ['itemtype', 'items_id'],
+            'FROM' => self::getTable(),
+            'WHERE' => ['plugin_credentials_credentials_id' => $credential_id],
+            'ORDER' => [new QueryExpression(\DBmysql::quoteName('itemtype') . ', ' . \DBmysql::quoteName('items_id') . ' FOR UPDATE')],
+        ]);
+        foreach ($iterator as $row) {
+            if (CredentialItem::loadReadableItem((string) $row['itemtype'], (int) $row['items_id']) !== null) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Remove relationships when a supported GLPI object is permanently purged.
      * Credentials that lose their last relationship are moved to the trash.

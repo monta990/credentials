@@ -218,13 +218,13 @@ namespace {
     $credential_query = $DB->requests[1] ?? [];
     if (($credential_query['FROM'] ?? null) !== 'glpi_plugin_credentials_credentials'
         || ($credential_query['WHERE'] ?? null) !== ['id' => 17]
-        || !in_array('password', $credential_query['SELECT'] ?? [], true)
-        || !in_array('login', $credential_query['SELECT'] ?? [], true)
+        || ($credential_query['SELECT'] ?? []) !== ['*']
+        || !str_contains(($credential_query['ORDER'][0]->expression ?? ''), 'FOR UPDATE')
     ) {
-        throw new RuntimeException('Credential data must be read by its exact parent ID after acquiring its write lock.');
+        throw new RuntimeException('Credential data must use a current locking read after acquiring its write lock.');
     }
 
-    // Database child: verify the current-read probe and parent-first lock sequence.
+    // Database child: resolve the parent without locking the child, then lock parent and child.
     $DB->requests = [];
     $DB->item_rows = [
         'Database#88' => ['id' => 88, 'databaseinstances_id' => 21, 'name' => 'ERP database'],
@@ -236,18 +236,18 @@ namespace {
     }
 
     $probe = $DB->requests[0] ?? [];
-    $probe_order = $probe['ORDER'][0] ?? null;
     if (($probe['FROM'] ?? null) !== 'glpi_databases'
         || ($probe['WHERE'] ?? null) !== ['id' => 88]
-        || !$probe_order instanceof FakeQueryExpression
-        || !str_contains($probe_order->expression, 'FOR UPDATE')
+        || ($probe['SELECT'] ?? []) !== ['databaseinstances_id']
+        || isset($probe['ORDER'])
     ) {
-        throw new RuntimeException('CommonDBChild FK probe must be an InnoDB current/locking read.');
+        throw new RuntimeException('CommonDBChild FK resolution must not lock the child before its parent.');
     }
 
     $parent_lock = $DB->requests[1] ?? [];
     $child_lock = $DB->requests[2] ?? [];
     if (($parent_lock['FROM'] ?? null) !== 'glpi_databaseinstances'
+        || !str_contains(($parent_lock['ORDER'][0]->expression ?? ''), 'FOR UPDATE')
         || ($child_lock['FROM'] ?? null) !== 'glpi_databases'
         || !str_contains(($child_lock['ORDER'][0]->expression ?? ''), 'FOR UPDATE')
     ) {
