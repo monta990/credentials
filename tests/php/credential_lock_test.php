@@ -6,6 +6,7 @@ namespace {
     class CommonDBTM
     {
         public static function getTable($classname = null): string { return ''; }
+        public static function getIndexName(): string { return 'id'; }
         /** @var array<string,mixed> */
         public array $fields = [];
         public function getFromResultSet(array $row): void { $this->fields = $row; }
