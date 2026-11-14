@@ -12,7 +12,7 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
-$query = is_array($_GET ?? null) ? http_build_query($_GET) : '';
+$query = http_build_query($_GET);
 $target = rtrim((string) PLUGIN_CREDENTIALS_WEBDIR, '/') . '/Credential/Details';
 if ($query !== '') {
     $target .= '?' . $query;
