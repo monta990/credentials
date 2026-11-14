@@ -24,6 +24,7 @@ const parentDocument = {
 };
 const document = {
     getElementById(id) { return id === 'credentials-modal-title-source' ? titleSource : null; },
+    querySelector() { return null; },
     querySelectorAll(selector) { return selector === '[data-credentials-close-modal="1"]' ? [button] : []; },
 };
 const window = {
