@@ -302,6 +302,59 @@ namespace GlpiPlugin\Credentials {
             return $locked;
         }
 
+        public static function getLinksForCredentialsForUpdate(array $credential_ids): array
+        {
+            global $DB;
+            $ids = array_values(array_unique(array_filter(array_map('intval', $credential_ids), static fn(int $id): bool => $id > 0)));
+            sort($ids, SORT_NUMERIC);
+
+            $locked = [];
+            foreach ($ids as $id) {
+                $locked[$id] = $DB->getCurrentLinksForCredential($id);
+                $DB->update(Credential::getTable(), [
+                    'links_count' => count($locked[$id]),
+                ], ['id' => $id]);
+            }
+            return $locked;
+        }
+
+        public static function addLink(array $input): bool
+        {
+            global $DB;
+            if (!$DB->insert(self::getTable(), $input)) {
+                return false;
+            }
+            $credential_id = (int) $input['plugin_credentials_credentials_id'];
+            $DB->update(Credential::getTable(), [
+                'links_count' => (int) ($DB->getCurrentCredentialForUpdate($credential_id)['links_count'] ?? 0) + 1,
+            ], ['id' => $credential_id]);
+            return true;
+        }
+
+        public static function moveLink(int $source_id, int $destination_id, string $itemtype, int $items_id): bool
+        {
+            global $DB;
+            $moved = $DB->update(self::getTable(), [
+                'plugin_credentials_credentials_id' => $destination_id,
+            ], [
+                'plugin_credentials_credentials_id' => $source_id,
+                'itemtype' => $itemtype,
+                'items_id' => $items_id,
+            ]);
+            if ($moved === false || $DB->getAffectedRows() !== 1) {
+                return false;
+            }
+
+            $source_count = (int) ($DB->getCurrentCredentialForUpdate($source_id)['links_count'] ?? 0);
+            $destination_count = (int) ($DB->getCurrentCredentialForUpdate($destination_id)['links_count'] ?? 0);
+            if ($source_count <= 0) {
+                throw new \RuntimeException('Fake transfer source link counter underflow.');
+            }
+            $DB->update(Credential::getTable(), ['links_count' => $source_count - 1], ['id' => $source_id]);
+            $DB->update(Credential::getTable(), ['links_count' => $destination_count + 1], ['id' => $destination_id]);
+            return true;
+        }
+
         public static function getLinksForCredentialForUpdate(int $id): array
         {
             global $DB;
@@ -371,6 +424,7 @@ namespace {
             'date_next_review' => '2026-12-01',
             'reviewer_users_id' => 19,
             'link_lock_token' => 'old-token',
+            'links_count' => 0,
             'is_deleted' => 0,
         ];
     }
