@@ -188,7 +188,7 @@ final class CredentialItemLink extends CommonDBTM
                 'SELECT' => [$parent_field],
                 'FROM' => $item::getTable(),
                 'WHERE' => [$index => $items_id],
-                'ORDER' => [new QueryExpression(\\DBmysql::quoteName($index) . ' FOR UPDATE')],
+                'ORDER' => [new QueryExpression(\DBmysql::quoteName($index) . ' FOR UPDATE')],
             ])->current();
             if (!is_array($probe)) {
                 return false;
