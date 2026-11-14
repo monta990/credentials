@@ -8,6 +8,7 @@ const sent = [];
 const document = {
     body: { dataset: { credentialsNavigateTop: '/front/user.form.php?id=2' } },
     getElementById() { return null; },
+    querySelector() { return null; },
     querySelectorAll() { return []; },
 };
 const window = {
