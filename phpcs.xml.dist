@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<ruleset name="GLPI Credentials">
+    <description>PHPCS checks for first-party plugin PHP code.</description>
+
+    <file>src</file>
+    <file>front</file>
+    <file>tests</file>
+    <file>setup.php</file>
+    <file>hook.php</file>
+
+    <arg name="basepath" value="."/>
+    <arg name="extensions" value="php"/>
+    <arg name="parallel" value="8"/>
+    <arg value="sp"/>
+
+    <rule ref="PSR12">
+        <exclude name="PSR12.Files.FileHeader.SpacingAfterBlock"/>
+    </rule>
+</ruleset>
