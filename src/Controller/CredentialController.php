@@ -419,7 +419,7 @@ final class CredentialController extends AbstractController
             throw new \Glpi\Exception\Http\AccessDeniedHttpException();
         }
 
-        /** @var list<array{itemtype:string,type_name:string,items_id:int,name:string,url:string,is_source:bool}> $rows */
+        /** @var array<int, array{itemtype:string,type_name:string,items_id:int,name:string,url:string,is_source:bool}> $rows */
         $rows = [];
         $hidden_count = 0;
         foreach (CredentialItemLink::getLinksForCredential($credential_id) as $link) {
