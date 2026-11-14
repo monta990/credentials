@@ -6,7 +6,7 @@
   <strong>GLPI plugin — Keep your organization's access credentials organized and available where your team needs them</strong>
 </p>
 <p align="center">
-  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-12.0%2B-blue" alt="GLPI compatibility"></a>
+  <a href="https://github.com/glpi-project/glpi" target="_blank"><img src="https://img.shields.io/badge/GLPI-12.0.0%2B-blue" alt="GLPI compatibility"></a>
   <a href="https://www.php.net/" target="_blank"><img src="https://img.shields.io/badge/PHP-8.3%2B-purple" alt="PHP requirement"></a>
   <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank"><img src="https://img.shields.io/badge/License-GPL%20v3%2B-green" alt="License"></a>
   <a href="https://github.com/monta990/credentials/releases" target="_blank"><img src="https://img.shields.io/github/downloads/monta990/credentials/total" alt="GitHub Downloads"></a>
@@ -16,7 +16,7 @@
 
 ## Overview
 
-**Credentials** helps your IT team keep account information organized in GLPI. Store the usernames, passwords, web addresses and notes needed to access company systems, services and equipment, and associate them with the users or assets they belong to.
+**Credentials** helps your IT team keep account information organized in GLPI. Store the usernames, passwords, web addresses and notes needed to access company systems, services and equipment, and associate them with the users, supported assets, phone lines, domains, clusters, data centers, server rooms, databases and infrastructure items they belong to.
 
 Instead of keeping the same information in separate places, your team can find it directly from the related GLPI record. Credentials can also be shared with other authorized items, making it easier to manage access information without creating duplicate entries.
 
@@ -25,24 +25,28 @@ Instead of keeping the same information in separate places, your team can find i
 - 🔐 **Protected information:** Keep usernames, passwords, web addresses and notes securely stored.
 - 👤 **User association:** View the credentials related to a GLPI user.
 - 🖥️ **Asset association:** Keep access information with the equipment or asset it belongs to.
-- 🎫 **Ticket access:** Find credentials related to a ticket's requester and associated assets from the ticket itself.
-- 🔗 **Reuse existing credentials:** Link an existing entry to another user or asset instead of creating duplicates.
-- 🔢 **Easy identification:** Each credential has its own ID to help identify and share the correct entry.
+- ☎️ **Phone-line association:** Store operator portal, line administration and SIP access credentials directly on GLPI phone lines.
+- 🌐 **Domain association:** Keep registrar, DNS provider, hosting and domain-management credentials with the corresponding GLPI domain.
+- 🏢 **Infrastructure and database association:** Link credentials to clusters, data centers, server rooms, database instances and databases, racks, enclosures, PDUs, passive data-center equipment and cables.
+- 🎫 **Ticket access:** Find credentials related to a ticket's requester and associated GLPI items from the ticket itself.
+- 🛠️ **Problem and Change access:** Find credentials linked to the inventory items associated with a GLPI Problem or Change, with duplicate credentials combined into one row.
+- 🔗 **Reuse existing credentials:** Link an existing entry to another user or supported GLPI item—including an asset, phone line, domain, cluster, database or data-center component—instead of creating duplicates.
+- 🔎 **Easy selection:** Find an existing credential by category and name, or link additional users, assets, phone lines, domains, clusters, data-center items, database items and infrastructure equipment with native dependent selectors.
 - 👁️ **Controlled password display:** Only authorized team members can reveal saved passwords.
 - 📋 **Quick copy:** Copy a password when access is needed.
 - 🧾 **Activity history:** Keep a record of important credential actions without exposing passwords.
 - 🏷️ **Categories:** Create, rename and update category descriptions; editing a category preserves its existing credential associations.
-- 📅 **Expiration and reviews:** Record expiration dates, last and next review dates, and the person responsible for reviewing each credential. Optional email reminders notify the assigned reviewer through GLPI. Optional email reminders notify the assigned reviewer through GLPI.
-- 🧭 **Administration page:** Review plugin updates, activity, upcoming reviews and archived records in one place.
+- 📅 **Expiration and reviews:** Record expiration dates, last and next review dates, and the person responsible for reviewing each credential. Optional email reminders notify the assigned reviewer through GLPI.
+- 🧭 **Administration page:** Manage plugin updates, reminders, categories, reviews and backups in General settings; archived records have a dedicated tab. Activity is recorded in the native History tab of each linked GLPI item or user.
 - 📦 **Protected backups:** Export and import credentials using a password-protected backup file.
 - 🌍 **Multiple languages:** English, Spanish and French translations.
-- 🔄 **Entity transfers:** Keep credential associations consistent when supported GLPI users or assets are transferred between entities.
+- 🔄 **Entity transfers:** Keep credential associations consistent when supported GLPI users, assets, phone lines, domains, clusters, data centers, server rooms, databases and infrastructure items are transferred between entities.
 
 ## Requirements
 
 | Component | Version |
 |-----------|---------|
-| GLPI | 12.0.x |
+| GLPI | 12.0.0 – 12.0.x |
 | PHP | 8.3 or newer |
 
 ## Installation
@@ -55,9 +59,9 @@ Instead of keeping the same information in separate places, your team can find i
 
 ## How to use
 
-### Manage credentials from users and assets
+### Manage credentials from users, assets and management items
 
-Open a GLPI user or supported asset and select the **Credentials** tab.
+Open a GLPI user or supported asset, or select a supported item under **Management**. Credentials supports phone lines, domains, clusters, data centers, server rooms, database instances and individual databases, racks, enclosures, PDUs, passive data-center equipment and cables. Open the record and select the **Credentials** tab.
 
 From there, authorized team members can:
 
@@ -72,9 +76,15 @@ Each entry includes a name, username, password, web address and notes. The passw
 
 Open a GLPI ticket and select the **Credentials** tab.
 
-The plugin brings together credentials associated with the ticket's requester users and attached assets. This makes it easier for support staff to find the access information related to the reported issue, subject to their assigned permissions.
+The plugin brings together credentials associated with the ticket's requester users and attached items, including phone lines, domains, clusters, data-center infrastructure and database items when GLPI allows them to be linked to the ticket. This makes it easier for support staff to find the access information related to the reported issue, subject to their assigned permissions.
 
 If the same credential is associated with more than one item on the ticket, it is displayed only once.
+
+### Find credentials from a Problem or Change
+
+Open a GLPI Problem or Change and select the **Credentials** tab. The plugin reads the items linked to that record through GLPI's native relations, then lists the credentials attached to those items. A credential linked to several associated items appears once, with all source items shown in the **Associated with** column.
+
+The listing follows each item's native GLPI read permissions. If an associated item requires GLPI re-authentication, use the protected **Authenticate and view all credentials for linked items** page; inaccessible items remain excluded. The tab does not create a second credential relationship with the Problem or Change itself.
 
 ### View and copy passwords
 
@@ -84,7 +94,7 @@ Password display is controlled separately from general credential access. This a
 
 ### Link and remove credentials
 
-An existing credential can be linked to more than one eligible user or asset. Removing a link only disconnects that item; it does not delete the credential or its other associations.
+An existing credential can be linked to more than one eligible user or supported GLPI item, including assets, phone lines, domains, clusters, databases and data-center infrastructure. Removing a link only disconnects that item; it does not delete the credential or its other associations.
 
 To prevent entries from being left without an associated item, the plugin does not allow removing the final link. If a credential is no longer needed, delete the credential itself.
 
@@ -96,31 +106,32 @@ The plugin provides separate permissions for:
 
 - **Credential management:** Access and manage credential entries according to the profile's assigned rights.
 - **Password display:** Reveal saved passwords.
+- **Backup export/import:** Create and restore password-protected credential backups.
 
-Give password-display permission only to team members who need it to perform their work.
+The independent backup permission is required in addition to the relevant credential read/create rights. Give password-display permission only to team members who need it to perform their work.
 
 
 ## Administration
 
-The Credentials administration page is available from GLPI's plugin configuration area. It is separate from the Credentials tabs on users, assets and tickets, so everyday credential management remains uncluttered.
+The Credentials administration page is available from GLPI's plugin configuration area to profiles that have GLPI configuration-update access. It is separate from the Credentials tabs on users and supported GLPI items, so everyday credential management remains uncluttered.
 
 Administrators can use this page to:
 
-- Check whether a newer stable version is available on GitHub.
-- Create, rename and update credential categories without breaking existing links.
+- Check manually whether a newer stable version is available on GitHub. Results are cached for six hours; the check never downloads or installs an update.
+- Create, rename and update entity-scoped categories. Category names must be unique within their entity; a category cannot be deleted while credentials use it.
 - Review credentials that have expired or need a review soon.
-- See recent activity recorded in GLPI history.
+- Review credential activity in the native **History** tab of each linked user or supported GLPI item, including management and infrastructure records; the configuration page does not duplicate those records.
 - Review archived credentials and restore them by linking them to an available item.
 - Choose how long archived credentials should be kept before they become eligible for permanent deletion.
 - Check whether the GLPI encryption key is available.
 
-Expiration and review dates can generate email reminders. Credentials does not change or rotate passwords automatically.
+Expiration and review dates are maintained by editing the credential: update **Last reviewed** after a review and set **Next review date** for the next planned check. There is no separate one-click “Mark reviewed” action. These dates can generate email reminders. Credentials does not change or rotate passwords automatically.
 
 ### Automatic lifecycle email reminders
 
 Credentials registers a daily GLPI automatic action. From **Setup > Plugins > Credentials > Configuration**, administrators can enable or pause lifecycle reminders and choose a look-ahead period from 1 to 365 days (30 days by default). Overdue dates remain eligible regardless of the selected period.
 
-The configuration page also reports whether GLPI global email notifications and the email delivery mode are enabled, whether the Credentials automatic action is registered and enabled, and whether the required Credential email notification (including its email template and Review responsible recipient) is correctly configured for the active entity. To deliver email reminders, configure a GLPI notification for the **Credential** item type and the **Expiration and review follow-up** event. Add **Review responsible** as a recipient and select an email notification template. The template can use these tags:
+The configuration page also reports whether GLPI global email notifications and the email delivery mode are enabled, whether the Credentials automatic action is registered and enabled, and whether the required Credential email notification (including its email template and Review responsible recipient) is correctly configured for the active entity. The dashboard uses a fixed 30-day window for its status indicators; the configurable 1–365-day period applies to email reminders. To deliver email reminders, configure a GLPI notification for the **Credential** item type and the **Expiration and review follow-up** event. Add **Review responsible** as a recipient and select an email notification template. The template can use these tags:
 
 - `##credential.id##`
 - `##credential.name##`
@@ -136,26 +147,42 @@ The plugin records reminders by credential, entity, due date and reviewer, so it
 
 Credentials can create a password-protected backup containing credentials and their related information. The backup file is encrypted and does not expose passwords as readable text.
 
-When exporting, choose a backup password with at least 12 characters and keep it somewhere safe. The password is required to import the file later and cannot be recovered if lost.
+When exporting, choose a backup password with at least 12 characters and keep it somewhere safe. Export is limited to records in entities the current user can access and requires the separate Backup permission, credential read permission and the independent Reveal credential passwords permission because the export necessarily contains decrypted secrets in memory. Import requires the Backup permission plus credential read and create permissions; it does not require permission to reveal passwords. Both operations are available only to profiles with GLPI configuration-update access and require GLPI reauthentication. Administrative POST routes use GLPI 12's native Fetch Metadata/Origin CSRF listener; GLPI 12 does not require the legacy hidden `_glpi_csrf_token` field. The password is required to import the file later and cannot be recovered if lost.
 
-Importing a backup creates new credential records; it does not overwrite existing records. Linked users and assets are reconnected when the destination GLPI instance contains an item with the same type, ID, name and entity. If no destination item can be matched, the credential is still imported into the GLPI trash so its protected information is not lost; an administrator can later restore it by linking it to an available item. Invalid entries are skipped. Imported passwords and protected details are encrypted again with the destination GLPI instance security key.
+Importing a backup creates new credential records; it does not overwrite existing records. Linked GLPI items are reconnected only when the destination GLPI instance contains an item with the same type, ID, name and entity. This is suitable for restoring into the same GLPI data set or a compatible copy; it is not an automatic cross-instance ID mapping or migration tool. If no destination item can be matched, the credential is imported as archived so its protected information is not lost; an administrator can later restore it by selecting an eligible destination item from a list of items in the same entity for which the administrator has update permission. Invalid entries are skipped and reported in the completion summary. If a database write, link creation, encryption or history operation fails after import begins, the database transaction is rolled back. Imported passwords and protected details are encrypted again with the destination GLPI instance security key. Categories retain their global or entity scope. A missing category is created in the corresponding destination scope and its description is copied; an existing category is not overwritten. If the destination profile cannot access the required scope, the import is rolled back rather than silently changing the category scope. Reviewer assignments are restored only when the reviewer login can be matched to an accessible user in the destination instance. Matching a linked item also requires update permission on that item.
 
-The backup can include archived credentials. Archived entries remain archived after import until an administrator restores them by linking them to an available item.
+The backup can include archived credentials. Archived entries remain archived after import until an administrator restores them by linking them to an available item. The backup file is limited to 20 MB and 2,000 credential entries; each credential can contain up to 250 supported item links. Imported records receive new IDs and current creation/modification timestamps; the original GLPI history is not copied.
 
 Always keep the GLPI database backup together with the matching glpicrypt.key file. The backup-file password and the GLPI encryption key serve different purposes, and both must be protected.
 
 ## Archived credentials
 
-When a linked user or asset is permanently removed from GLPI, a credential that has no other linked items is moved to the GLPI trash. It is not immediately erased.
+When a linked user or supported GLPI item is permanently removed from GLPI, a credential that has no other linked items is moved to the GLPI trash. It is not immediately erased. The dedicated **Archived credentials** tab on the administration page lists up to 25 accessible archived records and offers eligible destination items for restoration. The list is bounded to 500 choices per entity and includes only supported items the current profile can update. Restoration requires update access to that item and the same entity as the archived credential. Retention can be set from 0 to 3,650 days; 0 keeps archived credentials indefinitely and disables retention-based bulk deletion. Administrators with both read and delete rights for Credentials can still permanently delete an individual archived credential at any time, without waiting for the retention period. Individual and bulk deletion both refuse to remove credentials that still have linked items.
 
-Administrators can review archived entries, restore them by linking them to an available item in the same entity, or permanently delete eligible archived entries according to the configured retention period. Permanent deletion cannot be undone.
+Administrators use the separate **Archived credentials** configuration tab to review archived entries, restore them by linking them to an available item in the same entity, manage retention, delete one archived credential immediately with **Delete now**, or manually run the retention-based bulk-deletion action for eligible entries. The individual action bypasses the retention period; the bulk action does not. Permanent deletion is not an automatic background purge and cannot be undone. The dashboard shows up to 25 archived records and up to 25 items needing attention at a time.
 
 ## Important information
 
 - Keep access to Credentials limited to authorized personnel.
 - Back up your GLPI database together with the GLPI encryption key file. Both are needed to recover protected information.
-- If a user or asset is permanently removed from GLPI, an unshared credential may be moved to the GLPI trash. This does not automatically erase its stored information.
+- If a user or supported GLPI item is permanently removed from GLPI, an unshared credential may be moved to the GLPI trash. This does not automatically erase its stored information.
 - When updating the plugin, use the **Update** action in GLPI. Do not uninstall it to perform an update, because uninstalling removes the plugin's stored data.
+
+## Developer checks
+
+The standalone regression checks can be run from the plugin root with:
+
+```bash
+php tests/php/management_item_support_test.php
+php tests/php/itil_linked_credentials_test.php
+php tests/php/credential_backup_category_scope_test.php
+php tests/concurrency-locking.php
+php tests/php/runtime_db_access_test.php
+```
+
+The Problem/Change contract test verifies the native relation mapping, tab registration, permission-filtered lookup, de-duplication and sudo-mode count behavior with isolated GLPI fixtures. It does not replace a live GLPI browser/database acceptance test.
+
+Relationship mutations use a consistent lock order on InnoDB: the native GLPI item row is locked first, then the credential row, then the relationship rows. Bulk operations sort/deduplicate item and credential candidates before locking them. For `CommonDBChild` assets, the parent row is locked before the child row and the child foreign key is revalidated. Permanent purge enumerates candidate credential IDs with a DBAL locking current read inside its local transaction; after credential locks are acquired, remaining relationships are also checked with a current read. This remains correct when GLPI invokes the purge hook inside an outer transaction using `REPEATABLE READ`. The locking clauses are expressed through GLPI's DBAL query builder; runtime plugin code does not call `$DB->doQuery()` for these reads.
 
 ## Changelog
 

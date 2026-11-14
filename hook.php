@@ -107,11 +107,30 @@ function plugin_credentials_install(): bool
         'string',
         ['value' => '']
     );
-    $migration->addField(Credential::getTable(), 'plugin_credentials_categories_id', 'integer', ['value' => 0]);
-    $migration->addField(Credential::getTable(), 'date_expires', 'date');
-    $migration->addField(Credential::getTable(), 'date_last_review', 'date');
-    $migration->addField(Credential::getTable(), 'date_next_review', 'date');
-    $migration->addField(Credential::getTable(), 'reviewer_users_id', 'integer', ['value' => 0]);
+    // Keep plugin foreign-key columns aligned with GLPI's configured key sign.
+    // `integer` creates a signed INT and triggers GLPI 12 schema warnings. The
+    // `fkey` migration type uses DBConnection::getDefaultPrimaryKeySignOption().
+    // Existing signed columns are converted in place without changing their data
+    // or index definitions; missing columns are created with the same convention.
+    $credential_table = Credential::getTable();
+    $ensure_foreign_key_field = static function (string $field) use ($DB, $migration, $credential_table): void {
+        $definition = $DB->getField($credential_table, $field);
+        if ($definition === null) {
+            $migration->addField($credential_table, $field, 'fkey', ['value' => 0]);
+            return;
+        }
+
+        $field_type = strtolower((string) ($definition['Type'] ?? ''));
+        if (!str_contains($field_type, 'unsigned')) {
+            $migration->changeField($credential_table, $field, $field, 'fkey');
+        }
+    };
+    $ensure_foreign_key_field('plugin_credentials_categories_id');
+    $ensure_foreign_key_field('reviewer_users_id');
+
+    $migration->addField($credential_table, 'date_expires', 'date');
+    $migration->addField($credential_table, 'date_last_review', 'date');
+    $migration->addField($credential_table, 'date_next_review', 'date');
     $migration->addRight(Credential::$rightname, ALLSTANDARDRIGHT, ['config' => READ | UPDATE]);
     $migration->addRight(Credential::RIGHT_REVEAL, READ, ['config' => READ | UPDATE]);
     $migration->addRight(Credential::RIGHT_BACKUP, READ, ['config' => READ | UPDATE]);

@@ -9,8 +9,10 @@
 namespace GlpiPlugin\Credentials;
 
 use CommonDBTM;
+use CommonDBChild;
 use Override;
 use Session;
+use Glpi\DBAL\QueryExpression;
 
 /** Many-to-many relation between a credential and a GLPI item. */
 final class CredentialItemLink extends CommonDBTM
@@ -80,14 +82,10 @@ final class CredentialItemLink extends CommonDBTM
     }
 
     /**
-     * Read current committed relationships while the credential row is locked.
-     *
-     * InnoDB consistent reads may retain an older REPEATABLE READ snapshot after
-     * a lock wait. SELECT ... FOR UPDATE is a current read and observes the latest
-     * committed relationship rows before transfer or purge decisions are made.
-     *
-     * This SELECT ... FOR UPDATE acquires the row lock itself. The caller must
-     * run it inside a transaction and keep that transaction open through its work.
+     * Read relationships after the caller has acquired the credential write lock.
+     * All plugin relationship writers serialize on that parent row. For a
+     * transaction processing multiple credentials, callers must acquire ALL
+     * parent-row locks in sorted order before the first consistent read.
      *
      * @return array<int, array{itemtype:string,items_id:int}>
      */
@@ -99,48 +97,217 @@ final class CredentialItemLink extends CommonDBTM
             return [];
         }
 
-        // GLPI 12 DBmysql::request() has no FOR UPDATE option. Use the supported
-        // DBmysql::doQuery() API with fixed, explicitly quoted identifiers/values.
-        $query = 'SELECT '
-            . \DBmysql::quoteName('itemtype') . ', '
-            . \DBmysql::quoteName('items_id')
-            . ' FROM ' . \DBmysql::quoteName(self::getTable())
-            . ' WHERE ' . \DBmysql::quoteName('plugin_credentials_credentials_id')
-            . ' = ' . \DBmysql::quoteValue($credential_id)
-            . ' ORDER BY ' . \DBmysql::quoteName('itemtype') . ', '
-            . \DBmysql::quoteName('items_id')
-            . ' FOR UPDATE';
+        // The caller must already hold this credential's parent-row write lock.
+        // Use GLPI's DBAL query builder with a locking-read clause. The `ORDER`
+        // expression is a static DBAL expression; all identifiers and values are
+        // still handled by the query builder. This is a current read under InnoDB
+        // REPEATABLE READ, including when GLPI opened an outer transaction earlier.
+        $iterator = $DB->request([
+            'SELECT' => ['itemtype', 'items_id'],
+            'FROM' => self::getTable(),
+            'WHERE' => ['plugin_credentials_credentials_id' => $credential_id],
+            'ORDER' => [new QueryExpression(\DBmysql::quoteName('itemtype') . ', ' . \DBmysql::quoteName('items_id') . ' FOR UPDATE')],
+        ]);
 
-        $result = $DB->doQuery($query);
         $unique = [];
-        try {
-            while (($row = $DB->fetchAssoc($result)) !== false && $row !== null) {
-                $itemtype = (string) ($row['itemtype'] ?? '');
-                $items_id = (int) ($row['items_id'] ?? 0);
-                if ($itemtype === '' || $items_id <= 0) {
-                    continue;
-                }
-                $unique[$itemtype . '#' . $items_id] = [
-                    'itemtype' => $itemtype,
-                    'items_id' => $items_id,
-                ];
+        foreach ($iterator as $row) {
+            $itemtype = (string) ($row['itemtype'] ?? '');
+            $items_id = (int) ($row['items_id'] ?? 0);
+            if ($itemtype === '' || $items_id <= 0) {
+                continue;
             }
-        } finally {
-            $DB->freeResult($result);
+            $unique[$itemtype . '#' . $items_id] = [
+                'itemtype' => $itemtype,
+                'items_id' => $items_id,
+            ];
         }
 
         return array_values($unique);
     }
 
     /**
-     * Read the latest committed credential fields after its row lock is held.
+     * Return current item row under an InnoDB write lock.
      *
-     * This must be a locking/current read: under InnoDB REPEATABLE READ, a
-     * normal DB->request() can keep returning an older snapshot after waiting
-     * for a concurrent credential edit. The transfer path copies encrypted
-     * columns directly, so it must copy the latest committed ciphertext.
+     * The query uses GLPI's DBAL builder. QueryExpression is limited to the
+     * static locking clause appended to the ORDER BY expression; table names,
+     * index names and IDs originate from validated GLPI item classes/integers.
      *
-     * The caller must already hold this credential's row lock in a transaction.
+     * @return array<string,mixed>|null
+     */
+    private static function getItemRowForUpdate(CommonDBTM $item, int $items_id): ?array
+    {
+        global $DB;
+
+        $index = $item::getIndexName();
+        $table = $item::getTable();
+        $row = $DB->request([
+            'SELECT' => ['*'],
+            'FROM' => $table,
+            'WHERE' => [$table . '.' . $index => $items_id],
+            'ORDER' => [new QueryExpression(\DBmysql::quoteName($index) . ' FOR UPDATE')],
+        ])->current();
+
+        return is_array($row) ? $row : null;
+    }
+
+    /**
+     * Lock a supported GLPI item before locking or mutating its credential links.
+     *
+     * Lock order is always GLPI item row first, credential parent row second.
+     * GLPI deletes an item before invoking ITEM_PURGE but keeps that row lock
+     * until the surrounding transaction finishes. A link writer therefore either
+     * commits before the purge (and is found by its current-read enumeration), or
+     * waits for the purge and then finds that the item no longer exists.
+     */
+    public static function lockItemForUpdate(
+        string $itemtype,
+        int $items_id,
+        ?int $expected_entity_id = null,
+    ): bool {
+        if (!CredentialItem::isSupportedItemtype($itemtype) || $items_id <= 0) {
+            return false;
+        }
+
+        $item = getItemForItemtype($itemtype);
+        if (!$item instanceof CommonDBTM) {
+            return false;
+        }
+
+        $entity_id = 0;
+        if ($item instanceof CommonDBChild) {
+            // Read the parent ID first, then acquire locks in parent -> child order.
+            // Revalidate the foreign key from the locked child row afterwards.
+            global $DB;
+            $parent_field = $item::$items_id;
+            $probe = $DB->request([
+                'SELECT' => [$parent_field],
+                'FROM' => $item::getTable(),
+                'WHERE' => [$item::getIndexName() => $items_id],
+            ])->current();
+            if (!is_array($probe)) {
+                return false;
+            }
+
+            $parent_id = (int) ($probe[$parent_field] ?? 0);
+            $parent_type = $item::$itemtype;
+            if ($parent_id <= 0 || !is_string($parent_type) || !is_a($parent_type, CommonDBTM::class, true)) {
+                return false;
+            }
+            $parent = getItemForItemtype($parent_type);
+            if (!$parent instanceof CommonDBTM) {
+                return false;
+            }
+            $parent_row = self::getItemRowForUpdate($parent, $parent_id);
+            if ($parent_row === null) {
+                return false;
+            }
+            $parent->getFromResultSet($parent_row);
+
+            $row = self::getItemRowForUpdate($item, $items_id);
+            if ($row === null || (int) ($row[$parent_field] ?? 0) !== $parent_id) {
+                return false;
+            }
+            $item->getFromResultSet($row);
+            $entity_id = array_key_exists('entities_id', $row)
+                ? max(0, (int) $row['entities_id'])
+                : (array_key_exists('entities_id', $parent_row) ? max(0, (int) $parent_row['entities_id']) : 0);
+        } else {
+            $row = self::getItemRowForUpdate($item, $items_id);
+            if ($row === null) {
+                return false;
+            }
+            $item->getFromResultSet($row);
+            $entity_id = array_key_exists('entities_id', $row) ? max(0, (int) $row['entities_id']) : 0;
+        }
+
+        return $expected_entity_id === null || $entity_id === $expected_entity_id;
+    }
+
+    /**
+     * Lock a deterministic set of item rows before acquiring any credential locks.
+     *
+     * @param array<int,array{itemtype:string,items_id:int,entities_id?:int}> $items
+     */
+    public static function lockItemsForUpdate(array $items): bool
+    {
+        $normalized = [];
+        foreach ($items as $item) {
+            if (!is_array($item)
+                || !is_string($item['itemtype'] ?? null)
+                || !is_numeric($item['items_id'] ?? null)
+            ) {
+                return false;
+            }
+            $itemtype = $item['itemtype'];
+            $items_id = (int) $item['items_id'];
+            $entity_id = isset($item['entities_id']) ? (int) $item['entities_id'] : null;
+            if ($items_id <= 0 || ($entity_id !== null && $entity_id < 0)) {
+                return false;
+            }
+            $key = $itemtype . '#' . $items_id;
+            if (isset($normalized[$key]) && $normalized[$key]['entities_id'] !== $entity_id) {
+                return false;
+            }
+            $normalized[$key] = [
+                'itemtype' => $itemtype,
+                'items_id' => $items_id,
+                'entities_id' => $entity_id,
+            ];
+        }
+
+        $normalized = array_values($normalized);
+        usort($normalized, static fn(array $a, array $b): int =>
+            [$a['itemtype'], $a['items_id']] <=> [$b['itemtype'], $b['items_id']]
+        );
+
+        foreach ($normalized as $item) {
+            if (!self::lockItemForUpdate($item['itemtype'], $item['items_id'], $item['entities_id'])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Enumerate and lock all credential relations for an item using an InnoDB
+     * current read. Call inside a transaction after the GLPI item row is locked
+     * (or from ITEM_PURGE, where GLPI already deleted and locked that row).
+     *
+     * @return array<int,int>
+     */
+    public static function getCredentialIDsForItemForUpdate(string $itemtype, int $items_id): array
+    {
+        global $DB;
+
+        if (!CredentialItem::isSupportedItemtype($itemtype) || $items_id <= 0) {
+            return [];
+        }
+
+        $iterator = $DB->request([
+            'SELECT' => ['plugin_credentials_credentials_id'],
+            'FROM' => self::getTable(),
+            'WHERE' => ['itemtype' => $itemtype, 'items_id' => $items_id],
+            'ORDER' => [new QueryExpression(\DBmysql::quoteName('plugin_credentials_credentials_id') . ' FOR UPDATE')],
+        ]);
+
+        $ids = [];
+        foreach ($iterator as $row) {
+            $id = (int) ($row['plugin_credentials_credentials_id'] ?? 0);
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+        $ids = array_values($ids);
+        sort($ids, SORT_NUMERIC);
+
+        return $ids;
+    }
+
+    /**
+     * Read credential fields after the caller has acquired its parent-row lock.
+     * For bulk transactions, all candidate parent locks must be acquired before
+     * any consistent SELECT so this read uses a post-lock InnoDB snapshot.
      *
      * @return array<string, mixed>|null
      */
@@ -152,41 +319,22 @@ final class CredentialItemLink extends CommonDBTM
             return null;
         }
 
+        // The caller must hold the parent-row lock in the current transaction.
+        // The query builder keeps this read compatible with GLPI DBAL.
         $columns = [
-            'id',
-            'name',
-            'entities_id',
-            'login',
-            'password',
-            'url',
-            'notes',
-            'users_id',
-            'date_creation',
-            'date_mod',
-            'plugin_credentials_categories_id',
-            'date_expires',
-            'date_last_review',
-            'date_next_review',
-            'reviewer_users_id',
+            'id', 'name', 'entities_id', 'login', 'password', 'url', 'notes',
+            'users_id', 'date_creation', 'date_mod', 'plugin_credentials_categories_id',
+            'date_expires', 'date_last_review', 'date_next_review', 'reviewer_users_id',
             'is_deleted',
         ];
-        $select = implode(', ', array_map(
-            static fn(string $column): string => \DBmysql::quoteName($column),
-            $columns,
-        ));
-        $query = 'SELECT ' . $select
-            . ' FROM ' . \DBmysql::quoteName(Credential::getTable())
-            . ' WHERE ' . \DBmysql::quoteName('id')
-            . ' = ' . \DBmysql::quoteValue($credential_id)
-            . ' FOR UPDATE';
+        $row = $DB->request([
+            'SELECT' => $columns,
+            'FROM' => Credential::getTable(),
+            'WHERE' => ['id' => $credential_id],
+            'LIMIT' => 1,
+        ])->current();
 
-        $result = $DB->doQuery($query);
-        try {
-            $row = $DB->fetchAssoc($result);
-            return $row === false || $row === null ? null : $row;
-        } finally {
-            $DB->freeResult($result);
-        }
+        return is_array($row) ? $row : null;
     }
 
     public static function countForCredential(int $credential_id): int
@@ -230,8 +378,50 @@ final class CredentialItemLink extends CommonDBTM
         $updated = $DB->update(Credential::getTable(), [
             'link_lock_token' => bin2hex(random_bytes(16)),
         ], $where);
+        if ($updated === false) {
+            throw new \RuntimeException('Unable to acquire the credential write lock.');
+        }
 
-        return $updated !== false && $DB->getAffectedRows() === 1;
+        return $DB->getAffectedRows() === 1;
+    }
+
+    /**
+     * Acquire all credential parent-row locks in a deterministic order.
+     *
+     * This method must be called immediately after beginTransaction() and before
+     * any consistent SELECT in that transaction. InnoDB REPEATABLE READ creates
+     * its consistent-read snapshot on the first ordinary SELECT. Locking every
+     * candidate first ensures that snapshot is created only after all lock waits
+     * have completed, so later reads cannot observe a pre-lock snapshot for a
+     * credential that was locked afterwards.
+     *
+     * Missing rows are omitted; database errors throw. IDs are deduplicated and
+     * sorted numerically to reduce deadlock risk across bulk operations.
+     *
+     * @param array<int, int|string> $credential_ids
+     * @return array<int, int> IDs whose parent rows were successfully locked.
+     */
+    public static function lockCredentials(array $credential_ids): array
+    {
+        $normalized = [];
+        foreach ($credential_ids as $credential_id) {
+            $id = (int) $credential_id;
+            if ($id > 0) {
+                $normalized[$id] = $id;
+            }
+        }
+
+        $ids = array_values($normalized);
+        sort($ids, SORT_NUMERIC);
+
+        $locked = [];
+        foreach ($ids as $id) {
+            if (self::lockCredential($id)) {
+                $locked[] = $id;
+            }
+        }
+
+        return $locked;
     }
 
     public static function unlink(int $credential_id, string $itemtype, int $items_id): bool
@@ -291,31 +481,15 @@ final class CredentialItemLink extends CommonDBTM
             return;
         }
 
-        // GLPI may call ITEM_PURGE from inside an existing transaction. GLPI's
-        // DB layer supports nested transactions through savepoints: always open
-        // one local transaction level and close only that level. Never inspect
-        // the private DBmysql::isInTransaction() method or commit GLPI's caller.
+        // GLPI invokes ITEM_PURGE after deleting the item row, inside the same
+        // transaction. Every plugin link writer locks that item row before its
+        // credential row, so no new relationship can appear after the purge's
+        // item delete. Enumerate with a current read to avoid an outer transaction's
+        // older REPEATABLE READ snapshot, then lock credentials in ascending order.
         $DB->beginTransaction();
-
         try {
-            $iterator = $DB->request([
-                'SELECT' => ['plugin_credentials_credentials_id'],
-                'FROM'   => self::getTable(),
-                'WHERE'  => [
-                    'itemtype' => $itemtype,
-                    'items_id' => $items_id,
-                ],
-            ]);
-            $credential_ids = [];
-            foreach ($iterator as $row) {
-                $credential_ids[] = (int) $row['plugin_credentials_credentials_id'];
-            }
-
+            $credential_ids = self::getCredentialIDsForItemForUpdate($itemtype, $items_id);
             if ($credential_ids !== []) {
-                $credential_ids = array_values(array_unique($credential_ids));
-                sort($credential_ids, SORT_NUMERIC);
-                // Lock credential rows before deleting the source relationships. This
-                // serializes purge with explicit link/unlink operations.
                 foreach ($credential_ids as $credential_id) {
                     if (!self::lockCredential($credential_id)) {
                         throw new \RuntimeException('Unable to lock credential while purging its linked item.');
@@ -330,8 +504,8 @@ final class CredentialItemLink extends CommonDBTM
                 }
 
                 foreach ($credential_ids as $credential_id) {
-                    // Use a current read: link_existing may have committed another
-                    // relationship while purge waited for this credential's row lock.
+                    // Read relationships after acquiring the parent credential lock.
+                    // All plugin link writers use that same lock.
                     $remaining = self::getLinksForCredentialForUpdate($credential_id);
                     if ($remaining === []) {
                         $updated = $DB->update(Credential::getTable(), [

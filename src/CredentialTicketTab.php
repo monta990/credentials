@@ -189,7 +189,7 @@ final class CredentialTicketTab extends CommonDBTM
                 'display' => false,
                 'title' => __('Credential details', 'credentials') . ' — ' . $row['name'],
                 'width' => 1100,
-                'height' => 760,
+                'height' => 530,
                 'reloadonclose' => false,
             ]);
             $rows[] = $row;

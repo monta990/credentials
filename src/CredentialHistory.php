@@ -48,6 +48,43 @@ final class CredentialHistory
     }
 
     /**
+     * Record an event on every GLPI item currently linked to a credential.
+     * This keeps updates and exports visible in each affected asset/user history.
+     */
+    public static function recordForLinkedItems(int $credential_id, int $action): bool
+    {
+        if ($credential_id <= 0 || !Credential::isHistoryAction($action)) {
+            return false;
+        }
+
+        $links = CredentialItemLink::getLinksForCredential($credential_id);
+        if ($links === []) {
+            return false;
+        }
+
+        $written = [];
+        foreach ($links as $link) {
+            $itemtype = (string) ($link['itemtype'] ?? '');
+            $items_id = (int) ($link['items_id'] ?? 0);
+            if ($items_id <= 0 || !CredentialItem::isSupportedItemtype($itemtype)) {
+                return false;
+            }
+
+            $key = $itemtype . '#' . $items_id;
+            if (isset($written[$key])) {
+                continue;
+            }
+
+            if (!self::recordForItem($itemtype, $items_id, $action, $credential_id)) {
+                return false;
+            }
+            $written[$key] = true;
+        }
+
+        return $written !== [];
+    }
+
+    /**
      * Record a lifecycle event on the credential itself.
      * This is used when the last linked GLPI item is permanently purged, so the
      * event survives the deletion of the parent item's own history.
