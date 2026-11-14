@@ -7,8 +7,6 @@ namespace {
     {
         public static function getTable($classname = null): string { return ''; }
         public static function getIndexName(): string { return 'id'; }
-        public static function isEntityAssign(): bool { return false; }
-        public static function getEntityID(): int { return -1; }
         /** @var array<string,mixed> */
         public array $fields = [];
         public function getFromResultSet(array $row): void { $this->fields = $row; }
@@ -26,16 +24,14 @@ namespace {
 
     class Database extends CommonDBChild
     {
-        public function isEntityAssign(): bool { return false; }
-        public function getEntityID(): int { return -1; }
+        public function getFromResultSet(array $row): void { $this->fields = $row; }
     }
 
     class DatabaseInstance extends CommonDBTM
     {
         public static function getTable($classname = null): string { return 'glpi_databaseinstances'; }
         public static function getIndexName(): string { return 'id'; }
-        public function isEntityAssign(): bool { return true; }
-        public function getEntityID(): int { return (int) ($this->fields['entities_id'] ?? -1); }
+        public function getFromResultSet(array $row): void { $this->fields = $row; }
     }
 
     class Session
