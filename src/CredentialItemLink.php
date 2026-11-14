@@ -179,10 +179,16 @@ final class CredentialItemLink extends CommonDBTM
             // Revalidate the foreign key from the locked child row afterwards.
             global $DB;
             $parent_field = $item::$items_id;
+            // A normal SELECT here would establish the transaction's
+            // REPEATABLE READ snapshot before waiting for the parent row lock.
+            // Use a current read for the FK probe, while preserving parent -> child
+            // lock order; the child is locked and the FK is revalidated below too.
+            $index = $item::getIndexName();
             $probe = $DB->request([
                 'SELECT' => [$parent_field],
                 'FROM' => $item::getTable(),
-                'WHERE' => [$item::getIndexName() => $items_id],
+                'WHERE' => [$index => $items_id],
+                'ORDER' => [new QueryExpression(\\DBmysql::quoteName($index) . ' FOR UPDATE')],
             ])->current();
             if (!is_array($probe)) {
                 return false;
