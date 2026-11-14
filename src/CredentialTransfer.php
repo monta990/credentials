@@ -298,6 +298,7 @@ final class CredentialTransfer
             'date_creation' => self::currentTime(),
             'date_mod' => self::currentTime(),
             'link_lock_token' => bin2hex(random_bytes(16)),
+            'links_count' => 0,
             'is_deleted' => 0,
         ]);
         if ($inserted === false) {
