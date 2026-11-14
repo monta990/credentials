@@ -102,12 +102,12 @@ namespace {
                 );
             }
             if ($table === 'glpi_databases') {
-                $id = (int) ($criteria['WHERE']['id'] ?? 0);
+                $id = (int) ($criteria['WHERE']['id'] ?? $criteria['WHERE'][$table . '.id'] ?? 0);
                 $row = $this->item_rows['Database#' . $id] ?? null;
                 return new FakeCredentialLockIterator(is_array($row) ? [$row] : []);
             }
             if ($table === 'glpi_databaseinstances') {
-                $id = (int) ($criteria['WHERE']['id'] ?? 0);
+                $id = (int) ($criteria['WHERE']['id'] ?? $criteria['WHERE'][$table . '.id'] ?? 0);
                 $row = $this->item_rows['DatabaseInstance#' . $id] ?? null;
                 return new FakeCredentialLockIterator(is_array($row) ? [$row] : []);
             }
@@ -230,7 +230,7 @@ namespace {
         'Database#88' => ['id' => 88, 'databaseinstances_id' => 21, 'name' => 'ERP database'],
         'DatabaseInstance#21' => ['id' => 21, 'entities_id' => 4, 'name' => 'ERP instance'],
     ];
-    $child_locked = \GlpiPlugin\Credentials\CredentialItemLink::lockItemForUpdate('Database', 88);
+    $child_locked = \GlpiPlugin\Credentials\CredentialItemLink::lockItemForUpdate('Database', 88, 4);
     if (!$child_locked) {
         throw new RuntimeException('Database child lock must succeed when its parent and child rows exist.');
     }
