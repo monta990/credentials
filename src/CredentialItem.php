@@ -30,9 +30,6 @@ final class CredentialItem extends CommonDBTM
         }
 
         $itemtypes = array_values(array_unique($itemtypes));
-        if ($itemtypes === []) {
-            return;
-        }
 
         Plugin::registerClass(self::class, ['addtabon' => $itemtypes]);
         foreach ($itemtypes as $itemtype) {
