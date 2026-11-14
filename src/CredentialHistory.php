@@ -81,7 +81,7 @@ final class CredentialHistory
             $written[$key] = true;
         }
 
-        return $written !== [];
+        return true;
     }
 
     /**
