@@ -199,7 +199,7 @@ namespace {
         'Database#88' => ['id' => 88, 'databaseinstances_id' => 21, 'name' => 'ERP database'],
         'DatabaseInstance#21' => ['id' => 21, 'entities_id' => 4, 'name' => 'ERP instance'],
     ];
-    if (!\\GlpiPlugin\\Credentials\\CredentialItemLink::lockItemForUpdate('Database', 88, 4)) {
+    if (!\GlpiPlugin\Credentials\CredentialItemLink::lockItemForUpdate('Database', 88, 4)) {
         throw new RuntimeException('Database child item should lock when its parent and child rows are available.');
     }
     $probe = $DB->requests[0] ?? [];
