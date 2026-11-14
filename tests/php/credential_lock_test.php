@@ -191,6 +191,35 @@ namespace {
         throw new RuntimeException('Credential data must be read by its exact parent ID after acquiring its write lock.');
     }
 
+    // Regression: Database is a CommonDBChild. Its parent-ID probe must itself
+    // be a locking/current read, not a consistent SELECT that establishes the
+    // REPEATABLE READ snapshot before the parent lock wait.
+    $DB->requests = [];
+    $DB->item_rows = [
+        'Database#88' => ['id' => 88, 'databaseinstances_id' => 21, 'name' => 'ERP database'],
+        'DatabaseInstance#21' => ['id' => 21, 'entities_id' => 4, 'name' => 'ERP instance'],
+    ];
+    if (!\\GlpiPlugin\\Credentials\\CredentialItemLink::lockItemForUpdate('Database', 88, 4)) {
+        throw new RuntimeException('Database child item should lock when its parent and child rows are available.');
+    }
+    $probe = $DB->requests[0] ?? [];
+    $probe_order = $probe['ORDER'][0] ?? null;
+    if (($probe['FROM'] ?? null) !== 'glpi_databases'
+        || ($probe['WHERE'] ?? null) !== ['id' => 88]
+        || !$probe_order instanceof FakeQueryExpression
+        || !str_contains($probe_order->expression, 'FOR UPDATE')
+    ) {
+        throw new RuntimeException('CommonDBChild parent-ID probe must be a DBAL current/locking read.');
+    }
+    $parent_lock = $DB->requests[1] ?? [];
+    $child_lock = $DB->requests[2] ?? [];
+    if (($parent_lock['FROM'] ?? null) !== 'glpi_databaseinstances'
+        || ($child_lock['FROM'] ?? null) !== 'glpi_databases'
+        || !str_contains(($child_lock['ORDER'][0]->expression ?? ''), 'FOR UPDATE')
+    ) {
+        throw new RuntimeException('CommonDBChild locking must preserve parent-first lock order and revalidate the child row.');
+    }
+
     $source = file_get_contents(__DIR__ . '/../../src/CredentialItemLink.php');
     if (!is_string($source)
         || !str_contains($source, 'new QueryExpression(')
