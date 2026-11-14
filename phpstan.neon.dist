@@ -1,3 +1,8 @@
+includes:
+    - .ci/glpi/vendor/glpi-project/phpstan-glpi/extension.neon
+    - .ci/glpi/vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    - .ci/glpi/vendor/thecodingmachine/phpstan-safe-rule/phpstan-safe-rule.neon
+
 parameters:
     level: 5
     phpVersion: 80300
@@ -6,18 +11,14 @@ parameters:
         - front
         - setup.php
         - hook.php
+    bootstrapFiles:
+        - .ci/glpi/vendor/autoload.php
+        - .ci/glpi/stubs/db_config_classes.php
+        - .ci/glpi/stubs/glpi_constants.php
+        - .ci/glpi/stubs/plugins_migrations_classes.php
     tmpDir: .cache/phpstan
     treatPhpDocTypesAsCertain: false
-    reportUnmatchedIgnoredErrors: false
-
-    # GLPI supplies these symbols at runtime. The plugin repository is tested
-    # without booting an installed GLPI instance, so unresolved core symbols
-    # are excluded while PHPStan still checks types and control flow inside
-    # the plugin's own classes and functions.
-    ignoreErrors:
-        - identifier: class.notFound
-        - identifier: classConstant.notFound
-        - identifier: constant.notFound
-        - identifier: function.notFound
-        - identifier: method.notFound
-        - identifier: property.notFound
+    glpi:
+        glpiPath: .ci/glpi
+        glpiVersion: '12.0.0'
+        enableEarlierRulesAdoption: false
