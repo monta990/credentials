@@ -7,6 +7,8 @@ namespace {
     {
         public static function getTable($classname = null): string { return ''; }
         public static function getIndexName(): string { return 'id'; }
+        public static function isEntityAssign(): bool { return false; }
+        public static function getEntityID(): int { return -1; }
         /** @var array<string,mixed> */
         public array $fields = [];
         public function getFromResultSet(array $row): void { $this->fields = $row; }
