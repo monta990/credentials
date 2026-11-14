@@ -53,22 +53,132 @@ final class CredentialItemLink extends CommonDBTM
      */
     public static function existsForUpdate(int $credential_id, string $itemtype, int $items_id): bool
     {
-        global $DB;
         if ($credential_id <= 0 || $items_id <= 0 || !CredentialItem::isSupportedItemtype($itemtype)) {
             return false;
         }
-        $iterator = $DB->request([
-            'SELECT' => ['id'],
-            'FROM' => self::getTable(),
-            'WHERE' => [
-                'plugin_credentials_credentials_id' => $credential_id,
-                'itemtype' => $itemtype,
-                'items_id' => $items_id,
-            ],
-            'ORDER' => [new QueryExpression(\DBmysql::quoteName('id') . ' FOR UPDATE')],
-            'LIMIT' => 1,
+        $links = self::getLinksForCredentialForUpdate($credential_id);
+        return self::hasLink($links, $itemtype, $items_id);
+    }
+
+    /**
+     * Lock relationship sets for multiple credentials in deterministic credential
+     * ID order. Call before acquiring the corresponding credential row locks.
+     *
+     * @param array<int,int|string> $credential_ids
+     * @return array<int,array<int,array{itemtype:string,items_id:int}>>
+     */
+    public static function getLinksForCredentialsForUpdate(array $credential_ids): array
+    {
+        $ids = [];
+        foreach ($credential_ids as $credential_id) {
+            $id = (int) $credential_id;
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+        $ids = array_values($ids);
+        sort($ids, SORT_NUMERIC);
+
+        $links = [];
+        foreach ($ids as $id) {
+            $links[$id] = self::getLinksForCredentialForUpdate($id);
+        }
+        return $links;
+    }
+
+    /** Check a previously read or locked relationship set without another query. */
+    public static function hasLink(array $links, string $itemtype, int $items_id): bool
+    {
+        foreach ($links as $link) {
+            if (($link['itemtype'] ?? null) === $itemtype && (int) ($link['items_id'] ?? 0) === $items_id) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Add one relationship and update its denormalized count.
+     *
+     * @param array<string,mixed> $input
+     */
+    public static function addLink(array $input): bool
+    {
+        $credential_id = (int) ($input['plugin_credentials_credentials_id'] ?? 0);
+        if ($credential_id <= 0) {
+            return false;
+        }
+
+        $link = new self();
+        if (!$link->add($input)) {
+            return false;
+        }
+
+        self::adjustLinkCount($credential_id, 1);
+        return true;
+    }
+
+    /** Move one relationship and keep both credential counters synchronized. */
+    public static function moveLink(
+        int $source_credential_id,
+        int $destination_credential_id,
+        string $itemtype,
+        int $items_id,
+    ): bool {
+        global $DB;
+
+        if ($source_credential_id <= 0 || $destination_credential_id <= 0
+            || $source_credential_id === $destination_credential_id
+            || !CredentialItem::isSupportedItemtype($itemtype) || $items_id <= 0
+        ) {
+            return false;
+        }
+
+        $moved = $DB->update(self::getTable(), [
+            'plugin_credentials_credentials_id' => $destination_credential_id,
+        ], [
+            'plugin_credentials_credentials_id' => $source_credential_id,
+            'itemtype' => $itemtype,
+            'items_id' => $items_id,
         ]);
-        return count($iterator) > 0;
+        if ($moved === false || $DB->getAffectedRows() !== 1) {
+            return false;
+        }
+
+        self::adjustLinkCount($source_credential_id, -1);
+        self::adjustLinkCount($destination_credential_id, 1);
+        return true;
+    }
+
+    /**
+     * Atomically adjust the count while holding the credential parent row.
+     * Returns the new count; inconsistent negative values abort the transaction.
+     */
+    public static function adjustLinkCount(int $credential_id, int $delta): int
+    {
+        global $DB;
+
+        if ($credential_id <= 0 || $delta === 0) {
+            throw new \InvalidArgumentException('A positive credential ID and non-zero link-count delta are required.');
+        }
+        $credential = self::getCredentialForUpdate($credential_id);
+        if ($credential === null) {
+            throw new \RuntimeException('Unable to read credential while updating its relationship count.');
+        }
+
+        $current_count = (int) ($credential['links_count'] ?? -1);
+        $new_count = $current_count + $delta;
+        if ($current_count < 0 || $new_count < 0) {
+            throw new \RuntimeException('Credential relationship count is inconsistent with its links.');
+        }
+
+        $updated = $DB->update(Credential::getTable(), [
+            'links_count' => $new_count,
+        ], ['id' => $credential_id]);
+        if ($updated === false || $DB->getAffectedRows() !== 1) {
+            throw new \RuntimeException('Unable to update credential relationship count.');
+        }
+        return $new_count;
     }
 
     /** @return array<int, array{itemtype:string,items_id:int}> */
@@ -121,11 +231,9 @@ final class CredentialItemLink extends CommonDBTM
             return [];
         }
 
-        // The caller must already hold this credential's parent-row write lock.
-        // Use GLPI's DBAL query builder with a locking-read clause. The `ORDER`
-        // expression is a static DBAL expression; all identifiers and values are
-        // still handled by the query builder. This is a current read under InnoDB
-        // REPEATABLE READ, including when GLPI opened an outer transaction earlier.
+        // This is a current locking read. Call it BEFORE lockCredential() so
+        // concurrent ITEM_PURGE and link writers acquire relation rows in the
+        // same relationship -> credential order.
         $iterator = $DB->request([
             'SELECT' => ['itemtype', 'items_id'],
             'FROM' => self::getTable(),
@@ -145,7 +253,6 @@ final class CredentialItemLink extends CommonDBTM
                 'items_id' => $items_id,
             ];
         }
-
         return array_values($unique);
     }
 
@@ -373,7 +480,7 @@ final class CredentialItemLink extends CommonDBTM
      *
      * @return array<int,int>
      */
-    public static function getCredentialIDsForItemForUpdate(string $itemtype, int $items_id): array
+    public static function getCredentialLinkCountsForItemForUpdate(string $itemtype, int $items_id): array
     {
         global $DB;
 
@@ -387,18 +494,25 @@ final class CredentialItemLink extends CommonDBTM
             'WHERE' => ['itemtype' => $itemtype, 'items_id' => $items_id],
             'ORDER' => [new QueryExpression(\DBmysql::quoteName('plugin_credentials_credentials_id') . ' FOR UPDATE')],
         ]);
-
-        $ids = [];
+        $counts = [];
         foreach ($iterator as $row) {
             $id = (int) ($row['plugin_credentials_credentials_id'] ?? 0);
             if ($id > 0) {
-                $ids[$id] = $id;
+                $counts[$id] = ($counts[$id] ?? 0) + 1;
             }
         }
-        $ids = array_values($ids);
-        sort($ids, SORT_NUMERIC);
+        ksort($counts, SORT_NUMERIC);
+        return $counts;
+    }
 
-        return $ids;
+    /**
+     * Enumerate and lock all relationship rows for an item in credential ID order.
+     *
+     * @return array<int,int>
+     */
+    public static function getCredentialIDsForItemForUpdate(string $itemtype, int $items_id): array
+    {
+        return array_keys(self::getCredentialLinkCountsForItemForUpdate($itemtype, $items_id));
     }
 
     /**
@@ -449,7 +563,10 @@ final class CredentialItemLink extends CommonDBTM
      */
     public static function countForCredentialForUpdate(int $credential_id): int
     {
-        return count(self::getLinksForCredentialForUpdate($credential_id));
+        // The denormalized count lives on the credential row and avoids locking
+        // relation records after the parent credential lock.
+        $credential = self::getCredentialForUpdate($credential_id);
+        return $credential === null ? 0 : max(0, (int) ($credential['links_count'] ?? 0));
     }
 
     /**
@@ -542,18 +659,22 @@ final class CredentialItemLink extends CommonDBTM
             return false;
         }
 
-        // Keep the invariant even if a future caller bypasses the controller.
-        // The caller must hold the credential row lock; this current read then
-        // sees relationship deletes committed while it waited for that lock.
+        // The caller must lock the relationship set before the credential row.
         if (!CredentialLinkPolicy::canUnlink(self::countForCredentialForUpdate($credential_id))) {
             return false;
         }
 
-        return $DB->delete(self::getTable(), [
+        $deleted = $DB->delete(self::getTable(), [
             'plugin_credentials_credentials_id' => $credential_id,
             'itemtype' => $itemtype,
             'items_id' => $items_id,
-        ]) !== false;
+        ]);
+        if ($deleted === false || $DB->getAffectedRows() !== 1) {
+            return false;
+        }
+
+        self::adjustLinkCount($credential_id, -1);
+        return true;
     }
 
     /**
@@ -585,20 +706,17 @@ final class CredentialItemLink extends CommonDBTM
      * Current-read reachability check for link transactions after locking the
      * candidate credential row; it avoids reading an older RR snapshot.
      */
-    public static function userCanReachCredentialForUpdate(int $credential_id): bool
+    public static function userCanReachCredentialForUpdate(int $credential_id, ?array $locked_links = null): bool
     {
-        global $DB;
         if ($credential_id <= 0 || !Session::haveRight(Credential::$rightname, READ)) {
             return false;
         }
-        $iterator = $DB->request([
-            'SELECT' => ['itemtype', 'items_id'],
-            'FROM' => self::getTable(),
-            'WHERE' => ['plugin_credentials_credentials_id' => $credential_id],
-            'ORDER' => [new QueryExpression(\DBmysql::quoteName('itemtype') . ', ' . \DBmysql::quoteName('items_id') . ' FOR UPDATE')],
-        ]);
-        foreach ($iterator as $row) {
-            if (CredentialItem::loadReadableItem((string) $row['itemtype'], (int) $row['items_id']) !== null) {
+
+        // Callers pass the relation rows locked before the credential parent.
+        // The fallback must likewise run before lockCredential().
+        $locked_links ??= self::getLinksForCredentialForUpdate($credential_id);
+        foreach ($locked_links as $row) {
+            if (CredentialItem::loadReadableItem($row['itemtype'], $row['items_id']) !== null) {
                 return true;
             }
         }
@@ -617,59 +735,62 @@ final class CredentialItemLink extends CommonDBTM
             return;
         }
 
-        // GLPI invokes ITEM_PURGE after deleting the item row, inside the same
-        // transaction. Every plugin link writer locks that item row before its
-        // credential row, so no new relationship can appear after the purge's
-        // item delete. Enumerate with a current read to avoid an outer transaction's
-        // older REPEATABLE READ snapshot, then lock credentials in ascending order.
+        // GLPI already deleted and locked the item row. Lock only its relationship
+        // rows as a current read, then acquire credential parents in ascending order.
+        // Never lock other relation rows after a credential lock: another purge may
+        // hold one of them while waiting for this credential.
         $DB->beginTransaction();
         try {
-            $credential_ids = self::getCredentialIDsForItemForUpdate($itemtype, $items_id);
+            $link_counts = self::getCredentialLinkCountsForItemForUpdate($itemtype, $items_id);
+            $credential_ids = array_keys($link_counts);
             if ($credential_ids !== []) {
+                sort($credential_ids, SORT_NUMERIC);
                 foreach ($credential_ids as $credential_id) {
                     if (!self::lockCredential($credential_id)) {
                         throw new \RuntimeException('Unable to lock credential while purging its linked item.');
                     }
                 }
 
-                if ($DB->delete(self::getTable(), [
+                $deleted = $DB->delete(self::getTable(), [
                     'itemtype' => $itemtype,
                     'items_id' => $items_id,
-                ]) === false) {
+                ]);
+                $expected_deleted = array_sum($link_counts);
+                if ($deleted === false || $DB->getAffectedRows() !== $expected_deleted) {
                     throw new \RuntimeException('Unable to remove credential relationships for purged item.');
                 }
 
+                // The credential row stores the authoritative relation count. This
+                // lets concurrent purges serialize on the parent without acquiring
+                // each other's remaining relationship rows in reverse order.
                 foreach ($credential_ids as $credential_id) {
-                    // Read relationships after acquiring the parent credential lock.
-                    // All plugin link writers use that same lock.
-                    $remaining = self::getLinksForCredentialForUpdate($credential_id);
-                    if ($remaining === []) {
-                        $updated = $DB->update(Credential::getTable(), [
-                            'is_deleted' => 1,
-                            'date_mod'   => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
-                        ], [
-                            'id' => $credential_id,
-                            'is_deleted' => 0,
-                        ]);
-                        if ($updated === false) {
-                            throw new \RuntimeException('Unable to archive orphaned credential.');
-                        }
-                        if ($DB->getAffectedRows() === 1
-                            && !CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_ORPHANED)
-                        ) {
-                            throw new \RuntimeException('Unable to record orphaned credential history.');
-                        }
+                    $new_count = self::adjustLinkCount($credential_id, -$link_counts[$credential_id]);
+                    if ($new_count !== 0) {
+                        continue;
+                    }
+
+                    $updated = $DB->update(Credential::getTable(), [
+                        'is_deleted' => 1,
+                        'date_mod' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
+                    ], [
+                        'id' => $credential_id,
+                        'is_deleted' => 0,
+                    ]);
+                    if ($updated === false) {
+                        throw new \RuntimeException('Unable to archive orphaned credential.');
+                    }
+                    if ($DB->getAffectedRows() === 1
+                        && !CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_ORPHANED)
+                    ) {
+                        throw new \RuntimeException('Unable to record orphaned credential history.');
                     }
                 }
             }
 
             $DB->commit();
         } catch (\Throwable $exception) {
-            // This rolls back only the savepoint/transaction level opened above.
             $DB->rollBack();
-
-            // Propagate the failure so GLPI can roll back its surrounding purge
-            // transaction instead of leaving the asset deleted with stale links.
+            // Propagate so GLPI rolls back its surrounding parent-item purge.
             throw $exception;
         }
     }
