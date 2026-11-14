@@ -37,7 +37,7 @@ final class Credential extends CommonDBTM
 
     /** Keep change history for non-secret fields, never retain credential values in glpi_logs. */
     public bool $dohistory = true;
-    public array $history_blacklist = ['name', 'login', 'password', 'url', 'notes', 'link_lock_token'];
+    public array $history_blacklist = ['name', 'login', 'password', 'url', 'notes', 'link_lock_token', 'links_count'];
 
     #[Override]
     public static function getTable($classname = null): string

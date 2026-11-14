@@ -383,7 +383,7 @@ final class CredentialAdminService
         $DB->beginTransaction();
         $purged = 0;
         try {
-                        $locked_links = CredentialItemLink::getLinksForCredentialsForUpdate(array_column($candidates, 0));
+            $locked_links = CredentialItemLink::getLinksForCredentialsForUpdate(array_column($candidates, 0));
             $locked_ids = CredentialItemLink::lockCredentials(array_column($candidates, 0));
             $locked_set = array_fill_keys($locked_ids, true);
             foreach ($candidates as [$id, $entity]) {
