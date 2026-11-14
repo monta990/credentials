@@ -100,8 +100,9 @@ namespace {
         public ?array $item_row = ['id' => 7, 'entities_id' => 4, 'name' => 'ERP'];
         /** @var array<int,array<string,mixed>> */
         public array $database_probe_rows = [
-            12 => ['databaseinstances_id' => 50],
-            13 => ['databaseinstances_id' => 90],
+            // Deliberately inverse to child IDs: lower child ID belongs to higher parent ID.
+            12 => ['databaseinstances_id' => 90],
+            13 => ['databaseinstances_id' => 50],
         ];
         /** @var array<int,array<string,mixed>> */
         public array $database_parent_rows = [
@@ -110,8 +111,8 @@ namespace {
         ];
         /** @var array<int,array<string,mixed>> */
         public array $database_child_rows = [
-            12 => ['id' => 12, 'databaseinstances_id' => 50, 'name' => 'ERP DB A'],
-            13 => ['id' => 13, 'databaseinstances_id' => 90, 'name' => 'ERP DB B'],
+            12 => ['id' => 12, 'databaseinstances_id' => 90, 'name' => 'ERP DB A'],
+            13 => ['id' => 13, 'databaseinstances_id' => 50, 'name' => 'ERP DB B'],
         ];
         /** @var list<array<string,mixed>> */
         public array $link_rows = [
@@ -258,11 +259,11 @@ namespace {
         && str_contains($child_lock_requests[2]['ORDER'][0]->getValue(), 'FOR UPDATE'),
         'CommonDBChild resolves FK without locking the child, then locks parent and child');
     $db->database_child_rows[12] = ['id' => 12, 'databaseinstances_id' => 51, 'name' => 'ERP DB'];
-    check(!CredentialItemLink::lockItemForUpdate(Database::class, 12, 8), 'CommonDBChild rejects an FK that changed after parent resolution');
+    check(!\\GlpiPlugin\\Credentials\\CredentialItemLink::lockItemForUpdate(\\Database::class, 12, 8), 'CommonDBChild rejects an FK that changed after parent resolution');
     $db->database_child_rows[12] = ['id' => 12, 'databaseinstances_id' => 50, 'name' => 'ERP DB'];
 
     $db->requests = [];
-    $bulk_locked = CredentialItemLink::lockItemsForUpdate([
+    $bulk_locked = \\GlpiPlugin\\Credentials\\CredentialItemLink::lockItemsForUpdate([
         ['itemtype' => Database::class, 'items_id' => 13, 'entities_id' => 8],
         ['itemtype' => Database::class, 'items_id' => 12, 'entities_id' => 8],
     ]);
@@ -276,6 +277,14 @@ namespace {
         && ($bulk[4]['FROM'] ?? '') === 'glpi_databases'
         && ($bulk[5]['FROM'] ?? '') === 'glpi_databases',
         'bulk lock resolves all FKs, locks all parents, then all children');
+    $probe_child_ids = [
+        (int) ($bulk[0]['WHERE']['id'] ?? 0),
+        (int) ($bulk[1]['WHERE']['id'] ?? 0),
+    ];
+    $resolved_parent_ids = [
+        (int) ($db->database_probe_rows[$probe_child_ids[0]]['databaseinstances_id'] ?? 0),
+        (int) ($db->database_probe_rows[$probe_child_ids[1]]['databaseinstances_id'] ?? 0),
+    ];
     $parent_ids = [
         (int) ($bulk[2]['WHERE']['glpi_databaseinstances.id'] ?? 0),
         (int) ($bulk[3]['WHERE']['glpi_databaseinstances.id'] ?? 0),
@@ -284,8 +293,11 @@ namespace {
         (int) ($bulk[4]['WHERE']['glpi_databases.id'] ?? 0),
         (int) ($bulk[5]['WHERE']['glpi_databases.id'] ?? 0),
     ];
-    check($parent_ids === [50, 90], 'bulk parents lock by ascending parent ID despite reversed child input');
-    check($child_ids === [12, 13], 'bulk children lock by ascending child ID despite reversed child input');
+    check($probe_child_ids === [12, 13] && $resolved_parent_ids === [90, 50],
+        'test fixture maps ascending child IDs to descending parent IDs');
+    check($parent_ids === [50, 90],
+        'bulk parent locks are sorted ascending independently of the inverse child-to-parent mapping');
+    check($child_ids === [12, 13], 'bulk child locks remain sorted ascending after parent locks');
 
     $root = dirname(__DIR__);
     $backup = file_get_contents($root . '/src/Service/CredentialBackupService.php');
