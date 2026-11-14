@@ -39,6 +39,7 @@ final class FakeCredentialDBResult implements IteratorAggregate
 {
     private int $position = 0;
     public function __construct(private array $rows) {}
+    public function current(): ?array { return $this->rows[0] ?? null; }
     public function fetch_assoc(): array|false { return $this->rows[$this->position++] ?? false; }
     public function free(): void {}
     public function getIterator(): Traversable
@@ -70,6 +71,8 @@ final class FakeCredentialDB
     public array $links = [
         ['id' => 1, 'plugin_credentials_credentials_id' => 17, 'itemtype' => 'DummyAsset', 'items_id' => 42],
     ];
+    /** @var array<string,mixed> */
+    public array $credential = ['id' => 17, 'links_count' => 1, 'is_deleted' => 0];
     public ?Closure $afterLock = null;
     private ?array $consistentSnapshot = null;
 
@@ -117,7 +120,10 @@ final class FakeCredentialDB
             }
         }
 
-        if ($is_current_read) {
+        if (($query['FROM'] ?? '') === 'glpi_plugin_credentials_credentials') {
+            $id = (int) (($query['WHERE']['id'] ?? 0));
+            $rows = $id === 17 ? [$this->credential] : [];
+        } elseif ($is_current_read) {
             $rows = $this->links;
         } else {
             $this->consistentSnapshot ??= $this->links;
@@ -164,6 +170,7 @@ final class FakeCredentialDB
 
     public function delete(string $table, array $criteria): bool
     {
+        $before = count($this->links);
         $this->links = array_values(array_filter($this->links, static function (array $row) use ($criteria): bool {
             foreach ($criteria as $field => $expected) {
                 if ((string) ($row[$field] ?? null) !== (string) $expected) {
@@ -172,6 +179,7 @@ final class FakeCredentialDB
             }
             return false;
         }));
+        $this->affectedRows = $before - count($this->links);
         return true;
     }
 
@@ -185,6 +193,13 @@ final class FakeCredentialDB
         if ($table !== 'glpi_plugin_credentials_credentials' || ($criteria['id'] ?? null) !== 17) {
             throw new RuntimeException('Credential lock/archive must target the correct GLPI credential row.');
         }
+        foreach ($criteria as $field => $expected) {
+            if ((string) ($this->credential[$field] ?? null) !== (string) $expected) {
+                $this->affectedRows = 0;
+                return true;
+            }
+        }
+        $this->credential = array_merge($this->credential, $values);
         $this->affectedRows = 1;
         if (isset($values['link_lock_token']) && $this->afterLock !== null) {
             $callback = $this->afterLock;
@@ -242,12 +257,14 @@ $DB = new FakeCredentialDB();
 if ($DB->transactionLevel !== 1 || $DB->commitCalls !== 1 || $DB->rollbackCalls !== 0) {
     throw new RuntimeException('Successful cleanup changed the caller transaction level.');
 }
-if (count($DB->updates) !== 2
+if (count($DB->updates) !== 3
     || !isset($DB->updates[0]['values']['link_lock_token'])
-    || ($DB->updates[1]['values']['is_deleted'] ?? null) !== 1
+    || ($DB->updates[1]['values']['links_count'] ?? null) !== 0
+    || ($DB->updates[2]['values']['is_deleted'] ?? null) !== 1
+    || (int) $DB->credential['links_count'] !== 0
     || \GlpiPlugin\Credentials\CredentialHistory::$orphanEvents !== 1
 ) {
-    throw new RuntimeException('Purge must use the GLPI DB lock API, archive the orphan and record secret-free credential history.');
+    throw new RuntimeException('Purge must update the locked relation counter, archive the orphan and record secret-free history.');
 }
 
 // link_existing commits a survivor while purge waits for the credential lock.
@@ -260,15 +277,19 @@ $DB->afterLock = static function (FakeCredentialDB $database): void {
         'itemtype' => 'DummyAsset',
         'items_id' => 99,
     ];
+    $database->credential['links_count']++;
 };
 \GlpiPlugin\Credentials\CredentialHistory::$orphanEvents = 0;
 \GlpiPlugin\Credentials\CredentialItemLink::cleanupForItem('DummyAsset', 42);
 if (count($DB->links) !== 1
     || (int) $DB->links[0]['items_id'] !== 99
-    || count($DB->updates) !== 1
+    || count($DB->updates) !== 2
+    || ($DB->updates[1]['values']['links_count'] ?? null) !== 1
+    || (int) $DB->credential['links_count'] !== 1
+    || (int) $DB->credential['is_deleted'] !== 0
     || \GlpiPlugin\Credentials\CredentialHistory::$orphanEvents !== 0
 ) {
-    throw new RuntimeException('Purge must preserve a credential with a survivor committed during its lock wait.');
+    throw new RuntimeException('Purge must decrement the locked relation counter and preserve a concurrent survivor.');
 }
 
 // Failure must roll back only the plugin savepoint and leave the outer
