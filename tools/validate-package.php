@@ -221,7 +221,7 @@ foreach (['public/js/credentials.js', 'public/js/credential-details.js', 'public
         $errors[] = 'GLPI 12 public JavaScript resource is missing: ' . $public_script;
     }
 }
-if (!str_contains((string) $setup, "'js/credentials.js'")) {
+if (!str_contains((string) $setup, "'js/credentials.js?v='")) {
     $errors[] = 'Global JavaScript must be registered using a path relative to the plugin public/ directory.';
 }
 if (is_dir($root . '/js') || is_dir($root . '/css')) {
@@ -252,10 +252,13 @@ if ($history_call === '' || !str_contains($history_call, 'credential_id') || str
 
 $credential_model = file_get_contents($root . '/src/Credential.php');
 if (!is_string($credential_model)
-    || !preg_match('~function hasCredentialsForItem\([^)]*int \$entities_id\)~', $credential_model)
-    || !str_contains($credential_model, 'return self::getActiveIDsForItem($itemtype, $items_id, $entities_id) !== [];')
+    || !str_contains($credential_model, 'function getActiveIDsForItem(string $itemtype, int $items_id, int $entities_id): array')
+    || !str_contains($credential_model, '!Session::haveAccessToEntity($entities_id)')
+    || !str_contains($credential_model, "'entities_id' => $entities_id,")
+    || !str_contains($credential_model, "'is_deleted' => 0,")
+    || !str_contains($credential_model, 'return $active_ids;')
 ) {
-    $errors[] = 'Credential existence checks must require an explicit accessible entity.';
+    $errors[] = 'Credential listing and existence checks must require an explicit accessible entity and exclude archived rows.';
 }
 
 // Listing queries must never fetch encrypted credential material.
