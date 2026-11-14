@@ -64,15 +64,16 @@ final class CredentialBackupService
 
         $DB->beginTransaction();
         try {
+            $locked_links = CredentialItemLink::getLinksForCredentialsForUpdate(array_column($candidate_ids, 'id'));
             $locked_ids = CredentialItemLink::lockCredentials(array_column($candidate_ids, 'id'));
             if (count($locked_ids) !== count($candidate_ids)) {
                 throw new \RuntimeException(__('A credential changed or disappeared while the backup was being prepared. Retry the export.', 'credentials'));
             }
             $result = self::buildBackup($passphrase, $include_archived, $candidate_ids);
             foreach ($result['credential_ids'] as $credential_id) {
-                $links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
+                $links = $locked_links[$credential_id] ?? [];
                 $recorded = $links !== []
-                    ? CredentialHistory::recordForLinkedItems($credential_id, Credential::HISTORY_EXPORTED)
+                    ? CredentialHistory::recordForLinkedItems($credential_id, Credential::HISTORY_EXPORTED, $links)
                     : CredentialHistory::recordForCredential($credential_id, Credential::HISTORY_EXPORTED);
                 if (!$recorded) {
                     throw new \RuntimeException(__('The export could not be recorded in GLPI history. No backup was delivered.', 'credentials'));
@@ -434,8 +435,7 @@ final class CredentialBackupService
                 }
 
                 foreach ($entry['links'] as $link_data) {
-                    $link = new CredentialItemLink();
-                    $created = (bool) $link->add([
+                    $created = CredentialItemLink::addLink([
                         'plugin_credentials_credentials_id' => $new_id,
                         'itemtype' => $link_data['itemtype'],
                         'items_id' => $link_data['items_id'],

@@ -79,6 +79,7 @@ final class CredentialTransfer
             }
 
             $credential_ids = self::getCredentialIDsForItem($itemtype, $item_id);
+            CredentialItemLink::getLinksForCredentialsForUpdate($credential_ids);
             $locked_ids = CredentialItemLink::lockCredentials($credential_ids);
             self::copyItemRelationships($itemtype, $item_id, $new_id, $source_entity, $destination_entity, $locked_ids);
             $DB->commit();
@@ -105,6 +106,7 @@ final class CredentialTransfer
                 throw new \RuntimeException('The transferred item no longer exists in its destination entity.');
             }
             $credential_ids = self::getCredentialIDsForItem($itemtype, $items_id);
+            CredentialItemLink::getLinksForCredentialsForUpdate($credential_ids);
             $locked_ids = CredentialItemLink::lockCredentials($credential_ids);
             foreach ($locked_ids as $credential_id) {
                 $credential = self::readCredentialAfterLock($credential_id);
@@ -154,14 +156,8 @@ final class CredentialTransfer
                 // Do not change the entity of a credential still used by other items.
                 // Copy ciphertext as-is, then move only this item's relationship.
                 $new_credential_id = self::insertCredentialCopy($credential, $destination_entity);
-                $moved = $DB->update(CredentialItemLink::getTable(), [
-                    'plugin_credentials_credentials_id' => $new_credential_id,
-                ], [
-                    'plugin_credentials_credentials_id' => $credential_id,
-                    'itemtype' => $itemtype,
-                    'items_id' => $items_id,
-                ]);
-                if ($moved === false || $DB->getAffectedRows() !== 1) {
+                $moved = CredentialItemLink::moveLink($credential_id, $new_credential_id, $itemtype, $items_id);
+                if (!$moved) {
                     throw new \RuntimeException('Unable to move the credential relationship to its entity copy.');
                 }
 
@@ -222,13 +218,13 @@ final class CredentialTransfer
                 $new_credential_id = self::insertCredentialCopy($credential, $destination_entity);
             }
 
-            $inserted = $DB->insert(CredentialItemLink::getTable(), [
+            $inserted = CredentialItemLink::addLink([
                 'plugin_credentials_credentials_id' => $new_credential_id,
                 'itemtype' => $itemtype,
                 'items_id' => $destination_id,
                 'date_creation' => self::currentTime(),
             ]);
-            if ($inserted === false) {
+            if (!$inserted) {
                 throw new \RuntimeException('Unable to link the credential to the cloned item.');
             }
 

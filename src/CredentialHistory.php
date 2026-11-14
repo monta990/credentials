@@ -51,13 +51,15 @@ final class CredentialHistory
      * Record an event on every GLPI item currently linked to a credential.
      * This keeps updates and exports visible in each affected asset/user history.
      */
-    public static function recordForLinkedItems(int $credential_id, int $action): bool
+    public static function recordForLinkedItems(int $credential_id, int $action, ?array $locked_links = null): bool
     {
         if ($credential_id <= 0 || !Credential::isHistoryAction($action)) {
             return false;
         }
 
-        $links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
+        // Mutating callers lock relationship rows before the credential parent
+        // and pass that current-read result here rather than acquiring locks late.
+        $links = $locked_links ?? CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
         if ($links === []) {
             return false;
         }
