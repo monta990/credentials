@@ -259,7 +259,7 @@ $active_id_requirements = [
     'current user entity access check' => is_string($credential_model)
         && str_contains($credential_model, 'Session::haveAccessToEntity($entities_id)'),
     'credential entity scope' => is_string($credential_model)
-        && str_contains($credential_model, "'entities_id' => $entities_id,"),
+        && str_contains($credential_model, '\'entities_id\' => $entities_id,'),
     'active-only credential filter' => is_string($credential_model)
         && str_contains($credential_model, "'is_deleted' => 0,"),
     'active IDs return' => is_string($credential_model)
