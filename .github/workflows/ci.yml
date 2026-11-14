@@ -98,7 +98,7 @@ jobs:
           phpcs --version
           phpstan --version
 
-      - name: PHPCS (PSR-12)
+      - name: PHPCS (GLPI-compatible security and consistency rules)
         run: |
           set -o pipefail
           phpcs --standard=phpcs.xml.dist --report=checkstyle --no-cache | cs2pr
