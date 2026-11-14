@@ -214,9 +214,12 @@ final class CredentialAdminService
         try {
             // Lock the GLPI item first so a concurrent ITEM_PURGE either waits
             // for this restore or prevents the relationship from being recreated.
-            if (!CredentialItemLink::lockItemForUpdate($itemtype, $items_id, $entity_id)
-                || !CredentialItemLink::lockCredential($credential_id, $entity_id, false)
-            ) {
+            if (!CredentialItemLink::lockItemForUpdate($itemtype, $items_id, $entity_id)) {
+                $DB->rollBack();
+                return false;
+            }
+            $locked_links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
+            if (!CredentialItemLink::lockCredential($credential_id, $entity_id, false)) {
                 $DB->rollBack();
                 return false;
             }
@@ -225,14 +228,13 @@ final class CredentialAdminService
             if ($credential === null
                 || (int) ($credential->fields['is_deleted'] ?? 0) !== 1
                 || (int) ($credential->fields['entities_id'] ?? -1) !== $entity_id
-                || CredentialItemLink::getLinksForCredentialForUpdate($credential_id) !== []
+                || $locked_links !== []
             ) {
                 $DB->rollBack();
                 return false;
             }
 
-            $link = new CredentialItemLink();
-            if (!$link->add([
+            if (!CredentialItemLink::addLink([
                 'plugin_credentials_credentials_id' => $credential_id,
                 'itemtype' => $itemtype,
                 'items_id' => $items_id,
@@ -294,6 +296,7 @@ final class CredentialAdminService
 
         $DB->beginTransaction();
         try {
+            $locked_links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);
             if (!CredentialItemLink::lockCredential($credential_id, $entity_id, false)) {
                 $DB->rollBack();
                 return false;
@@ -309,7 +312,7 @@ final class CredentialAdminService
             }
 
             // Never permanently delete a credential while any asset/user relationship remains.
-            if (CredentialItemLink::getLinksForCredentialForUpdate($credential_id) !== []) {
+            if ($locked_links !== []) {
                 throw new \RuntimeException(__('This archived credential is still linked to an item. Remove its links before permanently deleting it.', 'credentials'));
             }
 
@@ -380,6 +383,7 @@ final class CredentialAdminService
         $DB->beginTransaction();
         $purged = 0;
         try {
+                        $locked_links = CredentialItemLink::getLinksForCredentialsForUpdate(array_column($candidates, 0));
             $locked_ids = CredentialItemLink::lockCredentials(array_column($candidates, 0));
             $locked_set = array_fill_keys($locked_ids, true);
             foreach ($candidates as [$id, $entity]) {
@@ -396,7 +400,7 @@ final class CredentialAdminService
                 }
 
                 // A record with any remaining link is never purged by this action.
-                if (CredentialItemLink::getLinksForCredentialForUpdate($id) !== []) {
+                if (($locked_links[$id] ?? []) !== []) {
                     continue;
                 }
                 if (!CredentialHistory::recordForCredential($id, Credential::HISTORY_PURGED)) {
