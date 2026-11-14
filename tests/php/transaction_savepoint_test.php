@@ -109,7 +109,7 @@ final class FakeCredentialDB
         $order = $query['ORDER'] ?? [];
         $is_current_read = false;
         foreach ($order as $expression) {
-            if ($expression instanceof \\Glpi\\DBAL\\QueryExpression
+            if ($expression instanceof \Glpi\DBAL\QueryExpression
                 && str_contains($expression->getValue(), 'FOR UPDATE')
             ) {
                 $is_current_read = true;
