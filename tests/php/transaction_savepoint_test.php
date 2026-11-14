@@ -139,7 +139,7 @@ final class FakeCredentialDB
             }));
         }
         $select = $query['SELECT'] ?? '*';
-        if (is_array($select)) {
+        if (is_array($select) && !in_array('*', $select, true)) {
             $rows = array_map(static fn(array $row): array => array_intersect_key($row, array_flip($select)), $rows);
         }
         return new FakeCredentialDBResult($rows);
