@@ -444,10 +444,17 @@ final class CredentialController extends AbstractController
             ];
         }
 
-        usort($rows, static function (array $left, array $right): int {
-            $type_order = strnatcasecmp($left['type_name'], $right['type_name']);
-            return $type_order !== 0 ? $type_order : strnatcasecmp($left['name'], $right['name']);
-        });
+        $type_names = array_column($rows, 'type_name');
+        $names = array_column($rows, 'name');
+        array_multisort(
+            $type_names,
+            SORT_ASC,
+            SORT_NATURAL | SORT_FLAG_CASE,
+            $names,
+            SORT_ASC,
+            SORT_NATURAL | SORT_FLAG_CASE,
+            $rows
+        );
 
         $modal_title = __('Linked items', 'credentials') . ' — ' . (string) $credential->fields['name'];
         $back_url = self::routeUrl('Credential/Details', [
