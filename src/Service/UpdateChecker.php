@@ -48,7 +48,7 @@ final class UpdateChecker
         $url = 'https://api.github.com/repos/' . self::REPOSITORY . '/releases/latest';
         $json = @file_get_contents($url, false, $context, 0, 65536);
         $status_code = 0;
-        foreach (($http_response_header ?? []) as $header) {
+        foreach ($http_response_header as $header) {
             if (preg_match('#^HTTP/\S+\s+(\d{3})#i', $header, $matches)) {
                 $status_code = (int) $matches[1];
             }
