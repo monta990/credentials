@@ -111,14 +111,19 @@ if (!is_file($root . '/tests/php/credential_lock_test.php')
     $errors[] = 'Credential mutations must retain the migrated row lock and use a narrowly scoped DBmysql-quoted current read with transfer/purge race regressions.';
 }
 if (!is_string($controller)
-    || !str_contains($controller, '$locked_candidate->getFromDB($candidate_id)')
+    || !str_contains($controller, 'CredentialItemLink::loadCredentialForUpdate($candidate_id)')
+    || !str_contains($controller, "\$locked_candidate === null")
     || !str_contains($controller, "\$locked_candidate->fields['is_deleted']")
     || !str_contains($controller, "\$locked_candidate->fields['entities_id']")
-    || !str_contains($controller, '$locked_credential->getFromDB($credential_id)')
+    || !str_contains($controller, 'CredentialItemLink::loadCredentialForUpdate($credential_id)')
+    || !str_contains($controller, "\$locked_credential === null")
+    || !str_contains($controller, "\$locked_credential->fields['is_deleted']")
+    || !str_contains($controller, "\$locked_credential->fields['entities_id']")
     || !str_contains($controller, 'CredentialItemLink::lockCredential($candidate_id, $parent_entity_id, true)')
     || !str_contains($controller, 'CredentialItemLink::lockCredential($credential_id, $parent_entity_id, true)')
+    || !str_contains($controller, 'CredentialItemLink::existsForUpdate($credential_id, $itemtype, $items_id)')
 ) {
-    $errors[] = 'Link/unlink/delete must revalidate the live credential state and entity after acquiring the row lock.';
+    $errors[] = 'Link/unlink/delete must revalidate the current credential state, entity and relation after acquiring the row lock.';
 }
 $history_source = file_get_contents($root . '/src/CredentialHistory.php');
 if (!is_string($cleanup)
