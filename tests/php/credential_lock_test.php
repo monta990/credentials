@@ -230,7 +230,7 @@ namespace {
         'Database#88' => ['id' => 88, 'databaseinstances_id' => 21, 'name' => 'ERP database'],
         'DatabaseInstance#21' => ['id' => 21, 'entities_id' => 4, 'name' => 'ERP instance'],
     ];
-    $child_locked = \\GlpiPlugin\\Credentials\\CredentialItemLink::lockItemForUpdate('Database', 88);
+    $child_locked = \GlpiPlugin\Credentials\CredentialItemLink::lockItemForUpdate('Database', 88);
     if (!$child_locked) {
         throw new RuntimeException('Database child lock must succeed when its parent and child rows exist.');
     }
