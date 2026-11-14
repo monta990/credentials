@@ -241,7 +241,7 @@ namespace GlpiPlugin\Credentials {
             $DB->runBeforeLock();
             if ($DB->forceNextLockFailure) {
                 $DB->forceNextLockFailure = false;
-                return false;
+                throw new \\RuntimeException('Unable to acquire the credential write lock.');
             }
             $ok = $DB->update(Credential::getTable(), ['link_lock_token' => bin2hex(random_bytes(16))], $where);
             $locked = $ok !== false && $DB->getAffectedRows() === 1;
@@ -626,7 +626,7 @@ namespace {
             'type' => 'FakeAsset', 'id' => 830, 'newID' => 830, 'entities_id' => 2,
         ]);
     } catch (\RuntimeException $exception) {
-        $thrown = str_contains($exception->getMessage(), 'Unable to lock active credential');
+        $thrown = str_contains($exception->getMessage(), 'Unable to acquire the credential write lock');
     }
     transferAssert($thrown, 'A failed lock on a still-active linked credential must remain an explicit failure.');
 
