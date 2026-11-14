@@ -400,7 +400,10 @@ final class CredentialLifecycleReminderService
         }
     }
 
-    /** @param array<string,int|string> $marker */
+    /**
+     * @param array<string,int|string> $marker
+     * @phpstan-impure
+     */
     private static function reminderAlreadyQueued(array $marker): bool
     {
         global $DB;
