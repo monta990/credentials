@@ -326,9 +326,17 @@ namespace GlpiPlugin\Credentials {
     final class CredentialHistory
     {
         public static array $events = [];
+        public static array $item_events = [];
+
         public static function recordForCredential(int $id, int $action): bool
         {
             self::$events[] = [$id, $action];
+            return true;
+        }
+
+        public static function recordForItem(string $itemtype, int $items_id, int $action, int $credential_id): bool
+        {
+            self::$item_events[] = [$itemtype, $items_id, $action, $credential_id];
             return true;
         }
     }
