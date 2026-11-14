@@ -259,11 +259,11 @@ namespace {
         && str_contains($child_lock_requests[2]['ORDER'][0]->getValue(), 'FOR UPDATE'),
         'CommonDBChild resolves FK without locking the child, then locks parent and child');
     $db->database_child_rows[12] = ['id' => 12, 'databaseinstances_id' => 51, 'name' => 'ERP DB'];
-    check(!\\GlpiPlugin\\Credentials\\CredentialItemLink::lockItemForUpdate(\\Database::class, 12, 8), 'CommonDBChild rejects an FK that changed after parent resolution');
-    $db->database_child_rows[12] = ['id' => 12, 'databaseinstances_id' => 50, 'name' => 'ERP DB'];
+    check(!\GlpiPlugin\Credentials\CredentialItemLink::lockItemForUpdate(\Database::class, 12, 8), 'CommonDBChild rejects an FK that changed after parent resolution');
+    $db->database_child_rows[12] = ['id' => 12, 'databaseinstances_id' => 90, 'name' => 'ERP DB'];
 
     $db->requests = [];
-    $bulk_locked = \\GlpiPlugin\\Credentials\\CredentialItemLink::lockItemsForUpdate([
+    $bulk_locked = \GlpiPlugin\Credentials\CredentialItemLink::lockItemsForUpdate([
         ['itemtype' => Database::class, 'items_id' => 13, 'entities_id' => 8],
         ['itemtype' => Database::class, 'items_id' => 12, 'entities_id' => 8],
     ]);
