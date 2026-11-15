@@ -230,8 +230,9 @@ namespace {
         || ($credential_query['WHERE'] ?? null) !== ['id' => 17]
         || ($credential_query['SELECT'] ?? []) !== ['*']
         || !str_contains(($credential_query['ORDER'][0]->expression ?? ''), 'FOR UPDATE')
+        || isset($credential_query['LIMIT'])
     ) {
-        throw new RuntimeException('Credential data must use a current locking read after acquiring its write lock.');
+        throw new RuntimeException('Credential data must use a single-row current locking read without a trailing LIMIT after FOR UPDATE.');
     }
 
     // Last-link decisions use the count on the credential parent and must not

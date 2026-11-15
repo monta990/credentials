@@ -531,8 +531,10 @@ final class CredentialItemLink extends CommonDBTM
             'SELECT' => ['*'],
             'FROM' => Credential::getTable(),
             'WHERE' => ['id' => $credential_id],
+            // The primary-key predicate already limits this read to one row.
+            // Do not add LIMIT: GLPI appends LIMIT after ORDER, but MariaDB
+            // requires the locking clause to come after LIMIT.
             'ORDER' => [new QueryExpression(\DBmysql::quoteName('id') . ' FOR UPDATE')],
-            'LIMIT' => 1,
         ])->current();
         return is_array($row) ? $row : null;
     }
