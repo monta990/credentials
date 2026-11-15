@@ -1,3 +1,10 @@
+## 0.0.61 — 2026-11-15 (clickable associated records)
+
+- Added a separate Origin column to the Ticket, Problem and Change Credentials tabs. Ticket origins distinguish requester users from ticket items; Problem and Change origins identify the ITIL record that contributed each linked item.
+- Made every associated user or inventory item a direct link to its native GLPI record, opening in a new browser tab with `noopener noreferrer`.
+- Preserved credential aggregation and deduplication, detail actions, item-level READ checks and sudo-mode/re-authentication behavior.
+- Kept links safely escaped in Twig. No database migration, secret-field, encryption or permission change.
+
 ## 0.0.60 — 2026-11-14 (purge serialization and DBAL locking hardening)
 
 - Reworked permanent-purge cleanup to enumerate linked credential IDs inside its transaction with an InnoDB current locking read. This avoids reusing an outer GLPI transaction's older `REPEATABLE READ` snapshot after item deletion waited for a concurrent link writer.

@@ -47,7 +47,7 @@ final class CredentialTicketTab extends CommonDBTM
     /**
      * Build rows with only labels and source descriptions. Encrypted fields are never selected.
      *
-     * @return array{rows: array<int, array{id:int,name:string,date_mod:?string,detail_url:string,sources:array<int,string>}>, requires_reauth:bool, count:int}
+     * @return array{rows: array<int, array{id:int,name:string,date_mod:?string,detail_url:string,origins:array<int,string>,sources:array<int,string>,source_links:array<int,array{label:string,url:string}>}>, requires_reauth:bool, count:int}
      */
     public static function getCredentialRows(Ticket $ticket): array
     {
@@ -142,11 +142,10 @@ final class CredentialTicketTab extends CommonDBTM
             $source_type = $source['kind'] === 'requester'
                 ? __('Requester', 'credentials')
                 : __('Ticket item', 'credentials');
-            $parent_name = (string) $parent->getName();
+            $source_label = (string) $parent->getName();
             if ($source['kind'] === 'item') {
-                $parent_name = sprintf('%s: %s', $itemtype::getTypeName(1), $parent_name);
+                $source_label = sprintf('%s: %s', $itemtype::getTypeName(1), $source_label);
             }
-            $source_label = sprintf('%s (%s)', $parent_name, $source_type);
             $detail_base = Security::routeUrl('Credential/Details', [
                 'itemtype' => $itemtype,
                 'items_id' => $items_id,
@@ -161,6 +160,8 @@ final class CredentialTicketTab extends CommonDBTM
                 $source_entries[] = [
                     'label' => $label,
                     'source_label' => $source_label,
+                    'source_type' => $source_type,
+                    'source_url' => (string) $parent->getLinkURL(),
                     'detail_url' => $detail_base . '&id=' . $credential_id,
                 ];
             }

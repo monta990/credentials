@@ -1,7 +1,7 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 0.0.60\n"
+"Project-Id-Version: Credentials 0.0.61\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-06 06:40+0000\n"
 "PO-Revision-Date: 2026-11-05 19:50-0700\n"
@@ -1217,3 +1217,11 @@ msgstr ""
 msgid "Back to Problem or Change"
 msgstr "Retour au problème ou au changement"
 
+msgid "Origin"
+msgstr "Origine"
+
+msgid "Problem item"
+msgstr "Élément du problème"
+
+msgid "Change item"
+msgstr "Élément du changement"
