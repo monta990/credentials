@@ -85,7 +85,7 @@ final class CredentialITILTab extends CommonDBTM
      * to a Problem or Change. Secret fields are never selected by this query path.
      *
      * @return array{
-     *     rows: array<int, array{id:int,name:string,date_mod:?string,detail_url:string,sources:array<int,string>}>,
+     *     rows: array<int, array{id:int,name:string,date_mod:?string,detail_url:string,origins:array<int,string>,sources:array<int,string>,source_links:array<int,array{label:string,url:string}>}>,
      *     requires_reauth: bool,
      *     count: int
      * }
@@ -164,6 +164,9 @@ final class CredentialITILTab extends CommonDBTM
 
             $item_name = (string) $item->getName();
             $source_label = sprintf('%s: %s', $itemtype::getTypeName(1), $item_name);
+            $source_type = $parent instanceof Problem
+                ? __('Problem item', 'credentials')
+                : __('Change item', 'credentials');
             $detail_base = Security::routeUrl('Credential/Details', [
                 'itemtype' => $itemtype,
                 'items_id' => $items_id,
@@ -177,6 +180,8 @@ final class CredentialITILTab extends CommonDBTM
                 $entries[] = [
                     'label' => $label,
                     'source_label' => $source_label,
+                    'source_type' => $source_type,
+                    'source_url' => (string) $item->getLinkURL(),
                     'detail_url' => $detail_base . '&id=' . $credential_id,
                 ];
             }

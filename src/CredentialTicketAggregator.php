@@ -16,9 +16,9 @@ namespace GlpiPlugin\Credentials;
 final class CredentialTicketAggregator
 {
     /**
-     * @param array<int, array{label:array<string,mixed>,source_label:string,detail_url:string}> $entries
+     * @param array<int, array{label:array<string,mixed>,source_label:string,source_type:string,detail_url:string,source_url?:string}> $entries
      * @param array<int|string, int|string> $protected_ids IDs found behind a sudo-mode gate
-     * @return array{rows:array<int,array{id:int,name:string,date_mod:?string,detail_url:string,sources:array<int,string>}>,count:int}
+     * @return array{rows:array<int,array{id:int,name:string,date_mod:?string,detail_url:string,origins:array<int,string>,sources:array<int,string>,source_links:array<int,array{label:string,url:string}>}>,count:int}
      */
     public static function aggregate(array $entries, array $protected_ids = []): array
     {
@@ -45,13 +45,37 @@ final class CredentialTicketAggregator
                     'name' => (string) ($label['name'] ?? ''),
                     'date_mod' => isset($label['date_mod']) ? (string) $label['date_mod'] : null,
                     'detail_url' => (string) ($entry['detail_url'] ?? ''),
+                    'origins' => [],
                     'sources' => [],
+                    'source_links' => [],
                 ];
+            }
+
+            $source_type = trim((string) ($entry['source_type'] ?? ''));
+            if ($source_type !== '' && !in_array($source_type, $rows[$credential_id]['origins'], true)) {
+                $rows[$credential_id]['origins'][] = $source_type;
             }
 
             $source_label = trim((string) ($entry['source_label'] ?? ''));
             if ($source_label !== '' && !in_array($source_label, $rows[$credential_id]['sources'], true)) {
                 $rows[$credential_id]['sources'][] = $source_label;
+            }
+
+            $source_url = trim((string) ($entry['source_url'] ?? ''));
+            if ($source_label !== '' && $source_url !== '') {
+                $source_link_exists = false;
+                foreach ($rows[$credential_id]['source_links'] as $source_link) {
+                    if ($source_link['url'] === $source_url) {
+                        $source_link_exists = true;
+                        break;
+                    }
+                }
+                if (!$source_link_exists) {
+                    $rows[$credential_id]['source_links'][] = [
+                        'label' => $source_label,
+                        'url' => $source_url,
+                    ];
+                }
             }
         }
 
