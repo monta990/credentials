@@ -4,6 +4,7 @@
 - Made every associated user or inventory item a direct link to its native GLPI record, opening in a new browser tab with `noopener noreferrer`.
 - Preserved credential aggregation and deduplication, detail actions, item-level READ checks and sudo-mode/re-authentication behavior.
 - Kept links safely escaped in Twig. No database migration, secret-field, encryption or permission change.
+- Fixed the MariaDB current-read query used by credential restore/delete operations: the primary-key lookup no longer appends a redundant `LIMIT` after `FOR UPDATE`.
 
 ## 0.0.60 — 2026-11-14 (purge serialization and DBAL locking hardening)
 
