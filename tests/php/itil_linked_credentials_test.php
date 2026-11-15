@@ -10,6 +10,11 @@ declare(strict_types=1);
 namespace {
     const READ = 1;
 
+    function __(string $message, ?string $domain = null): string
+    {
+        return $message;
+    }
+
     class CommonGLPI {}
 
     class CommonDBTM extends CommonGLPI
