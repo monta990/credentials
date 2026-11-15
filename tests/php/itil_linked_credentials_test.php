@@ -117,6 +117,10 @@ namespace {
                         return $this->canRead;
                     }
                     public function getName(): string { return (string) ($this->fields['name'] ?? ''); }
+                    public function getLinkURL(): string
+                    {
+                        return '/front/' . $this->type . '.form.php?id=' . $this->getID();
+                    }
                 };
             }
         }
