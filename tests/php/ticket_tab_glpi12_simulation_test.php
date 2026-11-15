@@ -31,6 +31,7 @@ namespace {
             return !(bool) ($this->fields['denied'] ?? false) && !$reauth_needed;
         }
         public function getName(): string { return (string) ($this->fields['name'] ?? ''); }
+        public function getLinkURL(): string { return '/front/' . static::class . '.form.php?id=' . $this->id; }
         public function isEntityAssign(): bool { return true; }
         public function getEntityID(): int { return (int) ($this->fields['entities_id'] ?? 0); }
     }
