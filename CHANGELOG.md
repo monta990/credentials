@@ -1,11 +1,13 @@
 ## 0.0.60 — 2026-11-14 (purge serialization and DBAL locking hardening)
 
 - Reworked permanent-purge cleanup to enumerate linked credential IDs inside its transaction with an InnoDB current locking read. This avoids reusing an outer GLPI transaction's older `REPEATABLE READ` snapshot after item deletion waited for a concurrent link writer.
-- Established and applied one relationship lock order across link, unlink, restore, transfer and backup-import paths: lock the native GLPI item row first, then the credential row, then read or mutate relationship rows. `CommonDBChild` items lock their parent record before the child and revalidate the child foreign key after acquiring both locks.
+- Established and applied one relationship lock order across link, unlink, restore, transfer and backup-import paths: lock the native GLPI item row first, then the relevant relationship rows, then the credential parent row. `CommonDBChild` items resolve their parent without locking the child, lock parent records in deterministic order before child rows, and revalidate the child foreign key after acquiring both locks.
 - Kept the current-read clauses inside GLPI's DBAL query builder using static `QueryExpression` order expressions; removed runtime `$DB->doQuery()` usage from credential relationship and exact-scope category lookups. DDL in install/uninstall hooks remains on GLPI's database API.
 - Kept backup category resolution strictly scoped: local categories cannot fall back to a same-named global category, while the legacy local-then-global resolver remains unchanged for entity-transfer behavior.
 - Expanded regression tests for current-read candidate enumeration, item-first lock ordering, `CommonDBChild` parent/child locking, cross-entity rejection, purge ordering, DBAL-only locking and exact-scope category imports.
-- No schema migration, secret format change, permission change or UI change.
+- Added the `links_count` credential counter and a retry-safe install/update reconciliation that recalculates every credential from the relationship table, including zero-link credentials. A partial failure can be retried without leaving stale counters.
+- Kept the fresh-install and upgrade column definitions aligned as signed `INT`; the counter is validated as non-negative by the relationship update logic.
+- No secret format change, permission change or UI change.
 
 ## 0.0.59 — 2026-11-14 (Codex concurrency and backup category-scope fixes)
 
