@@ -6,8 +6,18 @@ namespace {
     $root = dirname(__DIR__, 2);
     const READ = 1;
     const UPDATE = 2;
-    function mb_substr(string $value, int $start, ?int $length = null): string { return $length === null ? substr($value, $start) : substr($value, $start, $length); }
-    function mb_strlen(string $value): int { return strlen($value); }
+    if (!function_exists('mb_substr')) {
+        function mb_substr(string $value, int $start, ?int $length = null): string
+        {
+            return $length === null ? substr($value, $start) : substr($value, $start, $length);
+        }
+    }
+    if (!function_exists('mb_strlen')) {
+        function mb_strlen(string $value): int
+        {
+            return strlen($value);
+        }
+    }
 
     final class Session
     {
