@@ -245,7 +245,11 @@ final class CredentialController extends AbstractController
 
                         if ($DB->delete(CredentialItemLink::getTable(), [
                             'plugin_credentials_credentials_id' => $credential_id,
-                        ]) === false) {
+                        ]) === false
+                            || $DB->delete('glpi_plugin_credentials_reminders', [
+                                'plugin_credentials_credentials_id' => $credential_id,
+                            ]) === false
+                        ) {
                             return false;
                         }
 

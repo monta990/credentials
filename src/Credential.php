@@ -34,6 +34,7 @@ final class Credential extends CommonDBTM
     public const HISTORY_PURGED = 10;
     public const HISTORY_EXPORTED = 11;
     public const HISTORY_REVIEWED = 12;
+    public const HISTORY_RESTORED_LINKS = 13;
 
     /** Keep change history for non-secret fields, never retain credential values in glpi_logs. */
     public bool $dohistory = true;
@@ -87,6 +88,7 @@ final class Credential extends CommonDBTM
         }
 
         $rows = [];
+        $link_counts = CredentialItemLink::getLinkCounts($ids);
         $iterator = $DB->request([
             'SELECT' => ['id', 'name', 'date_mod'],
             'FROM'   => self::getTable(),
@@ -103,7 +105,7 @@ final class Credential extends CommonDBTM
                 'id'       => (int) $row['id'],
                 'name'     => (string) $row['name'],
                 'date_mod' => $row['date_mod'] !== null ? (string) $row['date_mod'] : null,
-                'link_count' => CredentialItemLink::countForCredential((int) $row['id']),
+                'link_count' => (int) ($link_counts[(int) $row['id']] ?? 0),
             ];
         }
 
@@ -191,6 +193,7 @@ final class Credential extends CommonDBTM
             self::HISTORY_PURGED => __s('An archived protected credential was permanently deleted.', 'credentials'),
             self::HISTORY_EXPORTED => __s('A protected credential was exported to an encrypted backup.', 'credentials'),
             self::HISTORY_REVIEWED => __s('A protected credential review was recorded.', 'credentials'),
+            self::HISTORY_RESTORED_LINKS => __s('An archived protected credential was restored with its existing item links.', 'credentials'),
             default                => '',
         };
     }
@@ -210,6 +213,7 @@ final class Credential extends CommonDBTM
             self::HISTORY_PURGED,
             self::HISTORY_EXPORTED,
             self::HISTORY_REVIEWED,
+            self::HISTORY_RESTORED_LINKS,
         ], true);
     }
 

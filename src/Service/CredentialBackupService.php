@@ -28,6 +28,7 @@ final class CredentialBackupService
     private const MAX_FILE_BYTES = 20_000_000;
     private const MAX_ENTRIES = 2000;
     private const MAX_LINKS_PER_ENTRY = 250;
+    private const MAX_TOTAL_LINKS = 20_000;
 
     public static function isAvailable(): bool
     {
@@ -69,7 +70,13 @@ final class CredentialBackupService
             if (count($locked_ids) !== count($candidate_ids)) {
                 throw new \RuntimeException(__('A credential changed or disappeared while the backup was being prepared. Retry the export.', 'credentials'));
             }
-            $result = self::buildBackup($passphrase, $include_archived, $candidate_ids);
+            // Once every parent lock is held, fetch encrypted credential rows in
+            // bounded current-read batches instead of issuing one SELECT per entry.
+            $locked_credentials = CredentialItemLink::getCredentialsForUpdate($locked_ids);
+            if (count($locked_credentials) !== count($candidate_ids)) {
+                throw new \RuntimeException(__('A credential changed or disappeared while the backup was being prepared. Retry the export.', 'credentials'));
+            }
+            $result = self::buildBackup($passphrase, $include_archived, $candidate_ids, $locked_links, $locked_credentials);
             foreach ($result['credential_ids'] as $credential_id) {
                 $links = $locked_links[$credential_id] ?? [];
                 $recorded = $links !== []
@@ -92,45 +99,67 @@ final class CredentialBackupService
     {
         global $DB;
 
+        // Restrict the database scan to entities visible in the current GLPI
+        // session and enforce the global cap BEFORE acquiring any row locks.
+        // The extra row detects overflow without materializing an unbounded list.
         $where = $include_archived ? [] : ['is_deleted' => 0];
+        $where = array_merge(
+            $where,
+            \getEntitiesRestrictCriteria(Credential::getTable(), 'entities_id', '', false)
+        );
         $iterator = $DB->request([
             'SELECT' => ['id', 'entities_id'],
             'FROM' => Credential::getTable(),
             'WHERE' => $where,
             'ORDER' => ['entities_id', 'id'],
+            'LIMIT' => self::MAX_ENTRIES + 1,
         ]);
         $candidates = [];
         foreach ($iterator as $row) {
-            $candidates[] = ['id' => (int) $row['id'], 'entities_id' => (int) $row['entities_id']];
+            $entity_id = (int) ($row['entities_id'] ?? -1);
+            if ($entity_id < 0 || !Session::haveAccessToEntity($entity_id)) {
+                continue;
+            }
+            $candidates[] = ['id' => (int) $row['id'], 'entities_id' => $entity_id];
+            if (count($candidates) > self::MAX_ENTRIES) {
+                throw new \RuntimeException(__('The backup contains too many credentials. Export smaller groups of records.', 'credentials'));
+            }
         }
         return $candidates;
     }
 
     /** Build the encrypted payload while the caller holds a consistent transaction. */
-    private static function buildBackup(string $passphrase, bool $include_archived, array $candidates): array
+    private static function buildBackup(
+        string $passphrase,
+        bool $include_archived,
+        array $candidates,
+        array $locked_links_by_credential,
+        array $locked_credentials_by_id
+    ): array
     {
         global $DB;
 
         $entries = [];
         $exported_ids = [];
+        $total_links = 0;
+        $estimated_payload_bytes = 1024; // Reserve room for the authenticated payload envelope.
         foreach ($candidates as $candidate_row) {
             $candidate_entity_id = (int) $candidate_row['entities_id'];
             if (!Session::haveAccessToEntity($candidate_entity_id)) {
-                continue;
+                throw new \RuntimeException(__('An entity became unavailable while the backup was being prepared. Retry the export.', 'credentials'));
             }
 
             $credential_id = (int) $candidate_row['id'];
-            // The export caller has already acquired ALL candidate locks before
-            // entering this method. Read the credential with FOR UPDATE so this
-            // remains current even inside an outer transaction with an older snapshot.
-            $row = CredentialItemLink::getCredentialForUpdate($credential_id);
+            // The export caller has already acquired ALL candidate locks and read
+            // these rows with bounded FOR UPDATE batches after lock acquisition.
+            $row = $locked_credentials_by_id[$credential_id] ?? null;
             if (!is_array($row) || (int) ($row['entities_id'] ?? -1) !== $candidate_entity_id) {
                 throw new \RuntimeException(__('A credential changed while the backup was being prepared. Retry the export.', 'credentials'));
             }
             $entities_id = (int) $row['entities_id'];
             $archived = (int) ($row['is_deleted'] ?? 0) === 1;
             if ($archived && !$include_archived) {
-                continue;
+                throw new \RuntimeException(__('A credential was archived while the backup was being prepared. Retry the export.', 'credentials'));
             }
 
             $secrets = [];
@@ -144,33 +173,55 @@ final class CredentialBackupService
             }
 
             $links = [];
-            foreach (CredentialItemLink::getLinksForCredentialForUpdate($credential_id) as $link) {
+            $source_links = $locked_links_by_credential[$credential_id] ?? [];
+            $total_links += count($source_links);
+            if ($total_links > self::MAX_TOTAL_LINKS) {
+                throw new \RuntimeException(__('The backup contains too many total item links. Export smaller groups of credentials.', 'credentials'));
+            }
+            if (count($source_links) > self::MAX_LINKS_PER_ENTRY) {
+                throw new \RuntimeException(sprintf(
+                    __('Credential %1$d has more than %2$d linked items. No backup was created to avoid losing relationships.', 'credentials'),
+                    $credential_id,
+                    self::MAX_LINKS_PER_ENTRY
+                ));
+            }
+            foreach ($source_links as $link) {
                 $itemtype = (string) $link['itemtype'];
                 $items_id = (int) $link['items_id'];
-                if (!CredentialItem::isSupportedItemtype($itemtype)) {
-                    continue;
+                if (!CredentialItem::isSupportedItemtype($itemtype) || $items_id <= 0) {
+                    throw new \RuntimeException(sprintf(
+                        __('Credential %d has a relationship to an unsupported or invalid item. No backup was created.', 'credentials'),
+                        $credential_id
+                    ));
                 }
                 $item = CredentialItem::loadReadableItem($itemtype, $items_id);
-                if ($item === null || CredentialItem::resolveParentEntityID($item) !== $entities_id) {
-                    continue;
+                if ($item === null
+                    || (array_key_exists('is_deleted', $item->fields) && (int) $item->fields['is_deleted'] !== 0)
+                    || CredentialItem::resolveParentEntityID($item) !== $entities_id
+                ) {
+                    throw new \RuntimeException(sprintf(
+                        __('A linked item for credential %d is unavailable, unreadable or belongs to another entity. No backup was created.', 'credentials'),
+                        $credential_id
+                    ));
                 }
                 $links[] = [
                     'itemtype' => $itemtype,
                     'items_id' => $items_id,
                     'item_name' => mb_substr((string) $item->getName(), 0, 255),
                 ];
-                if (count($links) >= self::MAX_LINKS_PER_ENTRY) {
-                    break;
-                }
             }
 
-            // Active records must retain at least one valid association in a backup.
+            // An active record without any association is inconsistent. Fail the
+            // export rather than silently dropping the credential from the file.
             if (!$archived && $links === []) {
-                continue;
+                throw new \RuntimeException(sprintf(
+                    __('Active credential %d has no linked items. No backup was created.', 'credentials'),
+                    $credential_id
+                ));
             }
 
             $category = CredentialCategory::getById((int) ($row['plugin_credentials_categories_id'] ?? 0));
-            $entries[] = [
+            $entry = [
                 'name' => (string) $row['name'],
                 'entity' => self::entityPath($entities_id),
                 'category' => $category['name'] ?? '',
@@ -187,12 +238,13 @@ final class CredentialBackupService
                 'archived' => $archived,
                 'links' => $links,
             ];
-
-            $exported_ids[] = $credential_id;
-
-            if (count($entries) > self::MAX_ENTRIES) {
-                throw new \RuntimeException(__('The backup contains too many credentials. Export smaller groups of records.', 'credentials'));
+            $entry_json = json_encode($entry, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $estimated_payload_bytes += strlen($entry_json) + (count($entries) > 0 ? 1 : 0);
+            if ($estimated_payload_bytes > self::MAX_FILE_BYTES) {
+                throw new \RuntimeException(__('The encrypted backup would exceed the 20 MB download limit. Export fewer credentials at a time.', 'credentials'));
             }
+            $entries[] = $entry;
+            $exported_ids[] = $credential_id;
         }
 
         $payload = json_encode([
@@ -327,7 +379,14 @@ final class CredentialBackupService
         $prepared = [];
         $errors = [];
         $skipped = 0;
+        $total_import_links = 0;
         foreach ($payload['entries'] as $index => $entry) {
+            if (is_array($entry) && is_array($entry['links'] ?? null)) {
+                $total_import_links += count($entry['links']);
+                if ($total_import_links > self::MAX_TOTAL_LINKS) {
+                    throw new \RuntimeException(__('The backup contains too many total item links. Import a smaller backup file.', 'credentials'));
+                }
+            }
             $candidate = self::prepareEntry($entry);
             if ($candidate === null) {
                 $skipped++;
@@ -359,9 +418,6 @@ final class CredentialBackupService
             // backup containing many entries from interleaving those locks.
             $item_locks = [];
             foreach ($prepared as $prepared_entry) {
-                if ($prepared_entry['archived']) {
-                    continue;
-                }
                 foreach ($prepared_entry['links'] as $link_data) {
                     $item_locks[] = [
                         'itemtype' => $link_data['itemtype'],
@@ -422,6 +478,22 @@ final class CredentialBackupService
                         'date_mod' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
                     ], ['id' => $new_id]) === false) {
                         throw new \RuntimeException(__('An archived credential could not be restored from the backup. The import was cancelled.', 'credentials'));
+                    }
+                    foreach ($entry['links'] as $link_data) {
+                        $created = CredentialItemLink::addLink([
+                            'plugin_credentials_credentials_id' => $new_id,
+                            'itemtype' => $link_data['itemtype'],
+                            'items_id' => $link_data['items_id'],
+                            'date_creation' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
+                        ]);
+                        if (!$created || !CredentialHistory::recordForItem(
+                            $link_data['itemtype'],
+                            $link_data['items_id'],
+                            Credential::HISTORY_IMPORTED,
+                            $new_id
+                        )) {
+                            throw new \RuntimeException(__('The archived credential could not preserve all of its item links. The import was cancelled.', 'credentials'));
+                        }
                     }
                     if (!CredentialHistory::recordForCredential($new_id, Credential::HISTORY_IMPORTED)) {
                         throw new \RuntimeException(__('The import could not be written to GLPI history. The import was cancelled.', 'credentials'));
@@ -544,32 +616,38 @@ final class CredentialBackupService
 
         $source_archived = !empty($entry['archived']);
         $links = [];
-        if (!$source_archived) {
-            foreach ($entry['links'] as $candidate) {
-                if (!is_array($candidate)) {
-                    continue;
-                }
-                $itemtype = (string) ($candidate['itemtype'] ?? '');
-                $items_id = (int) ($candidate['items_id'] ?? 0);
-                if (!CredentialItem::isSupportedItemtype($itemtype) || $items_id <= 0) {
-                    continue;
-                }
-                $item = getItemForItemtype($itemtype);
-                if (!$item instanceof \CommonDBTM
-                    || !$item->getFromDB($items_id)
-                    || !$item->can($items_id, UPDATE)
-                    || CredentialItem::resolveParentEntityID($item) !== $entities_id
-                    || trim((string) $item->getName()) !== trim((string) ($candidate['item_name'] ?? ''))
-                ) {
-                    continue;
-                }
-                $links[] = [
-                    'itemtype' => $itemtype,
-                    'items_id' => $items_id,
-                ];
+        $seen_links = [];
+        foreach ($entry['links'] as $candidate) {
+            if (!is_array($candidate)) {
+                return null;
             }
-            // If no destination item matches exactly, keep the imported secret
-            // as an archived record so it is not lost and can be linked manually.
+            $itemtype = (string) ($candidate['itemtype'] ?? '');
+            $items_id = (int) ($candidate['items_id'] ?? 0);
+            if (!CredentialItem::isSupportedItemtype($itemtype) || $items_id <= 0) {
+                return null;
+            }
+            $link_key = $itemtype . '#' . $items_id;
+            if (isset($seen_links[$link_key])) {
+                return null;
+            }
+            $item = getItemForItemtype($itemtype);
+            if (!$item instanceof \CommonDBTM
+                || !$item->getFromDB($items_id)
+                || (array_key_exists('is_deleted', $item->fields) && (int) $item->fields['is_deleted'] !== 0)
+                || !$item->can($items_id, READ)
+                || !$item->can($items_id, UPDATE)
+                || CredentialItem::resolveParentEntityID($item) !== $entities_id
+                || trim((string) $item->getName()) !== trim((string) ($candidate['item_name'] ?? ''))
+            ) {
+                // Import an entry only when every exported relationship can be
+                // re-established. Never report a partial restore as complete.
+                return null;
+            }
+            $links[] = [
+                'itemtype' => $itemtype,
+                'items_id' => $items_id,
+            ];
+            $seen_links[$link_key] = true;
         }
         $needs_relink = !$source_archived && $links === [];
 

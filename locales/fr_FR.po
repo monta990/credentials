@@ -1,7 +1,7 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 0.0.62\n"
+"Project-Id-Version: Credentials 0.0.66\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-06 06:40+0000\n"
 "PO-Revision-Date: 2026-11-05 19:50-0700\n"
@@ -1225,3 +1225,142 @@ msgstr "Élément du problème"
 
 msgid "Change item"
 msgstr "Élément du changement"
+
+msgid "Still linked"
+msgstr "Toujours associé"
+
+msgid "Remaining item links:"
+msgstr "Liens restants :"
+
+msgid "Remove all item links before restoring this credential."
+msgstr "Supprimez tous les liens vers des éléments avant de restaurer cet identifiant."
+
+msgid "Cannot delete while linked"
+msgstr "Suppression impossible tant que cet identifiant est associé"
+msgid "Some linked items are unavailable or you do not have permission to read them."
+msgstr "Certains éléments liés sont indisponibles ou vous ne disposez pas des droits nécessaires pour les consulter."
+
+msgid "Restore and keep existing links"
+msgstr "Restaurer en conservant les liens existants"
+
+msgid "Restore this archived credential and keep all of its current linked items?"
+msgstr "Restaurer cet identifiant archivé en conservant tous ses éléments actuellement associés ?"
+
+msgid "Permanently delete this archived credential and remove all of its item links? The linked GLPI items themselves will not be deleted. This cannot be undone."
+msgstr "Supprimer définitivement cet identifiant archivé et tous ses liens ? Les éléments GLPI associés ne seront pas supprimés. Cette action est irréversible."
+
+msgid "Delete credential and links"
+msgstr "Supprimer l’identifiant et ses liens"
+
+msgid "Some linked items cannot be validated with your current permissions, so this credential cannot be restored here."
+msgstr "Certains éléments associés ne peuvent pas être validés avec vos autorisations actuelles ; cet identifiant ne peut donc pas être restauré ici."
+
+msgid "Some linked items cannot be validated with your current permissions, so this credential cannot be permanently deleted here."
+msgstr "Certains éléments associés ne peuvent pas être validés avec vos autorisations actuelles ; cet identifiant ne peut donc pas être supprimé définitivement ici."
+
+msgid "Eligible for bulk permanent deletion (unlinked only)"
+msgstr "Éligibles à la suppression définitive groupée (sans lien uniquement)"
+
+msgid "Archived records are kept in the GLPI trash and are never erased automatically. The retention period controls bulk deletion of unlinked credentials. An authorized administrator can restore a linked archived credential while keeping its current item links, or permanently delete it together with its relationship rows. Linked GLPI items themselves are never deleted."
+msgstr "Les identifiants archivés sont conservés dans la corbeille GLPI et ne sont jamais supprimés automatiquement. La durée de conservation contrôle la suppression groupée des identifiants sans lien. Un administrateur autorisé peut restaurer un identifiant archivé associé en conservant ses liens actuels, ou le supprimer définitivement avec ses lignes de relation. Les éléments GLPI associés ne sont jamais supprimés."
+
+msgid "An archived protected credential was restored with its existing item links."
+msgstr "Un identifiant protégé archivé a été restauré en conservant ses liens existants."
+
+msgid "Restoration"
+msgstr "Restauration"
+msgid "Search destination items by name (at least 2 characters)"
+msgstr "Rechercher les éléments de destination par nom (au moins 2 caractères)"
+
+msgid "Search destination items"
+msgstr "Rechercher des éléments de destination"
+
+msgid "Search for an eligible destination item"
+msgstr "Rechercher un élément de destination éligible"
+
+msgid "Search results are checked against your entity and update permissions."
+msgstr "Les résultats sont vérifiés selon votre entité et vos droits de modification."
+
+msgid "Enter at least 2 characters to search."
+msgstr "Saisissez au moins 2 caractères pour rechercher."
+
+msgid "Searching eligible destination items…"
+msgstr "Recherche des éléments de destination éligibles…"
+
+msgid "%count% matching destination items shown. Select one to restore."
+msgstr "%count% élément(s) de destination correspondant(s) affiché(s). Sélectionnez-en un pour restaurer."
+
+msgid "No eligible destination items matched this search."
+msgstr "Aucun élément de destination éligible ne correspond à cette recherche."
+
+msgid "The destination item search is unavailable. Try again."
+msgstr "La recherche des éléments de destination est indisponible. Réessayez."
+
+msgid "Archived credentials pages"
+msgstr "Pages des identifiants archivés"
+
+msgid "Page"
+msgstr "Page"
+
+msgid "Previous"
+msgstr "Précédent"
+
+msgid "Next"
+msgstr "Suivant"
+
+msgid "Credential %1$d has more than %2$d linked items. No backup was created to avoid losing relationships."
+msgstr "L’identifiant %1$d comporte plus de %2$d éléments associés. Aucune sauvegarde n’a été créée afin d’éviter toute perte de relations."
+
+msgid "Credential %d has a relationship to an unsupported or invalid item. No backup was created."
+msgstr "L’identifiant %d comporte une relation vers un élément non pris en charge ou invalide. Aucune sauvegarde n’a été créée."
+
+msgid "A linked item for credential %d is unavailable, unreadable or belongs to another entity. No backup was created."
+msgstr "Un élément associé à l’identifiant %d est indisponible, illisible ou appartient à une autre entité. Aucune sauvegarde n’a été créée."
+
+msgid "Active credential %d has no linked items. No backup was created."
+msgstr "L’identifiant actif %d ne possède aucun élément associé. Aucune sauvegarde n’a été créée."
+
+msgid "The archived credential could not preserve all of its item links. The import was cancelled."
+msgstr "Tous les liens de l’identifiant archivé n’ont pas pu être conservés. L’importation a été annulée."
+
+msgid 'The backup contains too many total item links. Export smaller groups of credentials.'
+msgstr 'La sauvegarde contient trop de liens vers des éléments. Exportez des groupes d’identifiants plus petits.'
+
+msgid 'The backup contains too many total item links. Import a smaller backup file.'
+msgstr 'La sauvegarde contient trop de liens vers des éléments. Importez un fichier de sauvegarde plus petit.'
+
+msgid "A credential changed or disappeared while the backup was being prepared. Retry the export."
+msgstr "Un identifiant a été modifié ou a disparu pendant la préparation de la sauvegarde. Relancez l’exportation."
+
+msgid "A credential was archived while the backup was being prepared. Retry the export."
+msgstr "Un identifiant a été archivé pendant la préparation de la sauvegarde. Relancez l’exportation."
+
+msgid "A linked item changed or was removed while the backup was being imported. The import was cancelled."
+msgstr "Un élément associé a été modifié ou supprimé pendant l’importation de la sauvegarde. L’importation a été annulée."
+
+msgid "An entity became unavailable while the backup was being prepared. Retry the export."
+msgstr "Une entité est devenue indisponible pendant la préparation de la sauvegarde. Relancez l’exportation."
+
+msgid "An imported category could not be created. The import was cancelled."
+msgstr "Une catégorie importée n’a pas pu être créée. L’importation a été annulée."
+
+msgid "Credential"
+msgstr "Identifiant"
+
+msgid "Credential restored while keeping all existing item links."
+msgstr "Identifiant restauré en conservant tous les liens existants."
+
+msgid "Encrypted backup and import are unavailable. Check that Sodium is enabled in PHP and the GLPI encryption key is available."
+msgstr "La sauvegarde chiffrée et l’importation sont indisponibles. Vérifiez que Sodium est activé dans PHP et que la clé de chiffrement GLPI est disponible."
+
+msgid "The archived credential could not be restored with its existing links. Verify that every linked item still exists, is readable and belongs to the same entity."
+msgstr "L’identifiant archivé n’a pas pu être restauré avec ses liens existants. Vérifiez que chaque élément associé existe toujours, est lisible et appartient à la même entité."
+
+msgid "The credential or selected item is no longer available for linking."
+msgstr "L’identifiant ou l’élément sélectionné n’est plus disponible pour être associé."
+
+msgid "Your profile does not have the required backup permissions."
+msgstr "Votre profil ne dispose pas des autorisations nécessaires pour effectuer des sauvegardes."
+
+msgid "archived credentials"
+msgstr "identifiants archivés"

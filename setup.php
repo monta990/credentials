@@ -15,7 +15,7 @@ use GlpiPlugin\Credentials\CredentialITILTab;
 use GlpiPlugin\Credentials\CredentialTicketTab;
 use GlpiPlugin\Credentials\Profile;
 
-define('PLUGIN_CREDENTIALS_VERSION', '0.0.62');
+define('PLUGIN_CREDENTIALS_VERSION', '0.0.66');
 define('PLUGIN_CREDENTIALS_MIN_GLPI', '12.0.0');
 define('PLUGIN_CREDENTIALS_MAX_GLPI', '12.0.99');
 

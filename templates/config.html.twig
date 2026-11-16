@@ -302,7 +302,7 @@
     <div class="card mb-4">
         <div class="card-header"><h3 class="card-title mb-0 credentials-config-title"><i class="ti ti-archive me-2" aria-hidden="true"></i>{{ __('Archived credentials and retention', 'credentials') }}</h3></div>
         <div class="card-body">
-            <p class="text-muted">{{ __('Archived records are kept in the GLPI trash and are never erased automatically. The retention period controls when records become eligible for bulk deletion. An authorized administrator can also permanently delete an individual archived credential at any time, without waiting for the retention period, provided it has no remaining item links.', 'credentials') }}</p>
+            <p class="text-muted">{{ __('Archived records are kept in the GLPI trash and are never erased automatically. The retention period controls bulk deletion of unlinked credentials. An authorized administrator can restore a linked archived credential while keeping its current item links, or permanently delete it together with its relationship rows. Linked GLPI items themselves are never deleted.', 'credentials') }}</p>
             <form method="post" action="{{ config_url }}" class="row g-3 align-items-end mb-3 credentials-retention-form">
                 <input type="hidden" name="action" value="save_retention">
                 <input type="hidden" name="tab" value="archived">
@@ -318,37 +318,83 @@
             {% elseif dashboard.archived %}
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
-                        <thead><tr><th>{{ __('Credential', 'credentials') }}</th><th>{{ __('Archived / modified', 'credentials') }}</th><th>{{ __('Retention', 'credentials') }}</th><th>{{ __('Restore by linking to an item', 'credentials') }}</th>{% if can_purge %}<th class="text-end">{{ __('Actions', 'credentials') }}</th>{% endif %}</tr></thead>
+                        <thead><tr><th>{{ __('Credential', 'credentials') }}</th><th>{{ __('Archived / modified', 'credentials') }}</th><th>{{ __('Retention', 'credentials') }}</th><th>{{ __('Restoration', 'credentials') }}</th>{% if can_purge %}<th class="text-end">{{ __('Actions', 'credentials') }}</th>{% endif %}</tr></thead>
                         <tbody>
                         {% for row in dashboard.archived %}
                             <tr>
                                 <td class="fw-semibold">{{ row.name }}</td>
                                 <td>{{ row.date_mod ?: '—' }}</td>
-                                <td>{% if row.purge_eligible %}<span class="badge credentials-ui-badge credentials-ui-badge--warning">{{ __('Eligible', 'credentials') }}</span>{% else %}<span class="badge credentials-ui-badge credentials-ui-badge--neutral">{{ __('Retained', 'credentials') }}</span>{% endif %}</td>
                                 <td>
-                                    <form method="post" action="{{ config_url }}" class="credentials-archive-restore-form">
-                                        <input type="hidden" name="action" value="restore">
-                                        <input type="hidden" name="tab" value="archived">
-                                        <input type="hidden" name="credential_id" value="{{ row.id }}">
-                                        <select class="form-select form-select-sm" name="restore_target" required aria-label="{{ __('Select destination item', 'credentials') }}">
-                                            <option value="">{{ __('Select destination item', 'credentials') }}</option>
-                                            {% if row.restorable_items %}
-                                                {% for target in row.restorable_items %}<option value="{{ target.value }}">{{ target.label }}</option>{% endfor %}
-                                            {% else %}
-                                                <option value="" disabled>{{ __('No eligible destination items are available in this entity.', 'credentials') }}</option>
-                                            {% endif %}
-                                        </select>
-                                        <button class="btn btn-sm btn-primary" type="submit" {% if not row.restorable_items %}disabled{% endif %}><i class="ti ti-link me-1" aria-hidden="true"></i>{{ __('Restore', 'credentials') }}</button>
-                                    </form>
+                                    {% if row.has_links %}
+                                        <span class="badge credentials-ui-badge credentials-ui-badge--warning">{{ __('Still linked', 'credentials') }}</span>
+                                        <div class="small text-muted mt-1">{{ __('Remaining item links:', 'credentials') }} {{ row.link_count }}</div>
+                                        {% if row.remaining_links %}
+                                            <div class="small mt-2">
+                                                <div class="fw-semibold">{{ __('Linked items', 'credentials') }}:</div>
+                                                <ul class="mb-0 ps-3">
+                                                    {% for linked_item in row.remaining_links %}
+                                                        <li><a href="{{ linked_item.url|e('html_attr') }}" target="_blank" rel="noopener noreferrer">{{ linked_item.label }}</a></li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        {% endif %}
+                                        {% if row.hidden_link_count > 0 %}
+                                            <div class="small text-muted mt-1">{{ __('Some linked items are unavailable or you do not have permission to read them.', 'credentials') }} ({{ row.hidden_link_count }})</div>
+                                        {% endif %}
+                                    {% elseif row.purge_eligible %}
+                                        <span class="badge credentials-ui-badge credentials-ui-badge--warning">{{ __('Eligible', 'credentials') }}</span>
+                                    {% else %}
+                                        <span class="badge credentials-ui-badge credentials-ui-badge--neutral">{{ __('Retained', 'credentials') }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if row.has_links %}
+                                        {% if row.can_restore_with_links %}
+                                            <form method="post" action="{{ config_url }}" class="d-inline credentials-archive-restore-form" data-credentials-confirm="{{ __('Restore this archived credential and keep all of its current linked items?', 'credentials')|e('html_attr') }}">
+                                                <input type="hidden" name="action" value="restore_keep_links">
+                                                <input type="hidden" name="tab" value="archived">
+                                                <input type="hidden" name="credential_id" value="{{ row.id }}">
+                                                <button class="btn btn-sm btn-primary" type="submit"><i class="ti ti-link me-1" aria-hidden="true"></i>{{ __('Restore and keep existing links', 'credentials') }}</button>
+                                            </form>
+                                        {% else %}
+                                            <span class="small text-muted">{{ __('Some linked items cannot be validated with your current permissions, so this credential cannot be restored here.', 'credentials') }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <form method="post" action="{{ config_url }}" class="credentials-archive-restore-form">
+                                            <input type="hidden" name="action" value="restore">
+                                            <input type="hidden" name="tab" value="archived">
+                                            <input type="hidden" name="credential_id" value="{{ row.id }}">
+                                            <div class="mb-2"
+                                                data-credentials-restore-search
+                                                data-restore-search-url="{{ restorable_items_url|e('html_attr') }}"
+                                                data-search-empty="{{ __('Search for an eligible destination item', 'credentials')|e('html_attr') }}"
+                                                data-search-too-short="{{ __('Enter at least 2 characters to search.', 'credentials')|e('html_attr') }}"
+                                                data-searching="{{ __('Searching eligible destination items…', 'credentials')|e('html_attr') }}"
+                                                data-search-results="{{ __('%count% matching destination items shown. Select one to restore.', 'credentials')|e('html_attr') }}"
+                                                data-search-none="{{ __('No eligible destination items matched this search.', 'credentials')|e('html_attr') }}"
+                                                data-search-failed="{{ __('The destination item search is unavailable. Try again.', 'credentials')|e('html_attr') }}">
+                                                <input class="form-control form-control-sm mb-2" type="search" minlength="2" autocomplete="off" data-credentials-restore-query placeholder="{{ __('Search destination items by name (at least 2 characters)', 'credentials') }}" aria-label="{{ __('Search destination items', 'credentials') }}">
+                                                <select class="form-select form-select-sm" name="restore_target" required data-credentials-restore-results aria-label="{{ __('Select destination item', 'credentials') }}">
+                                                    <option value="">{{ __('Search for an eligible destination item', 'credentials') }}</option>
+                                                </select>
+                                                <div class="small text-muted mt-1" aria-live="polite" data-credentials-restore-status>{{ __('Search results are checked against your entity and update permissions.', 'credentials') }}</div>
+                                            </div>
+                                            <button class="btn btn-sm btn-primary" type="submit" data-credentials-restore-submit disabled><i class="ti ti-link me-1" aria-hidden="true"></i>{{ __('Restore', 'credentials') }}</button>
+                                        </form>
+                                    {% endif %}
                                 </td>
                                 {% if can_purge %}
                                     <td class="text-end">
-                                        <form method="post" action="{{ config_url }}" class="d-inline" data-credentials-confirm="{{ __('Permanently delete this archived credential now? This bypasses the retention period and cannot be undone.', 'credentials')|e('html_attr') }}">
-                                            <input type="hidden" name="action" value="purge_archived_one">
-                                            <input type="hidden" name="tab" value="archived">
-                                            <input type="hidden" name="credential_id" value="{{ row.id }}">
-                                            <button class="btn btn-sm btn-outline-danger" type="submit"><i class="ti ti-trash me-1" aria-hidden="true"></i>{{ __('Delete now', 'credentials') }}</button>
-                                        </form>
+                                        {% if not row.has_links or row.can_purge_linked %}
+                                            <form method="post" action="{{ config_url }}" class="d-inline" data-credentials-confirm="{{ (row.has_links ? __('Permanently delete this archived credential and remove all of its item links? The linked GLPI items themselves will not be deleted. This cannot be undone.', 'credentials') : __('Permanently delete this archived credential now? This bypasses the retention period and cannot be undone.', 'credentials'))|e('html_attr') }}">
+                                                <input type="hidden" name="action" value="purge_archived_one">
+                                                <input type="hidden" name="tab" value="archived">
+                                                <input type="hidden" name="credential_id" value="{{ row.id }}">
+                                                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="ti ti-trash me-1" aria-hidden="true"></i>{{ row.has_links ? __('Delete credential and links', 'credentials') : __('Delete now', 'credentials') }}</button>
+                                            </form>
+                                        {% else %}
+                                            <span class="small text-muted">{{ __('Some linked items cannot be validated with your current permissions, so this credential cannot be permanently deleted here.', 'credentials') }}</span>
+                                        {% endif %}
                                     </td>
                                 {% endif %}
                             </tr>
@@ -359,8 +405,21 @@
             {% else %}
                 <div class="alert alert-info mb-3">{{ __('There are no archived credentials in the current entity scope.', 'credentials') }}</div>
             {% endif %}
+            {% if dashboard.archived_pages > 1 %}
+                <nav class="d-flex justify-content-between align-items-center my-3" aria-label="{{ __('Archived credentials pages', 'credentials') }}">
+                    <span class="small text-muted">{{ __('Page', 'credentials') }} {{ dashboard.archived_page }} / {{ dashboard.archived_pages }} · {{ dashboard.archived_total }} {{ __('archived credentials', 'credentials') }}</span>
+                    <div class="btn-group btn-group-sm">
+                        {% if dashboard.archived_page > 1 %}
+                            <a class="btn btn-outline-secondary" href="{{ config_url }}?tab=archived&amp;page={{ dashboard.archived_page - 1 }}">{{ __('Previous', 'credentials') }}</a>
+                        {% endif %}
+                        {% if dashboard.archived_page < dashboard.archived_pages %}
+                            <a class="btn btn-outline-secondary" href="{{ config_url }}?tab=archived&amp;page={{ dashboard.archived_page + 1 }}">{{ __('Next', 'credentials') }}</a>
+                        {% endif %}
+                    </div>
+                </nav>
+            {% endif %}
             <div class="credentials-archive-footer">
-                <div class="text-muted small">{{ __('Eligible for permanent deletion', 'credentials') }}: <strong>{{ dashboard.purge_eligible }}</strong></div>
+                <div class="text-muted small">{{ __('Eligible for bulk permanent deletion (unlinked only)', 'credentials') }}: <strong>{{ dashboard.purge_eligible }}</strong></div>
                 <form method="post" action="{{ config_url }}" data-credentials-confirm="{{ __('This permanently deletes archived credentials older than the retention period. This cannot be undone. Continue?', 'credentials')|e('html_attr') }}">
                 <input type="hidden" name="action" value="purge_archived">
                 <input type="hidden" name="tab" value="archived">

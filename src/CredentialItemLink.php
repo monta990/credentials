@@ -69,6 +69,8 @@ final class CredentialItemLink extends CommonDBTM
      */
     public static function getLinksForCredentialsForUpdate(array $credential_ids): array
     {
+        global $DB;
+
         $ids = [];
         foreach ($credential_ids as $credential_id) {
             $id = (int) $credential_id;
@@ -78,10 +80,46 @@ final class CredentialItemLink extends CommonDBTM
         }
         $ids = array_values($ids);
         sort($ids, SORT_NUMERIC);
+        if ($ids === []) {
+            return [];
+        }
 
+        // Lock relation rows in deterministic credential/item order, using one
+        // current-read query per bounded chunk rather than one query per credential.
         $links = [];
-        foreach ($ids as $id) {
-            $links[$id] = self::getLinksForCredentialForUpdate($id);
+        foreach (array_chunk($ids, 250) as $chunk) {
+            $iterator = $DB->request([
+                'SELECT' => [
+                    'plugin_credentials_credentials_id',
+                    'itemtype',
+                    'items_id',
+                ],
+                'FROM' => self::getTable(),
+                'WHERE' => ['plugin_credentials_credentials_id' => $chunk],
+                'ORDER' => [new QueryExpression(
+                    \DBmysql::quoteName('plugin_credentials_credentials_id') . ', '
+                    . \DBmysql::quoteName('itemtype') . ', '
+                    . \DBmysql::quoteName('items_id') . ' FOR UPDATE'
+                )],
+            ]);
+
+            foreach ($iterator as $row) {
+                $credential_id = (int) ($row['plugin_credentials_credentials_id'] ?? 0);
+                $itemtype = trim((string) ($row['itemtype'] ?? ''));
+                $items_id = (int) ($row['items_id'] ?? 0);
+                if ($credential_id <= 0 || $itemtype === '' || $items_id <= 0) {
+                    continue;
+                }
+                $key = $itemtype . '#' . $items_id;
+                $links[$credential_id][$key] = [
+                    'itemtype' => $itemtype,
+                    'items_id' => $items_id,
+                ];
+            }
+        }
+
+        foreach ($links as $credential_id => $credential_links) {
+            $links[$credential_id] = array_values($credential_links);
         }
         return $links;
     }
@@ -213,6 +251,119 @@ final class CredentialItemLink extends CommonDBTM
         }
 
         return array_values($unique);
+    }
+
+    /**
+     * Read relationship targets for a bounded set of credentials in batches.
+     * This is a non-locking dashboard query; every displayed target must still
+     * pass the native item READ check before its name or URL is returned.
+     *
+     * @param array<int,int|string> $credential_ids
+     * @return array<int,array<int,array{itemtype:string,items_id:int}>>
+     */
+    public static function getLinksForCredentials(array $credential_ids): array
+    {
+        global $DB;
+
+        $ids = [];
+        foreach ($credential_ids as $credential_id) {
+            $id = (int) $credential_id;
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+        $ids = array_values($ids);
+        sort($ids, SORT_NUMERIC);
+        if ($ids === []) {
+            return [];
+        }
+
+        $links = [];
+        foreach (array_chunk($ids, 500) as $chunk) {
+            $iterator = $DB->request([
+                'SELECT' => [
+                    'plugin_credentials_credentials_id',
+                    'itemtype',
+                    'items_id',
+                ],
+                'FROM' => self::getTable(),
+                'WHERE' => ['plugin_credentials_credentials_id' => $chunk],
+                'ORDER' => ['plugin_credentials_credentials_id', 'itemtype', 'items_id'],
+            ]);
+
+            foreach ($iterator as $row) {
+                $credential_id = (int) ($row['plugin_credentials_credentials_id'] ?? 0);
+                $itemtype = trim((string) ($row['itemtype'] ?? ''));
+                $items_id = (int) ($row['items_id'] ?? 0);
+                if ($credential_id <= 0 || $itemtype === '' || $items_id <= 0) {
+                    continue;
+                }
+
+                $key = $itemtype . '#' . $items_id;
+                $links[$credential_id][$key] = [
+                    'itemtype' => $itemtype,
+                    'items_id' => $items_id,
+                ];
+            }
+        }
+
+        foreach ($links as $credential_id => $credential_links) {
+            $links[$credential_id] = array_values($credential_links);
+        }
+
+        return $links;
+    }
+
+    /**
+     * Count the actual relationship rows for a set of credentials.
+     *
+     * This is a non-locking dashboard/precheck query. Write operations must still
+     * re-read and lock relationships inside their transaction before mutating or
+     * deleting a credential; the returned counts are informational only.
+     *
+     * @param array<int,int|string> $credential_ids
+     * @return array<int,int> Credential ID => current relationship row count
+     */
+    public static function getLinkCounts(array $credential_ids): array
+    {
+        global $DB;
+
+        $ids = [];
+        foreach ($credential_ids as $credential_id) {
+            $id = (int) $credential_id;
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+        $ids = array_values($ids);
+        sort($ids, SORT_NUMERIC);
+        if ($ids === []) {
+            return [];
+        }
+
+        $counts = [];
+        // Keep IN predicates bounded for installations with a large trash.
+        foreach (array_chunk($ids, 500) as $chunk) {
+            $iterator = $DB->request([
+                'SELECT' => [
+                    'plugin_credentials_credentials_id',
+                    'COUNT' => 'id AS link_count',
+                ],
+                'FROM' => self::getTable(),
+                'WHERE' => ['plugin_credentials_credentials_id' => $chunk],
+                'GROUPBY' => ['plugin_credentials_credentials_id'],
+            ]);
+
+            foreach ($iterator as $row) {
+                $id = (int) ($row['plugin_credentials_credentials_id'] ?? 0);
+                $count = (int) ($row['link_count'] ?? 0);
+                if ($id > 0 && $count > 0) {
+                    $counts[$id] = $count;
+                }
+            }
+        }
+
+        return $counts;
     }
 
     /**
@@ -438,7 +589,9 @@ final class CredentialItemLink extends CommonDBTM
         $parent_rows = [];
         foreach ($parents as $parent_lock) {
             $row = self::getItemRowForUpdate($parent_lock['item'], $parent_lock['items_id']);
-            if ($row === null) {
+            if ($row === null
+                || (array_key_exists('is_deleted', $row) && (int) $row['is_deleted'] !== 0)
+            ) {
                 return false;
             }
             $parent_rows[$parent_lock['itemtype'] . '#' . $parent_lock['items_id']] = $row;
@@ -448,6 +601,12 @@ final class CredentialItemLink extends CommonDBTM
         foreach ($plans as $plan) {
             $row = self::getItemRowForUpdate($plan['item'], $plan['items_id']);
             if ($row === null) {
+                return false;
+            }
+            // A soft-deleted GLPI item is no longer a valid target for a
+            // credential relationship. Check the current locked row, not only
+            // the earlier permission/read probe, to close the archive/restore race.
+            if (array_key_exists('is_deleted', $row) && (int) $row['is_deleted'] !== 0) {
                 return false;
             }
             if ($plan['parent_type'] !== null) {
@@ -537,6 +696,50 @@ final class CredentialItemLink extends CommonDBTM
             'ORDER' => [new QueryExpression(\DBmysql::quoteName('id') . ' FOR UPDATE')],
         ])->current();
         return is_array($row) ? $row : null;
+    }
+
+    /**
+     * Read a bounded set of credential rows as current locking reads.
+     * The caller must acquire every parent lock first, in ascending ID order.
+     *
+     * @param array<int,int|string> $credential_ids
+     * @return array<int,array<string,mixed>> Credential ID => database row
+     */
+    public static function getCredentialsForUpdate(array $credential_ids): array
+    {
+        global $DB;
+
+        $ids = [];
+        foreach ($credential_ids as $credential_id) {
+            $id = (int) $credential_id;
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+        $ids = array_values($ids);
+        sort($ids, SORT_NUMERIC);
+        if ($ids === []) {
+            return [];
+        }
+
+        $rows_by_id = [];
+        foreach (array_chunk($ids, 250) as $chunk) {
+            $iterator = $DB->request([
+                'SELECT' => ['*'],
+                'FROM' => Credential::getTable(),
+                'WHERE' => ['id' => $chunk],
+                'ORDER' => [new QueryExpression(\DBmysql::quoteName('id') . ' FOR UPDATE')],
+            ]);
+            foreach ($iterator as $row) {
+                $id = (int) ($row['id'] ?? 0);
+                if ($id > 0) {
+                    $rows_by_id[$id] = $row;
+                }
+            }
+        }
+
+        ksort($rows_by_id, SORT_NUMERIC);
+        return $rows_by_id;
     }
 
     /**

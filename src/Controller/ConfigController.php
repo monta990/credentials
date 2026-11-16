@@ -19,6 +19,7 @@ use GlpiPlugin\Credentials\Service\UpdateChecker;
 use Html;
 use Session;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -129,6 +130,13 @@ final class ConfigController extends AbstractController
                         Session::addMessageAfterRedirect(__('Credential restored and linked successfully.', 'credentials'), false, INFO);
                         break;
 
+                    case 'restore_keep_links':
+                        if (!CredentialAdminService::restoreWithExistingLinks($request->request->getInt('credential_id'))) {
+                            throw new \RuntimeException(__('The archived credential could not be restored with its existing links. Verify that every linked item still exists, is readable and belongs to the same entity.', 'credentials'));
+                        }
+                        Session::addMessageAfterRedirect(__('Credential restored while keeping all existing item links.', 'credentials'), false, INFO);
+                        break;
+
                     case 'purge_archived_one':
                         if (!CredentialAdminService::purgeArchivedCredential($request->request->getInt('credential_id'))) {
                             throw new \RuntimeException(__('The archived credential could not be permanently deleted. It may have changed or may no longer exist.', 'credentials'));
@@ -178,7 +186,8 @@ final class ConfigController extends AbstractController
         $update = UpdateChecker::latest();
         $dashboard = CredentialAdminService::dashboard(
             $active_entity,
-            $retention_days
+            $retention_days,
+            max(1, $request->query->getInt('page', 1))
         );
 
         $response = $this->renderPage($request, [
@@ -206,11 +215,33 @@ final class ConfigController extends AbstractController
             'active_entity' => $active_entity,
             'admin_user' => (string) ($_SESSION['glpiname'] ?? ''),
             'config_url' => PLUGIN_CREDENTIALS_WEBDIR . '/config',
+            'restorable_items_url' => PLUGIN_CREDENTIALS_WEBDIR . '/config/restorable-items',
             'export_url' => PLUGIN_CREDENTIALS_WEBDIR . '/config/export',
             'import_url' => PLUGIN_CREDENTIALS_WEBDIR . '/config/import',
         ]);
 
         return $response;
+    }
+
+    #[Route('/config/restorable-items', name: 'credentials_config_restorable_items', methods: ['GET'])]
+    public function restorableItems(Request $request): JsonResponse
+    {
+        Session::checkLoginUser();
+        Session::checkRight('config', UPDATE);
+        Session::checkRight(Credential::$rightname, UPDATE);
+
+        $entities_id = max(0, (int) ($_SESSION['glpiactive_entity'] ?? 0));
+        $items = CredentialAdminService::searchRestorableItemsForEntity(
+            $entities_id,
+            $request->query->getString('q'),
+            50
+        );
+
+        return new JsonResponse(
+            ['items' => $items],
+            Response::HTTP_OK,
+            ['Cache-Control' => 'no-store, private', 'X-Content-Type-Options' => 'nosniff']
+        );
     }
 
     #[Route('/config/export', name: 'credentials_config_export', methods: ['POST'])]

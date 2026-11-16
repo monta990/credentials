@@ -1,3 +1,36 @@
+## 0.0.66 — 2026-11-16 (backup integrity, bounded administration and lifecycle cleanup)
+
+- Made encrypted backup export fail explicitly when any credential relationship is unsupported, unreadable, outside the credential entity, missing, or exceeds the 250-link per-entry contract. Candidate count is bounded before acquiring locks; archived credentials retain their existing links in the backup.
+- Made backup import all-or-nothing per credential relationship set. Entries are skipped with an explicit result when any original link cannot be matched; archived entries preserve every validated relationship instead of importing as detached records.
+- Bounded the dashboard scan by keyset pages, paginated archived credentials, and replaced the fixed 500-item restoration dropdown with a permission-scoped, paginated server-side name search. Search checks both native READ and UPDATE rights and has a bounded candidate scan per itemtype.
+- Bounded retention purge to ordered 100-record transactions, changed multi-credential relationship locking to batched current reads, fetched backup credential rows in bounded current-read batches, and reused grouped link counts in asset credential tabs.
+- Capped total backup relationships and checked encoded entry sizes incrementally, preventing oversized exports/imports from building unbounded in-memory payloads.
+- Made link-count reconciliation a one-time, retryable schema migration and processed it in bounded pages instead of recomputing the full table on every plugin update.
+- Added reminder type to the reminder idempotency key and migrated the unique index so expiry and review reminders on the same date no longer suppress one another.
+- Removed reminder markers when an active credential is permanently deleted.
+- Preserved native GLPI authorization, entity checks, item-first lock ordering, current-read validation, encrypted field handling and secret-free history. No credential field format or active-link schema changed.
+
+## 0.0.65 — 2026-11-16 (restore and purge legacy linked archived credentials)
+
+- Added an explicit **Restore and keep existing links** action for archived credentials that still have valid GLPI item relationships. Restoration preserves every current relationship, revalidates the set under current reads, locks linked GLPI items before relationship and credential rows, and records a secret-free native history event on the credential and linked items.
+- Enabled individual permanent deletion of a linked archived credential. The operation locks and validates every linked GLPI item, audits the credential and related items, then removes only the credential's relationship rows, reminder rows and credential record. Linked GLPI assets/users are never deleted.
+- Fail closed when any linked item is missing, unsupported, unreadable, outside the credential entity, or changes while locks are being acquired. Bulk retention deletion remains restricted to old archived credentials with no links.
+- Added a distinct native history event for restoration that preserves existing links. No schema migration, encryption-format change or profile-right change.
+
+## 0.0.64 — 2026-11-16 (clickable archived linked items)
+
+- Kept the archive tab inclusive of all archived credentials, while making legacy/manual archived records with remaining links diagnosable instead of showing only a link count.
+- Added one batched relationship-target read for the visible archived rows. Each linked target is shown as a direct native GLPI link that opens in a new tab.
+- Enforced native item READ permission and matching entity scope before exposing linked item names or URLs. Restricted, missing or unsupported targets are counted as hidden without leaking their details.
+- Preserved the existing safety rules: any remaining link blocks restoration, individual permanent deletion and retention-based bulk deletion. No schema migration or encryption change.
+
+## 0.0.63 — 2026-11-15 (linked archived credential eligibility)
+
+- Corrected archive dashboard eligibility: a credential is only shown as eligible for permanent deletion when its retention period has elapsed **and** its relationship table contains no remaining item links.
+- Added batched, read-only relationship counts for archived credentials. Linked records are clearly marked with their remaining link count; restore and immediate-delete actions are not offered while links remain.
+- Kept transactional link locking and revalidation in individual and bulk purge operations; dashboard counts are informational and cannot bypass the server-side safety checks.
+- Added local regression coverage for old-but-linked, old-and-unlinked and retained archived credentials. No database migration or encryption change.
+
 ## 0.0.62 — 2026-11-15 (MariaDB archived credential locking fix)
 
 - Corrected the MariaDB syntax used by archived credential restore/delete operations. The credential lookup is already restricted by its primary key, so the redundant `LIMIT 1` was removed while retaining the `FOR UPDATE` current-read lock.
