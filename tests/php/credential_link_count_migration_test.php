@@ -94,7 +94,7 @@ namespace {
             return new FakeCredentialMigrationIterator(array_slice($rows, $start, $limit));
         }
 
-        public function update(string $table, array $values, array $where): bool
+        public function update($table, $values, $where): bool
         {
             $GLOBALS['MIGRATION_UPDATE_TRACE'][] = ['table' => $table, 'values' => $values, 'where' => $where];
             if (array_key_exists('link_lock_token', $values)) {
