@@ -22,6 +22,7 @@ namespace {
         public int $transaction_depth = 0;
         public int $commits = 0;
         public int $rollbacks = 0;
+        public int $affected_rows = 1;
         /** @var list<array{links:list<array<string,mixed>>,credentials:list<array<string,mixed>>,updates:list<array<string,mixed>>}> */
         private array $snapshots = [];
 
@@ -58,6 +59,11 @@ namespace {
             $this->rollbacks++;
         }
 
+        public function getAffectedRows(): int
+        {
+            return $this->affected_rows;
+        }
+
         public function request(array $criteria): FakeCredentialMigrationIterator
         {
             return new FakeCredentialMigrationIterator(
@@ -73,6 +79,7 @@ namespace {
             if ($this->fail_on_update !== null && count($this->updates) === $this->fail_on_update) {
                 return false;
             }
+            $this->affected_rows = 1;
             return true;
         }
     }
