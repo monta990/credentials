@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 namespace {
+    class CommonDBTM
+    {
+    }
+
     final class FakeCredentialMigrationIterator implements IteratorAggregate
     {
         /** @param list<array<string,mixed>> $rows */
