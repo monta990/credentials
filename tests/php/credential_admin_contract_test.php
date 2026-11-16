@@ -40,7 +40,7 @@ $checks = [
     'Permanent deletion requires credential READ and DELETE rights' => str_contains($admin, 'Session::haveRight(Credential::$rightname, DELETE)'),
     'Credential details are hidden from profiles without credential READ' => str_contains($admin, 'if ($can_read_credentials)') && str_contains($admin, '$visible_archive_records[] = $record') && str_contains($admin, "if (\$can_read_credentials && \$status['key'] !== 'current' && count(\$attention) < self::ARCHIVE_PAGE_SIZE)"),
     'Dashboard does not return individual rows without credential READ' => str_contains($admin, '$can_read_credentials && $status') && str_contains($admin, 'if ($can_read_credentials) {') && str_contains($admin, "'archived' => \$archived") && str_contains($admin, "'attention' => \$attention"),
-    'Retention purge uses prelocked relationship sets before credential rows' => str_contains($admin, 'getLinksForCredentialsForUpdate(array_column($candidates, 0))') && str_contains($admin, 'if (($locked_links[$id] ?? []) !== [])'),
+    'Retention purge uses prelocked relationship sets before credential rows' => str_contains($admin, '$ids = array_column($candidates, 0)') && str_contains($admin, 'getLinksForCredentialsForUpdate($ids)') && str_contains($admin, 'lockCredentials($ids)') && str_contains($admin, 'getCredentialsForUpdate($locked_ids)') && str_contains($admin, 'if (($locked_links[$id] ?? []) !== [])'),
     'GitHub update checker' => is_file($root . '/src/Service/UpdateChecker.php'),
     'Reviewer selector filters entities before loading all available users' => str_contains($controller_source, "'entities_id' => \$visible_entities") && !str_contains($controller_source, "'LIMIT' => 250"),
     'Dashboard template' => is_file($root . '/templates/config.html.twig'),
