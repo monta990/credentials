@@ -26,7 +26,6 @@ namespace {
         /** @var list<int> */
         public array $lock_calls = [];
         /** @var list<array{links:list<array<string,mixed>>,credentials:list<array<string,mixed>>,updates:list<array<string,mixed>>,lock_calls:list<int>}> */
-
         private array $snapshots = [];
 
         public function beginTransaction(): void
