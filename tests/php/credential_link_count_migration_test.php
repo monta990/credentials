@@ -23,6 +23,7 @@ namespace {
         public int $commits = 0;
         public int $rollbacks = 0;
         public int $affected_rows = 1;
+        public ?string $last_error = null;
         /** @var list<int> */
         public array $lock_calls = [];
         /** @var list<array{links:list<array<string,mixed>>,credentials:list<array<string,mixed>>,updates:list<array<string,mixed>>,lock_calls:list<int>}> */
@@ -30,6 +31,7 @@ namespace {
 
         public function beginTransaction(): void
         {
+            $this->last_error = null;
             $this->snapshots[] = [
                 'links' => $this->links,
                 'credentials' => $this->credentials,
@@ -61,6 +63,7 @@ namespace {
             $this->lock_calls = $snapshot['lock_calls'];
             $this->transaction_depth--;
             $this->rollbacks++;
+            $this->last_error = 'rollback completed';
         }
 
         public function getAffectedRows(): int
@@ -106,6 +109,8 @@ namespace {
                 $this->affected_rows = $exists ? 1 : 0;
                 if ($exists) {
                     $this->lock_calls[] = $id;
+                } else {
+                    $this->last_error = 'lock update did not find row id=' . $id;
                 }
                 return true;
             }
@@ -175,6 +180,8 @@ namespace {
             'rollbacks' => $DB->rollbacks,
             'update_trace' => $GLOBALS['MIGRATION_UPDATE_TRACE'],
             'request_trace' => $GLOBALS['MIGRATION_REQUEST_TRACE'],
+            'last_error' => $DB->last_error,
+            'credential_ids' => array_column($DB->credentials, 'id'),
         ]));
     }
 
