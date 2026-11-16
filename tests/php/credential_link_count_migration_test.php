@@ -219,7 +219,12 @@ namespace {
         ['values' => ['links_count' => 1], 'where' => ['id' => 3]],
     ];
     if ($DB->updates !== $expected) {
-        throw new RuntimeException('Retry must recalculate exact counts, including zero-link credentials.');
+        throw new RuntimeException('Retry must recalculate exact counts, including zero-link credentials. ' . json_encode([
+            'expected' => $expected,
+            'actual' => $DB->updates,
+            'credential_rows' => $DB->credentials,
+            'request_trace' => $GLOBALS['MIGRATION_REQUEST_TRACE'],
+        ]));
     }
     $counts_after_retry = array_column($DB->credentials, 'links_count', 'id');
     if ($counts_after_retry !== [1 => 2, 2 => 0, 3 => 1]) {
