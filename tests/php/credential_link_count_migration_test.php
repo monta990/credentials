@@ -70,11 +70,23 @@ namespace {
 
         public function request(array $criteria): FakeCredentialMigrationIterator
         {
-            return new FakeCredentialMigrationIterator(
-                ($criteria['FROM'] ?? '') === 'glpi_plugin_credentials_items'
-                    ? $this->links
-                    : $this->credentials
-            );
+            $table = (string) ($criteria['FROM'] ?? '');
+            if ($table === 'glpi_plugin_credentials_items') {
+                return new FakeCredentialMigrationIterator($this->links);
+            }
+
+            $rows = $this->credentials;
+            $where = $criteria['WHERE'] ?? [];
+            if (isset($where['id']) && is_array($where['id']) && count($where['id']) === 2 && $where['id'][0] === '>') {
+                $last_id = (int) $where['id'][1];
+                $rows = array_values(array_filter(
+                    $rows,
+                    static fn(array $row): bool => (int) ($row['id'] ?? 0) > $last_id,
+                ));
+            }
+            $start = (int) ($criteria['START'] ?? 0);
+            $limit = (int) ($criteria['LIMIT'] ?? count($rows));
+            return new FakeCredentialMigrationIterator(array_slice($rows, $start, $limit));
         }
 
         public function update(string $table, array $values, array $where): bool
