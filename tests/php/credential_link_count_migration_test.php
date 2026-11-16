@@ -91,6 +91,7 @@ namespace {
 
         public function update(string $table, array $values, array $where): bool
         {
+            $GLOBALS['MIGRATION_UPDATE_TRACE'][] = ['table' => $table, 'values' => $values, 'where' => $where];
             if (array_key_exists('link_lock_token', $values)) {
                 $id = (int) ($where['id'] ?? 0);
                 $exists = false;
@@ -137,6 +138,7 @@ namespace GlpiPlugin\Credentials {
 namespace {
     require_once dirname(__DIR__, 2) . '/hook.php';
 
+    $GLOBALS['MIGRATION_UPDATE_TRACE'] = [];
     $DB = new FakeCredentialMigrationDB();
     $DB->credentials = [
         ['id' => 1, 'links_count' => 0],
@@ -168,6 +170,7 @@ namespace {
             'affected_rows' => $DB->affected_rows,
             'commits' => $DB->commits,
             'rollbacks' => $DB->rollbacks,
+            'update_trace' => $GLOBALS['MIGRATION_UPDATE_TRACE'],
         ]));
     }
 
