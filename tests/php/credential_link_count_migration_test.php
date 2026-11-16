@@ -75,12 +75,23 @@ namespace {
 
         public function update(string $table, array $values, array $where): bool
         {
+            if (array_key_exists('link_lock_token', $values)) {
+                $this->affected_rows = 1;
+                return true;
+            }
+
             $this->updates[] = compact('values', 'where');
             if ($this->fail_on_update !== null && count($this->updates) === $this->fail_on_update) {
                 $this->affected_rows = 0;
                 return false;
             }
             $this->affected_rows = 1;
+            foreach ($this->credentials as &$credential) {
+                if ((int) ($credential['id'] ?? 0) === (int) ($where['id'] ?? 0)) {
+                    $credential = array_merge($credential, $values);
+                }
+            }
+            unset($credential);
             return true;
         }
     }
@@ -134,6 +145,10 @@ namespace {
     ];
     if ($DB->updates !== $expected) {
         throw new RuntimeException('Retry must recalculate exact counts, including zero-link credentials.');
+    }
+    $counts_after_retry = array_column($DB->credentials, 'links_count', 'id');
+    if ($counts_after_retry !== [1 => 2, 2 => 0, 3 => 1]) {
+        throw new RuntimeException('Committed reconciliation must persist the recalculated link counts.');
     }
     if ($DB->transaction_depth !== 0 || $DB->commits !== 1 || $DB->rollbacks !== 1) {
         throw new RuntimeException('Successful reconciliation must commit exactly once and leave no open transaction.');
