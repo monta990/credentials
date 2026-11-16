@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace {
     class CommonDBTM
     {
+        public static function getTable($classname = null): string
+        {
+            return '';
+        }
     }
 
     final class FakeCredentialMigrationIterator implements IteratorAggregate
