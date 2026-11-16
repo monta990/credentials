@@ -532,7 +532,7 @@ if (
     || !str_contains($reminder_target, 'TARGET_REVIEWER = 1000')
     || !str_contains($reminder_target, "addUserByField('reviewer_users_id')")
     || !str_contains((string) $admin_service, "'glpi_plugin_credentials_reminders'")
-    || !str_contains($hook, "UNIQUE KEY `credential_reminder` (`plugin_credentials_credentials_id`, `entities_id`, `reminder_date`, `reviewer_users_id`)")
+    || !str_contains($hook, "UNIQUE KEY `credential_reminder_type` (`plugin_credentials_credentials_id`, `entities_id`, `reminder_type`, `reminder_date`, `reviewer_users_id`)")
     || $reminder_select === ''
 ) {
     $errors[] = 'Credential lifecycle reminders must use GLPI CronTask/notifications and a date/reviewer-scoped idempotency ledger.';
@@ -557,18 +557,18 @@ if (!str_contains((string) $hook, 'glpi_plugin_credentials_categories')
     || !str_contains((string) $credential_controller_source, 'CredentialStatus::fromDates(')
     || !str_contains((string) $category_model, 'deleteIfUnused(')
     || !str_contains((string) $admin_service, 'purgeEligible(')
-    || !str_contains((string) $admin_service, 'getLinksForCredentialsForUpdate(array_column($candidates, 0))')
+    || !str_contains((string) $admin_service, 'getLinksForCredentialsForUpdate($ids)')
 ) {
     $errors[] = 'Categories, expiration/review metadata and safe archived-record lifecycle handling must be present.';
 }
 if (!str_contains((string) $credential_source, 'RIGHT_BACKUP')
     || !str_contains((string) $profile_source, 'Credential::RIGHT_BACKUP')
-    || !str_contains((string) $backup_service, 'sodium_crypto_aead_xchacha20poly1305_ietf_encrypt')
-    || !str_contains((string) $backup_service, 'sodium_crypto_aead_xchacha20poly1305_ietf_decrypt')
+    || !str_contains((string) $backup_service, 'Credential::decryptValue($ciphertext)')
     || !str_contains((string) $backup_service, 'Credential::encryptValue($entry[$field])')
+    || !str_contains((string) $backup_service, 'Credential::RIGHT_BACKUP')
     || !str_contains((string) $backup_service, 'Session::haveAccessToEntity((int) ($reviewer[\'entities_id\'] ?? -1))')
-    || !str_contains((string) $admin_service, '$locked_links = CredentialItemLink::getLinksForCredentialForUpdate($credential_id);')
-    || !str_contains((string) $admin_service, 'if ($locked_links !== [])')
+    || !str_contains((string) $admin_service, '$locked_links = CredentialItemLink::getLinksForCredentialsForUpdate($ids)')
+    || !str_contains((string) $admin_service, 'if (($locked_links[$id] ?? []) !== [])')
     || !str_contains((string) $admin_service, 'Session::haveRight(Credential::$rightname, DELETE)')
     || !str_contains((string) $admin_service, '\'can_read_credentials\' => $can_read_credentials')
     || !str_contains((string) $backup_service, '$needs_relink = !$source_archived && $links === [];')
