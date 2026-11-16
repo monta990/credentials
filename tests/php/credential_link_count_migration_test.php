@@ -19,6 +19,44 @@ namespace {
         /** @var list<array{values:array<string,mixed>,where:array<string,mixed>}> */
         public array $updates = [];
         public ?int $fail_on_update = null;
+        public int $transaction_depth = 0;
+        public int $commits = 0;
+        public int $rollbacks = 0;
+        /** @var list<array{links:list<array<string,mixed>>,credentials:list<array<string,mixed>>,updates:list<array<string,mixed>>}> */
+        private array $snapshots = [];
+
+        public function beginTransaction(): void
+        {
+            $this->snapshots[] = [
+                'links' => $this->links,
+                'credentials' => $this->credentials,
+                'updates' => $this->updates,
+            ];
+            $this->transaction_depth++;
+        }
+
+        public function commit(): void
+        {
+            if ($this->transaction_depth <= 0) {
+                throw new RuntimeException('No transaction to commit.');
+            }
+            array_pop($this->snapshots);
+            $this->transaction_depth--;
+            $this->commits++;
+        }
+
+        public function rollBack(): void
+        {
+            if ($this->transaction_depth <= 0) {
+                throw new RuntimeException('No transaction to roll back.');
+            }
+            $snapshot = array_pop($this->snapshots);
+            $this->links = $snapshot['links'];
+            $this->credentials = $snapshot['credentials'];
+            $this->updates = $snapshot['updates'];
+            $this->transaction_depth--;
+            $this->rollbacks++;
+        }
 
         public function request(array $criteria): FakeCredentialMigrationIterator
         {
@@ -71,6 +109,9 @@ namespace {
     if (plugin_credentials_reconcile_link_counts()) {
         throw new RuntimeException('A failed counter update must fail reconciliation.');
     }
+    if ($DB->transaction_depth !== 0 || $DB->rollbacks !== 1 || $DB->updates !== []) {
+        throw new RuntimeException('A failed batch must roll back every write and close its transaction.');
+    }
 
     $DB->updates = [];
     $DB->fail_on_update = null;
@@ -85,6 +126,9 @@ namespace {
     ];
     if ($DB->updates !== $expected) {
         throw new RuntimeException('Retry must recalculate exact counts, including zero-link credentials.');
+    }
+    if ($DB->transaction_depth !== 0 || $DB->commits !== 1 || $DB->rollbacks !== 1) {
+        throw new RuntimeException('Successful reconciliation must commit exactly once and leave no open transaction.');
     }
 
     echo "Credential link-count migration retry/idempotency regression: OK\n";
