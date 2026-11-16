@@ -112,9 +112,9 @@ namespace {
 
     $DB = new FakeCredentialMigrationDB();
     $DB->credentials = [
-        ['id' => 1],
-        ['id' => 2],
-        ['id' => 3],
+        ['id' => 1, 'links_count' => 0],
+        ['id' => 2, 'links_count' => 0],
+        ['id' => 3, 'links_count' => 0],
     ];
     $DB->links = [
         ['plugin_credentials_credentials_id' => 1],
