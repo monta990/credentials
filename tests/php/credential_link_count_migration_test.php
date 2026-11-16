@@ -23,7 +23,10 @@ namespace {
         public int $commits = 0;
         public int $rollbacks = 0;
         public int $affected_rows = 1;
-        /** @var list<array{links:list<array<string,mixed>>,credentials:list<array<string,mixed>>,updates:list<array<string,mixed>>}> */
+        /** @var list<int> */
+        public array $lock_calls = [];
+        /** @var list<array{links:list<array<string,mixed>>,credentials:list<array<string,mixed>>,updates:list<array<string,mixed>>,lock_calls:list<int>}> */
+
         private array $snapshots = [];
 
         public function beginTransaction(): void
@@ -32,6 +35,7 @@ namespace {
                 'links' => $this->links,
                 'credentials' => $this->credentials,
                 'updates' => $this->updates,
+                'lock_calls' => $this->lock_calls,
             ];
             $this->transaction_depth++;
         }
@@ -55,6 +59,7 @@ namespace {
             $this->links = $snapshot['links'];
             $this->credentials = $snapshot['credentials'];
             $this->updates = $snapshot['updates'];
+            $this->lock_calls = $snapshot['lock_calls'];
             $this->transaction_depth--;
             $this->rollbacks++;
         }
@@ -76,7 +81,18 @@ namespace {
         public function update(string $table, array $values, array $where): bool
         {
             if (array_key_exists('link_lock_token', $values)) {
-                $this->affected_rows = 1;
+                $id = (int) ($where['id'] ?? 0);
+                $exists = false;
+                foreach ($this->credentials as $credential) {
+                    if ((int) ($credential['id'] ?? 0) === $id) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                $this->affected_rows = $exists ? 1 : 0;
+                if ($exists) {
+                    $this->lock_calls[] = $id;
+                }
                 return true;
             }
 
@@ -135,7 +151,13 @@ namespace {
     $DB->updates = [];
     $DB->fail_on_update = null; // The injected failure is transient; permit the retry to proceed.
     if (!plugin_credentials_reconcile_link_counts()) {
-        throw new RuntimeException('A retry must complete reconciliation.');
+        throw new RuntimeException('A retry must complete reconciliation. ' . json_encode([
+            'updates' => $DB->updates,
+            'lock_calls' => $DB->lock_calls,
+            'affected_rows' => $DB->affected_rows,
+            'commits' => $DB->commits,
+            'rollbacks' => $DB->rollbacks,
+        ]));
     }
 
     $expected = [
