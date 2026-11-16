@@ -70,6 +70,7 @@ namespace {
 
         public function request(array $criteria): FakeCredentialMigrationIterator
         {
+            $GLOBALS['MIGRATION_REQUEST_TRACE'][] = $criteria;
             $table = (string) ($criteria['FROM'] ?? '');
             if ($table === 'glpi_plugin_credentials_items') {
                 return new FakeCredentialMigrationIterator($this->links);
@@ -139,6 +140,7 @@ namespace {
     require_once dirname(__DIR__, 2) . '/hook.php';
 
     $GLOBALS['MIGRATION_UPDATE_TRACE'] = [];
+    $GLOBALS['MIGRATION_REQUEST_TRACE'] = [];
     $DB = new FakeCredentialMigrationDB();
     $DB->credentials = [
         ['id' => 1, 'links_count' => 0],
@@ -171,6 +173,7 @@ namespace {
             'commits' => $DB->commits,
             'rollbacks' => $DB->rollbacks,
             'update_trace' => $GLOBALS['MIGRATION_UPDATE_TRACE'],
+            'request_trace' => $GLOBALS['MIGRATION_REQUEST_TRACE'],
         ]));
     }
 
