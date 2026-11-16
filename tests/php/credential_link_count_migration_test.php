@@ -77,6 +77,7 @@ namespace {
         {
             $this->updates[] = compact('values', 'where');
             if ($this->fail_on_update !== null && count($this->updates) === $this->fail_on_update) {
+                $this->affected_rows = 0;
                 return false;
             }
             $this->affected_rows = 1;
