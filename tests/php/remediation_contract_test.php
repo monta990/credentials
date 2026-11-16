@@ -7,6 +7,7 @@ $backup = file_get_contents($root . '/src/Service/CredentialBackupService.php');
 $admin = file_get_contents($root . '/src/Service/CredentialAdminService.php');
 $link = file_get_contents($root . '/src/CredentialItemLink.php');
 $credential = file_get_contents($root . '/src/Credential.php');
+$profile = file_get_contents($root . '/src/Profile.php');
 $reminders = file_get_contents($root . '/src/Service/CredentialLifecycleReminderService.php');
 $hook = file_get_contents($root . '/hook.php');
 $controller = file_get_contents($root . '/src/Controller/CredentialController.php');
