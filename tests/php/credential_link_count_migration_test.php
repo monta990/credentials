@@ -76,6 +76,25 @@ namespace {
             $GLOBALS['MIGRATION_REQUEST_TRACE'][] = $criteria;
             $table = (string) ($criteria['FROM'] ?? '');
             if ($table === 'glpi_plugin_credentials_items') {
+                $ids = $criteria['WHERE']['plugin_credentials_credentials_id'] ?? [];
+                $ids = is_array($ids) ? array_map('intval', $ids) : [(int) $ids];
+                if (isset($criteria['SELECT']['COUNT'])) {
+                    $counts = [];
+                    foreach ($this->links as $link) {
+                        $credential_id = (int) ($link['plugin_credentials_credentials_id'] ?? 0);
+                        if (in_array($credential_id, $ids, true)) {
+                            $counts[$credential_id] = ($counts[$credential_id] ?? 0) + 1;
+                        }
+                    }
+                    $rows = [];
+                    foreach ($counts as $credential_id => $count) {
+                        $rows[] = [
+                            'plugin_credentials_credentials_id' => $credential_id,
+                            'link_count' => $count,
+                        ];
+                    }
+                    return new FakeCredentialMigrationIterator($rows);
+                }
                 return new FakeCredentialMigrationIterator($this->links);
             }
 
