@@ -213,9 +213,10 @@ namespace {
         ]));
     }
 
+    // Zero is already the correct value for credential #2, so reconciliation
+    // must leave it unchanged instead of issuing a redundant UPDATE.
     $expected = [
         ['values' => ['links_count' => 2], 'where' => ['id' => 1]],
-        ['values' => ['links_count' => 0], 'where' => ['id' => 2]],
         ['values' => ['links_count' => 1], 'where' => ['id' => 3]],
     ];
     if ($DB->updates !== $expected) {
