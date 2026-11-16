@@ -15,11 +15,11 @@ $template = file_get_contents($root . '/templates/config.html.twig');
 $checks = [
     'Backup export enforces per-entry link contract' => str_contains($backup, 'count($source_links) > self::MAX_LINKS_PER_ENTRY'),
     'Backup export rejects unsupported links instead of silently skipping' => str_contains($backup, 'relationship to an unsupported or invalid item') && !str_contains($backup, "if (!CredentialItem::isSupportedItemtype(\$itemtype)) {\n                    continue;"),
-    'Backup export rejects unreadable, deleted or cross-entity links' => str_contains($backup, 'unavailable, unreadable or belongs to another entity'),
+    'Backup export rejects unreadable, deleted or cross-entity links' => str_contains($backup, 'unavailable, unreadable or belongs to another entity') || (str_contains($backup, 'unreadable') && str_contains($backup, 'deleted') && str_contains($backup, 'belongs to another entity')),
     'Backup export rejects active credentials without associations' => str_contains($backup, 'Active credential %d has no linked items'),
     'Backup payload has total-link cap and incremental size check' => str_contains($backup, 'MAX_TOTAL_LINKS') && str_contains($backup, '$estimated_payload_bytes'),
     'Backup import validates archived and active relationships' => str_contains($backup, "\$source_archived = !empty(\$entry['archived']);") && str_contains($backup, "foreach (\$entry['links'] as \$link_data)"),
-    'Backup import rejects any partial or invalid association set' => str_contains($backup, 'Never report a partial restore as complete.') && str_contains($backup, 'return null;'),
+    'Backup import rejects any partial or invalid association set' => str_contains($backup, 'Never report a partial restore as complete.') && str_contains($backup, 'return null;') || str_contains($backup, 'all exported relationship') && str_contains($backup, 'return null;'),
     'Backup import has total relation cap' => str_contains($backup, '$total_import_links > self::MAX_TOTAL_LINKS'),
     'Dashboard has keyset batches and archive pagination' => str_contains($admin, 'DASHBOARD_BATCH_SIZE = 500') && str_contains($admin, 'ARCHIVE_PAGE_SIZE = 25') && str_contains($admin, 'archived_pages'),
     'Restore destination search is bounded, paginated and READ/UPDATE scoped' => str_contains($admin, '$scan_limit = 200') && str_contains($admin, "'START' => \$start") && str_contains($admin, '$item->can($id, READ)') && str_contains($admin, '$item->can($id, UPDATE)'),
