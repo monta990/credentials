@@ -272,10 +272,11 @@ final class CredentialAdminService
                 $per_page = 50;
                 $scan_limit = 200;
                 $itemtype_options = 0;
-                for ($start = 0; $start < $scan_limit; $start += $per_page) {
+                for ($page = 0; $page < intdiv($scan_limit, $per_page); $page++) {
                     if ($itemtype_options >= $limit) {
                         break;
                     }
+                    $start = $page * $per_page;
                     $rows = $DB->request([
                         'SELECT' => $select,
                         'FROM' => $prototype::getTable(),
