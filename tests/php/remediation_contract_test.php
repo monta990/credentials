@@ -27,8 +27,8 @@ $checks = [
     'Grouped link counts replace per-credential queries' => str_contains($credential, 'CredentialItemLink::getLinkCounts($ids)'),
     'Relationship reads are chunked and deterministic' => str_contains($link, 'array_chunk($ids, 250)') && str_contains($link, 'FOR UPDATE') && str_contains($link, 'function getCredentialsForUpdate'),
     'Link count reconciliation is paged and retryable' => str_contains($hook, 'links_count_reconciliation_version') && str_contains($hook, '$batch_size = 500') && str_contains($hook, 'lockCredentials($credential_ids)'),
-    'Reminder idempotency includes reminder type' => str_contains($reminders, "'reminder_type' => \$reminder_type") && str_contains($hook, 'credential_reminder_type'),
-    'Active and archived deletion clean reminder markers' => substr_count($controller, "delete('glpi_plugin_credentials_reminders'") >= 1 && substr_count($admin, "delete('glpi_plugin_credentials_reminders'") >= 2,
+    'Reminder idempotency includes reminder type and reviewer/date scope' => str_contains($reminders, "'reminder_type' => \$reminder_type") && str_contains($reminders, "'reviewer_users_id' => \$reviewer_users_id") && str_contains($reminders, "'reminder_date' => \$reminder_date") && str_contains($hook, 'credential_reminder_type') && str_contains($hook, "'reminder_type'"),
+    'Active and archived deletion clean reminder markers' => substr_count($controller, "delete('glpi_plugin_credentials_reminders'") >= 1 && substr_count($admin, "delete('glpi_plugin_credentials_reminders'") >= 2 && str_contains($admin, 'restoreWithExistingLinks'),
     'Destination search continues across itemtypes' => !str_contains(substr($admin, strpos($admin, 'public static function searchRestorableItemsForEntity'), strpos($admin, 'private static function buildExistingLinkLockPlan') - strpos($admin, 'public static function searchRestorableItemsForEntity')), 'break 2;'),
     'Archived UI paginates and exposes linked targets' => str_contains($template, 'dashboard.archived_pages') && str_contains($template, 'row.remaining_links'),
 ];
