@@ -86,7 +86,7 @@ function plugin_credentials_install(): bool
         `reviewer_users_id` INT UNSIGNED NOT NULL,
         `date_sent` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (`id`),
-        UNIQUE KEY `credential_reminder` (`plugin_credentials_credentials_id`, `entities_id`, `reminder_date`, `reviewer_users_id`),
+        UNIQUE KEY `credential_reminder_type` (`plugin_credentials_credentials_id`, `entities_id`, `reminder_type`, `reminder_date`, `reviewer_users_id`),
         KEY `credential` (`plugin_credentials_credentials_id`),
         KEY `date_sent` (`date_sent`)
     ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
@@ -141,8 +141,36 @@ function plugin_credentials_install(): bool
     $migration->addRight(Credential::RIGHT_REVEAL, READ, ['config' => READ | UPDATE]);
     $migration->addRight(Credential::RIGHT_BACKUP, READ, ['config' => READ | UPDATE]);
     $migration->executeMigration();
-    if (!plugin_credentials_reconcile_link_counts()) {
-        return false;
+
+    // Upgrade the reminder idempotency key. Older installations used a unique
+    // key without reminder_type, which caused an expiry and review reminder on
+    // the same date to suppress one another. Execute the drop before adding the
+    // replacement so GLPI Migration observes the actual post-drop schema.
+    $reminder_table = 'glpi_plugin_credentials_reminders';
+    $reminder_key_migration = new Migration(PLUGIN_CREDENTIALS_VERSION);
+    $reminder_key_migration->dropKey($reminder_table, 'credential_reminder');
+    $reminder_key_migration->executeMigration();
+    $reminder_key_migration = new Migration(PLUGIN_CREDENTIALS_VERSION);
+    $reminder_key_migration->addKey(
+        $reminder_table,
+        ['plugin_credentials_credentials_id', 'entities_id', 'reminder_type', 'reminder_date', 'reviewer_users_id'],
+        'credential_reminder_type',
+        'UNIQUE'
+    );
+    $reminder_key_migration->executeMigration();
+
+    // Reconcile the denormalized counter once per schema contract, not on every
+    // plugin update. The marker is written only after all bounded pages succeed,
+    // so an interrupted reconciliation is safely retried on the next update.
+    $plugin_settings = Config::getConfigurationValues('plugin_credentials');
+    $link_count_reconcile_version = (int) ($plugin_settings['links_count_reconciliation_version'] ?? 0);
+    if ($link_count_reconcile_version < 1) {
+        if (!plugin_credentials_reconcile_link_counts()) {
+            return false;
+        }
+        Config::setConfigurationValues('plugin_credentials', [
+            'links_count_reconciliation_version' => 1,
+        ]);
     }
     Profile::initProfile();
 
@@ -171,47 +199,70 @@ function plugin_credentials_install(): bool
 }
 
 /**
- * Reconcile the denormalized relationship count for every credential.
- *
- * This intentionally runs on every install/update invocation rather than only
- * when the column is first created. If a previous run failed partway through,
- * the next invocation recomputes the complete state instead of trusting a
- * partially populated counter. Updating each credential to its exact count
- * also resets credentials with no relationships to zero.
+ * Reconcile the denormalized relationship count in bounded, retryable pages.
+ * The install hook runs this once when the links_count schema contract is added.
+ * If a run fails partway through, the completion marker is not written and the
+ * next installation/update invocation recomputes the exact counts, including zero.
  */
 function plugin_credentials_reconcile_link_counts(): bool
 {
     global $DB;
 
     $credential_table = Credential::getTable();
-    $link_counts = [];
+    $last_id = 0;
+    $batch_size = 500;
 
-    $link_iterator = $DB->request([
-        'SELECT' => ['plugin_credentials_credentials_id'],
-        'FROM' => 'glpi_plugin_credentials_items',
-    ]);
-    foreach ($link_iterator as $link_row) {
-        $credential_id = (int) ($link_row['plugin_credentials_credentials_id'] ?? 0);
-        if ($credential_id > 0) {
-            $link_counts[$credential_id] = ($link_counts[$credential_id] ?? 0) + 1;
+    do {
+        $iterator = $DB->request([
+            'SELECT' => ['id', 'links_count'],
+            'FROM' => $credential_table,
+            'WHERE' => ['id' => ['>', $last_id]],
+            'ORDER' => ['id'],
+            'LIMIT' => $batch_size,
+        ]);
+        $credential_rows = [];
+        $credential_ids = [];
+        foreach ($iterator as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $last_id = max($last_id, $id);
+            $credential_rows[$id] = (int) ($row['links_count'] ?? 0);
+            $credential_ids[] = $id;
         }
-    }
-
-    $credential_iterator = $DB->request([
-        'SELECT' => ['id'],
-        'FROM' => $credential_table,
-    ]);
-    foreach ($credential_iterator as $credential_row) {
-        $credential_id = (int) ($credential_row['id'] ?? 0);
-        if ($credential_id <= 0) {
-            continue;
+        if ($credential_ids === []) {
+            break;
         }
 
-        $count = $link_counts[$credential_id] ?? 0;
-        if ($DB->update($credential_table, ['links_count' => $count], ['id' => $credential_id]) === false) {
+        // Serialize relationship writers for this bounded page before counting.
+        // Every link mutation acquires the credential parent lock first, so once
+        // these locks are held the grouped count is stable until the batch commits.
+        $DB->beginTransaction();
+        try {
+            $locked_ids = CredentialItemLink::lockCredentials($credential_ids);
+            if (count($locked_ids) !== count($credential_ids)) {
+                throw new \RuntimeException('A credential changed during link-count reconciliation.');
+            }
+
+            // Group relationship counts for this bounded page instead of loading
+            // the whole relationship table into a PHP map.
+            $link_counts = CredentialItemLink::getLinkCounts($credential_ids);
+            foreach ($credential_rows as $credential_id => $current_count) {
+                $count = (int) ($link_counts[$credential_id] ?? 0);
+                if ($current_count === $count) {
+                    continue;
+                }
+                if ($DB->update($credential_table, ['links_count' => $count], ['id' => $credential_id]) === false) {
+                    throw new \RuntimeException('Unable to reconcile a credential link count.');
+                }
+            }
+            $DB->commit();
+        } catch (\Throwable) {
+            $DB->rollBack();
             return false;
         }
-    }
+    } while (count($credential_rows) === $batch_size);
 
     return true;
 }

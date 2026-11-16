@@ -342,10 +342,11 @@ final class CredentialLifecycleReminderService
         $dedupe_key = [
             'plugin_credentials_credentials_id' => (int) $row['id'],
             'entities_id' => $entities_id,
+            'reminder_type' => $reminder_type,
             'reminder_date' => $reminder_date,
             'reviewer_users_id' => $reviewer_users_id,
         ];
-        $marker = $dedupe_key + ['reminder_type' => $reminder_type];
+        $marker = $dedupe_key;
         if (self::reminderAlreadyQueued($dedupe_key)) {
             return false;
         }

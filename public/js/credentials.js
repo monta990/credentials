@@ -197,6 +197,74 @@
         filterLinkableCredentials(target.closest('form'));
     });
 
+    // Server-side, permission-scoped lookup for archived-credential restore.
+    // The endpoint returns a small bounded JSON array; names are assigned with
+    // textContent so item labels cannot become markup.
+    const restoreSearchControllers = new WeakMap();
+    document.addEventListener('input', async (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || !input.matches('[data-credentials-restore-query]')) return;
+        const wrapper = input.closest('[data-credentials-restore-search]');
+        if (!wrapper) return;
+        const select = wrapper.querySelector('[data-credentials-restore-results]');
+        const status = wrapper.querySelector('[data-credentials-restore-status]');
+        const submit = wrapper.parentElement?.querySelector('[data-credentials-restore-submit]');
+        if (!(select instanceof HTMLSelectElement)) return;
+
+        const query = input.value.trim();
+        select.replaceChildren(new Option(wrapper.dataset.searchEmpty || '', ''));
+        if (submit instanceof HTMLButtonElement) submit.disabled = true;
+        const previous = restoreSearchControllers.get(wrapper);
+        if (previous) previous.abort();
+        if (query.length < 2) {
+            if (status) status.textContent = wrapper.dataset.searchTooShort || '';
+            return;
+        }
+
+        const controller = new AbortController();
+        restoreSearchControllers.set(wrapper, controller);
+        if (status) status.textContent = wrapper.dataset.searching || '';
+        try {
+            const url = new URL(wrapper.dataset.restoreSearchUrl || '', window.location.href);
+            if (url.origin !== window.location.origin) throw new Error('Invalid search endpoint');
+            url.searchParams.set('q', query);
+            const response = await fetch(url.href, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                signal: controller.signal,
+            });
+            const contentType = response.headers.get('content-type') || '';
+            if (!response.ok || !contentType.toLowerCase().includes('application/json')) {
+                throw new Error('Search request failed');
+            }
+            const payload = await response.json();
+            if (restoreSearchControllers.get(wrapper) !== controller) return;
+            const items = Array.isArray(payload.items) ? payload.items : [];
+            for (const item of items) {
+                if (!item || typeof item.value !== 'string' || typeof item.label !== 'string') continue;
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = item.label;
+                select.append(option);
+            }
+            if (status) status.textContent = items.length > 0
+                ? (wrapper.dataset.searchResults || '').replace('%count%', String(items.length))
+                : (wrapper.dataset.searchNone || '');
+        } catch (error) {
+            if (error?.name === 'AbortError') return;
+            if (status) status.textContent = wrapper.dataset.searchFailed || '';
+        }
+    });
+
+    document.addEventListener('change', (event) => {
+        const select = event.target;
+        if (!(select instanceof HTMLSelectElement) || !select.matches('[data-credentials-restore-results]')) return;
+        const wrapper = select.closest('[data-credentials-restore-search]');
+        const submit = wrapper?.parentElement?.querySelector('[data-credentials-restore-submit]');
+        if (submit instanceof HTMLButtonElement) submit.disabled = select.value === '';
+    });
+
     // Confirm mutations rendered in the parent AJAX tab. Forms inside the
     // credential details iframe own their confirmation handler locally.
     document.addEventListener('submit', (event) => {
