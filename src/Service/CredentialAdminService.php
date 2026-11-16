@@ -93,13 +93,17 @@ final class CredentialAdminService
                         'entities_id' => $entity,
                         'old_enough_for_purge' => $old_enough,
                     ];
-                    $archived_batch[] = $record;
-                    if ($archive_position >= $archive_offset
-                        && $archive_position < $archive_offset + self::ARCHIVE_PAGE_SIZE
-                    ) {
-                        $visible_archive_records[] = $record;
+                    if ($can_read_credentials) {
+                        $archived_batch[] = $record;
+                        if ($archive_position >= $archive_offset
+                            && $archive_position < $archive_offset + self::ARCHIVE_PAGE_SIZE
+                        ) {
+                            $visible_archive_records[] = $record;
+                        }
                     }
-                    $archive_position++;
+                    if ($can_read_credentials) {
+                        $archive_position++;
+                    }
                     continue;
                 }
 
