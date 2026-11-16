@@ -162,6 +162,7 @@ namespace GlpiPlugin\Credentials {
 }
 
 namespace {
+    require_once dirname(__DIR__, 2) . '/src/CredentialItemLink.php';
     require_once dirname(__DIR__, 2) . '/hook.php';
 
     $GLOBALS['MIGRATION_UPDATE_TRACE'] = [];
