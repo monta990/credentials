@@ -14,6 +14,8 @@ $template = file_get_contents($root . '/templates/config.html.twig');
 
 $checks = [
     'Backup export enforces per-entry link contract' => str_contains($backup, 'count($source_links) > self::MAX_LINKS_PER_ENTRY'),
+    'Backup export decrypts stored secrets and requires dedicated backup right' => str_contains($backup, 'Credential::RIGHT_BACKUP') && str_contains($backup, 'Credential::decryptValue') && str_contains($profile, 'Credential::RIGHT_BACKUP'),
+    'Backup import re-encrypts secret fields with the current GLPI key' => str_contains($backup, 'Credential::encryptValue') && str_contains($backup, "'login' => \$encrypted['login']") && str_contains($backup, "'password' => \$encrypted['password']"),
     'Backup export rejects unsupported links instead of silently skipping' => str_contains($backup, 'relationship to an unsupported or invalid item') && !str_contains($backup, "if (!CredentialItem::isSupportedItemtype(\$itemtype)) {\n                    continue;"),
     'Backup export rejects unreadable, deleted or cross-entity links' => str_contains($backup, 'unavailable, unreadable or belongs to another entity') || (str_contains($backup, 'unreadable') && str_contains($backup, 'deleted') && str_contains($backup, 'belongs to another entity')),
     'Backup export rejects active credentials without associations' => str_contains($backup, 'Active credential %d has no linked items'),
