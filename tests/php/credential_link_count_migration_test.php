@@ -114,7 +114,7 @@ namespace {
     }
 
     $DB->updates = [];
-    $DB->fail_on_update = null;
+    $DB->fail_on_update = null; // The injected failure is transient; permit the retry to proceed.
     if (!plugin_credentials_reconcile_link_counts()) {
         throw new RuntimeException('A retry must complete reconciliation.');
     }
