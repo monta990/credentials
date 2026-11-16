@@ -78,8 +78,9 @@ namespace {
 
             $rows = $this->credentials;
             $where = $criteria['WHERE'] ?? [];
-            if (isset($where['id']) && is_array($where['id']) && count($where['id']) === 2 && $where['id'][0] === '>') {
-                $last_id = (int) $where['id'][1];
+            $id_condition = $where['id'] ?? null;
+            if (is_array($id_condition) && ($id_condition[0] ?? null) === '>') {
+                $last_id = (int) ($id_condition[1] ?? 0);
                 $rows = array_values(array_filter(
                     $rows,
                     static fn(array $row): bool => (int) ($row['id'] ?? 0) > $last_id,
