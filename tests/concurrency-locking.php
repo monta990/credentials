@@ -327,13 +327,17 @@ namespace {
     check($link_candidate_relation !== false && $link_candidate_parent !== false && $link_candidate_relation < $link_candidate_parent
         && $unlink_start !== false && $unlink_relation !== false && $unlink_parent !== false && $unlink_relation < $unlink_parent,
         'controller link/unlink/delete flows lock relationship rows before the credential parent');
-    $restore_start = strpos($admin, 'public static function restore');
-    $restore_item = strpos($admin, 'lockItemForUpdate($itemtype, $items_id, $entity_id)', $restore_start);
-    $restore_relations = strpos($admin, 'getLinksForCredentialForUpdate($credential_id)', $restore_start);
-    $restore_parent = strpos($admin, 'lockCredential($credential_id, $entity_id, false)', $restore_start);
+    $restore_start = strpos($admin, 'public static function restoreWithExistingLinks');
+    $restore_end = strpos($admin, 'public static function restore(', $restore_start);
+    $restore_body = $restore_start !== false && $restore_end !== false
+        ? substr($admin, $restore_start, $restore_end - $restore_start)
+        : '';
+    $restore_item = strpos($restore_body, 'lockItemsForUpdate($item_lock_plan)');
+    $restore_relations = strpos($restore_body, 'getLinksForCredentialForUpdate($credential_id)');
+    $restore_parent = strpos($restore_body, 'lockCredential($credential_id, $entity_id, false)');
     check($restore_item !== false && $restore_relations !== false && $restore_parent !== false
         && $restore_item < $restore_relations && $restore_relations < $restore_parent,
-        'archived credential restore locks its item, relationships, then credential');
+        'archived credential restore-with-links locks every linked item, relationships, then credential');
     check(strpos($backup, 'lockItemsForUpdate($item_locks)') < strpos($backup, 'foreach ($prepared as $entry)'),
         'backup import locks all destination items before it creates relationship rows');
     $backup_export_start = strpos($backup, 'public static function createBackup');
