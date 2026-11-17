@@ -55,8 +55,9 @@ if (!is_string($manifest_source)
     if (trim($compatibility_match[1]) !== '~12.0.0') {
         $errors[] = 'Manifest compatibility must be ~12.0.0 for the supported GLPI 12.0.x range.';
     }
-    if (trim($state_match[1]) !== 'development') {
-        $errors[] = 'Keep the manifest in development state until public URLs and live acceptance tests exist.';
+    $expected_state = $version === '1.0.0' ? 'stable' : 'development';
+    if (trim($state_match[1]) !== $expected_state) {
+        $errors[] = 'Manifest state must be stable for 1.0.0 and development for pre-release builds.';
     }
 }
 
@@ -193,6 +194,16 @@ if (!is_string($item_tab_template) || !str_contains($item_tab_template, "__('Cre
     $errors[] = 'Credential IDs, password hint, same-iframe linked-item navigation and external iframe behavior must be present.';
 }
 $form_template = file_get_contents($root . '/templates/credential/form.html.twig');
+$credential_form_controller = file_get_contents($root . '/src/Controller/CredentialController.php');
+if (!is_file($root . '/tests/php/credential_form_feedback_test.php')
+    || !str_contains((string) $credential_form_controller, 'Session::addMessageAfterRedirect(')
+    || !str_contains((string) $credential_form_controller, "__('Credential updated successfully.', 'credentials')")
+    || !str_contains((string) $credential_form_controller, "__('Credential created successfully.', 'credentials')")
+    || !str_contains((string) $form_template, 'aria-live="assertive"')
+    || !str_contains((string) $form_template, 'save_attempted')
+) {
+    $errors[] = 'Credential create/update must report success after redirect and keep accessible failure feedback with regression coverage.';
+}
 if (!is_string($form_template)
     || !str_contains($form_template, '{% if is_in_modal %}')
     || !str_contains($form_template, "data-credentials-close-modal=\"1\"")

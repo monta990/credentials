@@ -242,6 +242,12 @@ final class CredentialItem extends CommonDBTM
             ]);
         }
 
+        $categories = CredentialCategory::getOptions($entity_id);
+        $category_names = [];
+        foreach ($categories as $category) {
+            $category_names[(int) $category['id']] = (string) $category['name'];
+        }
+
         $rows = [];
         foreach ($labels as $label) {
             $credential_id = (int) $label['id'];
@@ -260,6 +266,7 @@ final class CredentialItem extends CommonDBTM
                 'id' => $credential_id,
                 'count_url' => $count_url,
                 'name' => (string) $label['name'],
+                'category_name' => $category_names[(int) ($label['category_id'] ?? 0)] ?? '',
                 'link_count' => (int) ($label['link_count'] ?? 0),
                 'date_mod' => $label['date_mod'],
                 'links_modal_id' => $links_modal_id,

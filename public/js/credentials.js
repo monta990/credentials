@@ -265,6 +265,36 @@
         if (submit instanceof HTMLButtonElement) submit.disabled = select.value === '';
     });
 
+    // Populate the single native Bootstrap modal used to edit credential categories.
+    // Values are copied from data attributes into form controls (never inserted as HTML).
+    document.addEventListener('show.bs.modal', (event) => {
+        const modal = event.target instanceof HTMLElement ? event.target : null;
+        if (!modal || modal.id !== 'credentials-category-edit-modal') return;
+
+        const trigger = event.relatedTarget instanceof HTMLElement ? event.relatedTarget : null;
+        if (!trigger || !trigger.matches('[data-bs-target="#credentials-category-edit-modal"]')) return;
+
+        const categoryId = modal.querySelector('[data-credentials-category-id]');
+        const categoryName = modal.querySelector('[data-credentials-category-name]');
+        const categoryComment = modal.querySelector('[data-credentials-category-comment]');
+        if (!(categoryId instanceof HTMLInputElement)
+            || !(categoryName instanceof HTMLInputElement)
+            || !(categoryComment instanceof HTMLInputElement)) {
+            event.preventDefault();
+            return;
+        }
+
+        categoryId.value = trigger.dataset.categoryId || '';
+        categoryName.value = trigger.dataset.categoryName || '';
+        categoryComment.value = trigger.dataset.categoryComment || '';
+    });
+
+    document.addEventListener('shown.bs.modal', (event) => {
+        const modal = event.target instanceof HTMLElement ? event.target : null;
+        if (!modal || modal.id !== 'credentials-category-edit-modal') return;
+        modal.querySelector('[data-credentials-category-name]')?.focus();
+    });
+
     // Confirm mutations rendered in the parent AJAX tab. Forms inside the
     // credential details iframe own their confirmation handler locally.
     document.addEventListener('submit', (event) => {

@@ -69,6 +69,9 @@ jobs:
           php -r '$xml = new DOMDocument(); if (!$xml->load("credentials.xml", LIBXML_NONET)) { exit(1); }'
           php tools/validate-package.php
 
+      - name: Compile gettext catalogs
+        run: python tools/compile_locales.py
+
       - name: Verify PO and MO catalogs are synchronized
         run: python tools/compile_locales.py --check
 
@@ -124,6 +127,14 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Set up Python for translation packaging
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Compile gettext catalogs for the installable package
+        run: python tools/compile_locales.py
 
       - name: Prepare plugin package
         id: metadata

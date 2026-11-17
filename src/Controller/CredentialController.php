@@ -699,6 +699,7 @@ final class CredentialController extends AbstractController
         }
 
         $errors = [];
+        $save_attempted = $request->isMethod('POST') && $request->request->has('save');
         if (!Credential::isEncryptionReady()) {
             $errors[] = __('The GLPI security key is unavailable or invalid. Contact your GLPI administrator.', 'credentials');
         }
@@ -733,7 +734,7 @@ final class CredentialController extends AbstractController
             }
         }
 
-        if ($request->isMethod('POST') && $request->request->has('save')) {
+        if ($save_attempted) {
             $values = [
                 'name' => trim($request->request->getString('name')),
                 'login' => trim($request->request->getString('login')),
@@ -831,7 +832,8 @@ final class CredentialController extends AbstractController
 
                 if ($errors === []) {
                     $expected_entity_id = CredentialItem::resolveParentEntityID($parent);
-                    $saved_id = $this->runTransaction(function () use ($credential, $input, $is_update, $credential_id, $itemtype, $items_id, $expected_entity_id): int {
+                    try {
+                        $saved_id = $this->runTransaction(function () use ($credential, $input, $is_update, $credential_id, $itemtype, $items_id, $expected_entity_id): int {
                         // Serialize this form's parent item against a concurrent
                         // permanent purge before any credential/link write begins.
                         if (!CredentialItemLink::lockItemForUpdate($itemtype, $items_id, $expected_entity_id)) {
@@ -904,18 +906,34 @@ final class CredentialController extends AbstractController
                             Credential::HISTORY_CREATED,
                             $new_id,
                         ) ? $new_id : 0;
-                    });
+                        });
+                    } catch (\Throwable $exception) {
+                        // Do not expose exception details or SQL text in the page.
+                        error_log('[Credentials] Credential save failed (' . get_class($exception) . ').');
+                        $saved_id = 0;
+                        $errors[] = __('The save operation failed because of an unexpected error. No changes were saved. Contact your GLPI administrator if the problem persists.', 'credentials');
+                    }
 
                     if ($saved_id > 0) {
+                        Session::addMessageAfterRedirect(
+                            $is_update
+                                ? __('Credential updated successfully.', 'credentials')
+                                : __('Credential created successfully.', 'credentials'),
+                            false,
+                            INFO
+                        );
+
                         // Saving is a committed change: navigate the top-level item page
                         // so all item data, related tabs and counters are refreshed.
                         // Cancel remains a local modal action and never reaches this branch.
                         return Security::redirectToItem($itemtype, $items_id, $context_ticket_id, $is_in_modal, true, true);
                     }
 
-                    $errors[] = $is_update
-                        ? __('The credential could not be updated or recorded in GLPI history. No changes were saved.', 'credentials')
-                        : __('The credential could not be created or recorded in GLPI history. No credential was saved.', 'credentials');
+                    if ($errors === []) {
+                        $errors[] = $is_update
+                            ? __('The credential could not be updated or recorded in GLPI history. No changes were saved.', 'credentials')
+                            : __('The credential could not be created or recorded in GLPI history. No credential was saved.', 'credentials');
+                    }
                 }
             }
         }
@@ -953,6 +971,7 @@ final class CredentialController extends AbstractController
                     . ($is_update ? ' — ' . $values['name'] : ''),
                 'associated_item_name' => (string) $parent->getName(),
                 'errors' => $errors,
+                'save_attempted' => $save_attempted,
                 'values' => $values,
                 'categories' => CredentialCategory::getOptions($entity_id),
                 'reviewer_options' => $this->reviewerOptions($entity_id, (int) $values['reviewer_users_id']),
