@@ -293,7 +293,7 @@ foreach ($active_id_requirements as $requirement => $present) {
 
 // Listing queries must never fetch encrypted credential material.
 if (!is_string($credential_model)
-    || !str_contains($credential_model, "'SELECT' => ['id', 'name', 'date_mod']")
+    || !str_contains($credential_model, "'SELECT' => ['id', 'name', 'plugin_credentials_categories_id', 'date_mod']")
     || !str_contains($credential_model, '\'entities_id\' => $entities_id')
     || !str_contains($credential_model, "'is_deleted'  => 0")
 ) {
