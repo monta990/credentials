@@ -15,19 +15,19 @@ final class UpdateChecker
     private const CACHE_TTL = 21600;
 
     /** @return array{status:string,version:?string,url:?string,name:?string,published_at:?string,checked_at:?int} */
-    public static function latest(bool $force = false): array
+    public static function latest(): array
     {
         $cache_file = self::cacheFile();
         $cached = self::readCache($cache_file);
         $stale = $cached;
 
-        if (!$force && $cached !== null
+        if ($cached !== null
             && $cached['checked_at'] <= time()
             && (time() - $cached['checked_at']) < self::CACHE_TTL
         ) {
             return self::result($cached, 'cached');
         }
-        if (!$force && $cached === null) {
+        if ($cached === null) {
             $no_release_checked_at = self::readNoReleaseCache($cache_file);
             if ($no_release_checked_at !== null) {
                 return self::noReleaseResult($no_release_checked_at);

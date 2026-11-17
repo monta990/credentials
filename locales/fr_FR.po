@@ -1,7 +1,7 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 0.0.66\n"
+"Project-Id-Version: Credentials 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-06 06:40+0000\n"
 "PO-Revision-Date: 2026-11-05 19:50-0700\n"
@@ -1364,3 +1364,33 @@ msgstr "Votre profil ne dispose pas des autorisations nécessaires pour effectue
 
 msgid "archived credentials"
 msgstr "identifiants archivés"
+
+msgid "Delete category"
+msgstr "Supprimer la catégorie"
+
+msgid "Restore archived credential"
+msgstr "Restaurer l’identifiant archivé"
+
+msgid "Delete archived credential"
+msgstr "Supprimer l’identifiant archivé"
+
+msgid "Delete archived credentials"
+msgstr "Supprimer les identifiants archivés"
+
+msgid "Unlink credential"
+msgstr "Dissocier l’identifiant"
+
+msgid "Confirm action"
+msgstr "Confirmer l’action"
+
+msgid "Credentials checks for stable GitHub releases automatically when this configuration page is opened, at most once every six hours. Updates are never installed automatically."
+msgstr "Credentials recherche automatiquement les versions stables publiées sur GitHub lorsque cette page de configuration est ouverte, au maximum une fois toutes les six heures. Les mises à jour ne sont jamais installées automatiquement."
+
+msgid "Credential created successfully."
+msgstr "L’identifiant a été créé avec succès."
+
+msgid "The credential could not be saved. Review the errors below; no changes were saved."
+msgstr "L’identifiant n’a pas pu être enregistré. Consultez les erreurs ci-dessous ; aucune modification n’a été enregistrée."
+
+msgid "The save operation failed because of an unexpected error. No changes were saved. Contact your GLPI administrator if the problem persists."
+msgstr "L’enregistrement a échoué en raison d’une erreur inattendue. Aucune modification n’a été enregistrée. Contactez votre administrateur GLPI si le problème persiste."

@@ -90,7 +90,7 @@ final class Credential extends CommonDBTM
         $rows = [];
         $link_counts = CredentialItemLink::getLinkCounts($ids);
         $iterator = $DB->request([
-            'SELECT' => ['id', 'name', 'date_mod'],
+            'SELECT' => ['id', 'name', 'plugin_credentials_categories_id', 'date_mod'],
             'FROM'   => self::getTable(),
             'WHERE'  => [
                 'id'          => array_values(array_unique($ids)),
@@ -103,8 +103,9 @@ final class Credential extends CommonDBTM
         foreach ($iterator as $row) {
             $rows[] = [
                 'id'       => (int) $row['id'],
-                'name'     => (string) $row['name'],
-                'date_mod' => $row['date_mod'] !== null ? (string) $row['date_mod'] : null,
+                'name'       => (string) $row['name'],
+                'category_id' => (int) ($row['plugin_credentials_categories_id'] ?? 0),
+                'date_mod'    => $row['date_mod'] !== null ? (string) $row['date_mod'] : null,
                 'link_count' => (int) ($link_counts[(int) $row['id']] ?? 0),
             ];
         }

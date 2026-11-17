@@ -46,17 +46,6 @@ final class ConfigController extends AbstractController
 
             try {
                 switch ($action) {
-                    case 'check_updates':
-                        $update = UpdateChecker::latest(true);
-                        $message = match ($update['status']) {
-                            'update_available' => sprintf(__('Version %s is available.', 'credentials'), $update['version']),
-                            'up_to_date' => __('Credentials is already up to date.', 'credentials'),
-                            'no_release' => __('There are no stable releases published on GitHub yet.', 'credentials'),
-                            default => __('GitHub could not be reached. The update check will be available again later.', 'credentials'),
-                        };
-                        Session::addMessageAfterRedirect($message, false, INFO);
-                        break;
-
                     case 'save_reminder_settings':
                         $days = $request->request->getInt(
                             'lifecycle_reminder_lookahead_days',

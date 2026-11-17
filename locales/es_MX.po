@@ -1,7 +1,7 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 0.0.66\n"
+"Project-Id-Version: Credentials 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-06 06:40+0000\n"
 "PO-Revision-Date: 2026-11-05 19:50-0700\n"
@@ -1352,3 +1352,33 @@ msgstr "Tu perfil no tiene los permisos necesarios para realizar respaldos."
 
 msgid "archived credentials"
 msgstr "credenciales archivadas"
+
+msgid "Delete category"
+msgstr "Eliminar categoría"
+
+msgid "Restore archived credential"
+msgstr "Restaurar credencial archivada"
+
+msgid "Delete archived credential"
+msgstr "Eliminar credencial archivada"
+
+msgid "Delete archived credentials"
+msgstr "Eliminar credenciales archivadas"
+
+msgid "Unlink credential"
+msgstr "Desvincular credencial"
+
+msgid "Confirm action"
+msgstr "Confirmar acción"
+
+msgid "Credentials checks for stable GitHub releases automatically when this configuration page is opened, at most once every six hours. Updates are never installed automatically."
+msgstr "Credentials busca automáticamente las versiones estables publicadas en GitHub cuando se abre esta página de configuración, como máximo una vez cada seis horas. Nunca instala actualizaciones automáticamente."
+
+msgid "Credential created successfully."
+msgstr "La credencial se creó correctamente."
+
+msgid "The credential could not be saved. Review the errors below; no changes were saved."
+msgstr "No se pudo guardar la credencial. Revisa los errores siguientes; no se guardaron cambios."
+
+msgid "The save operation failed because of an unexpected error. No changes were saved. Contact your GLPI administrator if the problem persists."
+msgstr "La operación de guardado falló por un error inesperado. No se guardaron cambios. Contacta al administrador de GLPI si el problema continúa."
