@@ -3,14 +3,21 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../../public/js/credentials.js'), 'utf8');
-const listeners = {};
+const listeners = new Map();
+const dispatch = (type, event) => {
+    for (const callback of listeners.get(type) || []) callback(event);
+};
 const badge = { textContent: '1', removed: false, remove() { this.removed = true; } };
 const activeTab = {
     querySelector(selector) { return selector.includes('tab-count-badge') || selector.includes('glpi-badge') ? badge : null; },
     append() { throw new Error('Existing badge should be updated, not duplicated.'); },
 };
 const document = {
-    addEventListener(type, callback) { listeners[type] = callback; },
+    addEventListener(type, callback) {
+        const callbacks = listeners.get(type) || [];
+        callbacks.push(callback);
+        listeners.set(type, callbacks);
+    },
     querySelector(selector) { return selector.startsWith('#tabspanel') || selector.startsWith('.nav-tabs') ? activeTab : null; },
     createElement() { return { dataset: {}, className: '', textContent: '' }; },
 };
@@ -30,14 +37,14 @@ const window = {
 };
 class HTMLFormElement { constructor() { this.dataset = {}; } }
 vm.runInNewContext(source, { window, document, HTMLElement, HTMLFormElement, Date, console });
-if (typeof listeners['show.bs.modal'] !== 'function' || typeof listeners['hidden.bs.modal'] !== 'function') {
+if (!(listeners.get('show.bs.modal') || []).length || !(listeners.get('hidden.bs.modal') || []).length) {
     throw new Error('Modal show/hide hooks are not installed.');
 }
 const trigger = new HTMLElement('trigger', { credentialsCountUrl: '/plugins/credentials/ajax/Credential/TabCount?itemtype=User&items_id=2' });
-listeners['show.bs.modal']({ target: modal, relatedTarget: trigger });
+dispatch('show.bs.modal', { target: modal, relatedTarget: trigger });
 if (!modal.dataset.credentialsCountUrl) throw new Error('The originating tab count URL must be saved on the modal.');
 (async () => {
-    await listeners['hidden.bs.modal']({ target: modal });
+    await Promise.all((listeners.get('hidden.bs.modal') || []).map((callback) => callback({ target: modal })));
     if (reloadCalls !== 1) throw new Error('A changed modal must refresh only the active tab.');
     if (badge.textContent !== '3') throw new Error('The tab count badge must be refreshed from the JSON endpoint.');
     if (fetchOptions?.options?.cache !== 'no-store' || fetchOptions?.options?.credentials !== 'same-origin') {
