@@ -14,8 +14,8 @@ if (!str_contains($controller, 'redirectToItem($itemtype, $items_id, $context_ti
 }
 if (!str_contains($security, 'bool $reload_parent_page = false')
     || !str_contains($security, 'data-credentials-navigate-top=')
-    || !str_contains($security, '/js/credential-frame.js?v=')
-    || !str_contains($security, 'PLUGIN_CREDENTIALS_VERSION')) {
+    || !str_contains($security, "PLUGIN_CREDENTIALS_WEBDIR . '/js/credential-frame.js?v='")
+    || !str_contains($security, 'rawurlencode(PLUGIN_CREDENTIALS_VERSION)')) {
     throw new RuntimeException('Modal Save must use the external iframe helper to request a full top-level GLPI item reload.');
 }
 $parent_js = file_get_contents($root . '/public/js/credentials.js');
