@@ -55,9 +55,14 @@ if (!is_string($manifest_source)
     if (trim($compatibility_match[1]) !== '~12.0.0') {
         $errors[] = 'Manifest compatibility must be ~12.0.0 for the supported GLPI 12.0.x range.';
     }
-    $expected_state = $version === '1.0.0' ? 'stable' : 'development';
-    if (trim($state_match[1]) !== $expected_state) {
-        $errors[] = 'Manifest state must be stable for 1.0.0 and development for pre-release builds.';
+    if (!preg_match('/^\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?$/', $version)) {
+        $errors[] = 'Plugin version must follow semantic versioning (MAJOR.MINOR.PATCH with optional prerelease/build metadata).';
+    }
+    $manifest_state = trim($state_match[1]);
+    $is_prerelease = preg_match('/[-+]/', $version) === 1;
+    $expected_state = $is_prerelease ? 'development' : 'stable';
+    if ($manifest_state !== $expected_state) {
+        $errors[] = 'Manifest state must be stable for semantic release versions and development for prerelease versions.';
     }
 }
 
