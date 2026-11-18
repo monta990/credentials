@@ -198,12 +198,15 @@ Edwin Elias Alvarez — [GitHub](https://github.com/monta990)
 
 GPL v3+ — see [LICENSE](LICENSE).
 
-## Issues and support
+---
 
-Report bugs or request features through the [GitHub issue tracker](https://github.com/monta990/credentials/issues).
+## Buy me a coffee :)
+If you like my work, you can support me by a donate here:
+
+<a href="https://www.buymeacoffee.com/monta990" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-yellow.png" alt="Buy Me A Coffee" height="51px" width="210px"></a>
 
 ---
 
-<p align="center">
-  <sub>Credentials — GLPI plugin</sub>
-</p>
+## Issues and support
+
+Report bugs or request features through the [GitHub issue tracker](https://github.com/monta990/credentials/issues).
