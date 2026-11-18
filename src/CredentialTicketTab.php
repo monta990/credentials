@@ -19,8 +19,11 @@ use Ticket_User;
 use Item_Ticket;
 
 /** Aggregates requester and associated-item credentials in a ticket tab. */
-final class CredentialTicketTab extends CommonDBTM
+final class CredentialTicketTab extends CommonGLPI
 {
+    /** @var array<int, array{rows:array,requires_reauth:bool,count:int}> */
+    private static array $rowsCache = [];
+
     public static function register(): void
     {
         Plugin::registerClass(self::class, ['addtabon' => [Ticket::class]]);
@@ -56,6 +59,9 @@ final class CredentialTicketTab extends CommonDBTM
         $ticket_id = (int) $ticket->getID();
         if ($ticket_id <= 0 || !Session::haveRight(Credential::$rightname, READ)) {
             return ['rows' => [], 'requires_reauth' => false, 'count' => 0];
+        }
+        if (isset(self::$rowsCache[$ticket_id])) {
+            return self::$rowsCache[$ticket_id];
         }
 
         $sources = [];
@@ -168,11 +174,12 @@ final class CredentialTicketTab extends CommonDBTM
         }
 
         $aggregated = CredentialTicketAggregator::aggregate($source_entries, array_values($protected_ids));
-        return [
+        self::$rowsCache[$ticket_id] = [
             'rows' => $aggregated['rows'],
             'requires_reauth' => $requires_reauth,
             'count' => $aggregated['count'],
         ];
+        return self::$rowsCache[$ticket_id];
     }
 
     public static function renderTicketList(Ticket $ticket, bool $secure_page): void

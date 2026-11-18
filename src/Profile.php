@@ -74,7 +74,7 @@ final class Profile extends \Profile
         ];
     }
 
-    /** Ensure the plugin's profile-right rows exist for one profile. */
+    /** Verify that migration-created rights exist without writing during profile display. */
     public static function ensureRightsForProfile(int $profiles_id): bool
     {
         global $DB;
@@ -93,11 +93,7 @@ final class Profile extends \Profile
                 ],
                 'LIMIT' => 1,
             ]);
-            if (count($existing) === 0 && $DB->insert('glpi_profilerights', [
-                'profiles_id' => $profiles_id,
-                'name' => $right['field'],
-                'rights' => 0,
-            ]) === false) {
+            if (count($existing) === 0) {
                 return false;
             }
         }
@@ -105,7 +101,7 @@ final class Profile extends \Profile
         return true;
     }
 
-    /** Refresh only the active profile after a profile switch. */
+    /** Refresh cached rights for the active profile after a profile switch. */
     public static function initProfile(): void
     {
         global $DB;

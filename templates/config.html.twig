@@ -26,7 +26,9 @@
         <div class="card-body">
             <div class="row g-3 align-items-center">
                 <div class="col-md-7">
-                    {% if update.status == 'update_available' %}
+                    {% if update.status == 'disabled' %}
+                        <div class="alert alert-secondary mb-2" role="status">{{ __('Automatic update checks are disabled. Use the GitHub releases page to check manually.', 'credentials') }}</div>
+                    {% elseif update.status == 'update_available' %}
                         <div class="alert alert-warning mb-2" role="status">
                             <strong>{{ __('An update is available.', 'credentials') }}</strong>
                             {{ __('Latest version', 'credentials') }}: {{ update.version }}
@@ -54,7 +56,15 @@
                     <a class="btn btn-secondary" href="https://github.com/monta990/credentials/releases" target="_blank" rel="noopener noreferrer">{{ __('View GitHub releases', 'credentials') }} <i class="ti ti-external-link ms-1" aria-hidden="true"></i></a>
                 </div>
             </div>
-            <p class="form-hint mt-3 mb-0">{{ __('Credentials checks for stable GitHub releases automatically when this configuration page is opened, at most once every six hours. Updates are never installed automatically.', 'credentials') }}</p>
+            <form method="post" action="{{ config_url }}" class="mt-3">
+                <input type="hidden" name="action" value="save_update_check_settings">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="credentials-update-check-enabled" name="update_check_enabled" value="1" {% if update_check_enabled %}checked{% endif %}>
+                    <label class="form-check-label" for="credentials-update-check-enabled">{{ __('Enable automatic update checks', 'credentials') }}</label>
+                </div>
+                <p class="form-hint">{{ __('When enabled, the GLPI server checks for stable GitHub releases at most once every six hours. The request reveals the server egress IP and plugin usage to GitHub. No credential data is sent, and updates are never installed automatically.', 'credentials') }}</p>
+                <button type="submit" class="btn btn-primary">{{ __('Save update check settings', 'credentials') }}</button>
+            </form>
         </div>
     </div>
 
@@ -136,7 +146,6 @@
         </div>
     </div>
 
-    
 
     <div class="card mb-4">
         <div class="card-header"><h3 class="card-title mb-0 credentials-config-title"><i class="ti ti-tags me-2" aria-hidden="true"></i>{{ __('Credential categories', 'credentials') }}</h3></div>

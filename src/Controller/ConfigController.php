@@ -32,7 +32,6 @@ final class ConfigController extends AbstractController
     {
         global $CFG_GLPI;
 
-        Session::checkLoginUser();
         Session::checkRight('config', UPDATE);
 
         if ($request->isMethod('POST')) {
@@ -46,6 +45,20 @@ final class ConfigController extends AbstractController
 
             try {
                 switch ($action) {
+                    case 'save_update_check_settings':
+                        $enabled = $request->request->getBoolean('update_check_enabled');
+                        \Config::setConfigurationValues('plugin_credentials', [
+                            'update_check_enabled' => $enabled ? 1 : 0,
+                        ]);
+                        Session::addMessageAfterRedirect(
+                            $enabled
+                                ? __('Automatic update checks were enabled.', 'credentials')
+                                : __('Automatic update checks were disabled.', 'credentials'),
+                            false,
+                            INFO
+                        );
+                        break;
+
                     case 'save_reminder_settings':
                         $days = $request->request->getInt(
                             'lifecycle_reminder_lookahead_days',
@@ -165,6 +178,7 @@ final class ConfigController extends AbstractController
         $notification_setup = CredentialLifecycleReminderService::notificationSetupStatus($active_entity);
         $settings = \Config::getConfigurationValues('plugin_credentials');
         $retention_days = max(0, min(3650, (int) ($settings['archive_retention_days'] ?? 365)));
+        $update_check_enabled = !empty($settings['update_check_enabled']);
         $reminder_settings = CredentialLifecycleReminderService::getSettings();
         $reminder_task = new \CronTask();
         $reminder_task_registered = $reminder_task->getFromDBbyName(
@@ -172,7 +186,7 @@ final class ConfigController extends AbstractController
             CredentialLifecycleReminderService::CRON_NAME
         );
         $reminder_task_enabled = $reminder_task_registered && $reminder_task->isDisabled() === 0;
-        $update = UpdateChecker::latest();
+        $update = UpdateChecker::latest($update_check_enabled);
         $dashboard = CredentialAdminService::dashboard(
             $active_entity,
             $retention_days,
@@ -183,6 +197,7 @@ final class ConfigController extends AbstractController
             'installed_version' => PLUGIN_CREDENTIALS_VERSION,
             'active_tab' => $active_tab,
             'update' => $update,
+            'update_check_enabled' => $update_check_enabled,
             'dashboard' => $dashboard,
             'retention_days' => $retention_days,
             'reminders_enabled' => $reminder_settings['enabled'],
@@ -215,7 +230,6 @@ final class ConfigController extends AbstractController
     #[Route('/config/restorable-items', name: 'credentials_config_restorable_items', methods: ['GET'])]
     public function restorableItems(Request $request): JsonResponse
     {
-        Session::checkLoginUser();
         Session::checkRight('config', UPDATE);
         Session::checkRight(Credential::$rightname, UPDATE);
 
@@ -236,7 +250,6 @@ final class ConfigController extends AbstractController
     #[Route('/config/export', name: 'credentials_config_export', methods: ['POST'])]
     public function export(Request $request): Response
     {
-        Session::checkLoginUser();
         Session::checkRight('config', UPDATE);
         Session::checkRight(Credential::RIGHT_BACKUP, READ);
         Session::checkRight(Credential::RIGHT_REVEAL, READ);
@@ -276,7 +289,6 @@ final class ConfigController extends AbstractController
     #[Route('/config/import', name: 'credentials_config_import', methods: ['POST'])]
     public function import(Request $request): Response
     {
-        Session::checkLoginUser();
         Session::checkRight('config', UPDATE);
         Session::checkRight(Credential::RIGHT_BACKUP, READ);
         Session::checkRight(Credential::$rightname, CREATE);

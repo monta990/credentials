@@ -40,6 +40,91 @@ final class Credential extends CommonDBTM
     public bool $dohistory = true;
     public array $history_blacklist = ['name', 'login', 'password', 'url', 'notes', 'link_lock_token', 'links_count'];
 
+    /** Never expose encrypted credential values through GLPI's generic API serializers.
+     * @var string[]
+     */
+    public static array $undisclosedFields = ['login', 'password', 'url', 'notes'];
+
+    /** Internal mutation depth; generic GLPI CRUD must never write secret records directly. */
+    private static int $trustedWriteDepth = 0;
+
+
+    /** Execute a model mutation initiated by an authorized Credentials service. */
+    public static function withTrustedWrite(callable $operation): mixed
+    {
+        self::$trustedWriteDepth++;
+        try {
+            return $operation();
+        } finally {
+            self::$trustedWriteDepth--;
+        }
+    }
+
+    /** Prevent generic mass actions from bypassing the plugin's transactional workflows. */
+    #[Override]
+    public function getForbiddenStandardMassiveAction()
+    {
+        return ['update', 'delete', 'purge'];
+    }
+
+    /** Generic model creation is disabled; controllers and import services use withTrustedWrite(). */
+    #[Override]
+    public function prepareInputForAdd($input)
+    {
+        return self::$trustedWriteDepth > 0 && is_array($input) ? $input : false;
+    }
+
+    /** Generic model updates are disabled to prevent unencrypted API writes. */
+    #[Override]
+    public function prepareInputForUpdate($input)
+    {
+        return self::$trustedWriteDepth > 0 && is_array($input) ? $input : false;
+    }
+
+    /** CommonDBTM::delete() must only be called by the plugin's audited archive flow. */
+    #[Override]
+    public function pre_deleteItem()
+    {
+        return self::$trustedWriteDepth > 0;
+    }
+
+    /** A credential can only be archived by a user who can update at least one linked item. */
+    #[Override]
+    public function canDeleteItem(): bool
+    {
+        if (!parent::canDeleteItem()) {
+            return false;
+        }
+
+        $credential_id = (int) ($this->fields['id'] ?? 0);
+        $credential_entity = (int) ($this->fields['entities_id'] ?? -1);
+        if ($credential_id <= 0 || $credential_entity < 0 || !Session::haveAccessToEntity($credential_entity)) {
+            return false;
+        }
+
+        foreach (CredentialItemLink::getLinksForCredential($credential_id) as $link) {
+            $item = getItemForItemtype($link['itemtype']);
+            if (!$item instanceof CommonDBTM || !$item->getFromDB($link['items_id'])) {
+                continue;
+            }
+            if (CredentialItem::resolveParentEntityID($item) !== $credential_entity) {
+                continue;
+            }
+            if ($item->can((int) $link['items_id'], UPDATE)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Permanent deletion is only available through CredentialAdminService, which enforces retention and history. */
+    #[Override]
+    public function canPurgeItem(): bool
+    {
+        return false;
+    }
+
     #[Override]
     public static function getTable($classname = null): string
     {

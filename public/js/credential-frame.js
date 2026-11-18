@@ -127,7 +127,16 @@
         }
     }
 
-    const navigationUrl = document.body?.dataset.credentialsNavigateTop;
+    const body = document.body;
+    if (body?.dataset.credentialsChanged === '1') {
+        if (modal) {
+            modal.dataset.credentialsChanged = '1';
+        } else {
+            postToParent('markChanged');
+        }
+    }
+
+    const navigationUrl = body?.dataset.credentialsNavigateTop;
     if (navigationUrl) {
         try {
             const destination = new URL(navigationUrl, window.location.href);
@@ -136,6 +145,19 @@
             }
         } catch (error) {
             // Invalid navigation targets are ignored; never navigate to an external URL.
+        }
+    } else if (body?.dataset.credentialsCloseModal === '1') {
+        try {
+            const dismiss = modal?.querySelector('.modal-header [data-bs-dismiss="modal"], .modal-header .btn-close');
+            if (dismiss) {
+                dismiss.click();
+            } else if (modal && window.parent.bootstrap?.Modal) {
+                window.parent.bootstrap.Modal.getOrCreateInstance(modal).hide();
+            } else {
+                postToParent('closeModal');
+            }
+        } catch (error) {
+            postToParent('closeModal');
         }
     }
 

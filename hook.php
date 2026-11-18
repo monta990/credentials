@@ -77,6 +77,13 @@ function plugin_credentials_install(): bool
         KEY `is_deleted` (`is_deleted`)
     ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
 
+    // Plugin-owned lock rows serialize category mutations without writing to core glpi_entities records.
+    $entity_locks_created = $DB->doQuery("CREATE TABLE IF NOT EXISTS `glpi_plugin_credentials_entity_locks` (
+        `entities_id` INT UNSIGNED NOT NULL,
+        `lock_token` CHAR(32) NOT NULL DEFAULT '',
+        PRIMARY KEY (`entities_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
+
     $reminders_created = $DB->doQuery("CREATE TABLE IF NOT EXISTS `glpi_plugin_credentials_reminders` (
         `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `plugin_credentials_credentials_id` INT UNSIGNED NOT NULL,
@@ -91,7 +98,7 @@ function plugin_credentials_install(): bool
         KEY `date_sent` (`date_sent`)
     ) ENGINE=InnoDB DEFAULT CHARSET={$charset} COLLATE={$collation}");
 
-    if ($credentials_created === false || $links_created === false || $categories_created === false || $reminders_created === false) {
+    if ($credentials_created === false || $links_created === false || $categories_created === false || $entity_locks_created === false || $reminders_created === false) {
         return false;
     }
 
@@ -99,6 +106,14 @@ function plugin_credentials_install(): bool
     // changes. GLPI's documented initial-table pattern is static CREATE TABLE DDL
     // through $DB->doQuery(); DDL is not a runtime data query.
     $migration = new Migration(PLUGIN_CREDENTIALS_VERSION);
+    // Ensure the plugin-owned category lock table also upgrades safely if it
+    // was created by an earlier local test build.
+    $migration->addField(
+        'glpi_plugin_credentials_entity_locks',
+        'lock_token',
+        'string',
+        ['value' => '']
+    );
     // Additive, non-secret serialization token for existing installations. It
     // is updated through DB->update() to acquire an InnoDB row write lock without
     // issuing prohibited raw runtime SQL. Existing credential data is untouched.
@@ -276,26 +291,70 @@ function plugin_credentials_uninstall(): bool
     if (CronTask::unregister('credentials') === false) {
         return false;
     }
+
+    // Remove every persisted setting owned by the plugin, including the one-time migration marker.
+    Config::deleteConfigurationValues('plugin_credentials', [
+        'links_count_reconciliation_version',
+        'archive_retention_days',
+        'lifecycle_reminders_enabled',
+        'lifecycle_reminder_lookahead_days',
+        'update_check_enabled',
+    ]);
+
+    // Remove administrator-created notification definitions that target the plugin itemtype.
+    // Templates themselves may be shared by other notifications and are intentionally retained.
+    if ($DB->tableExists('glpi_notifications') && $DB->fieldExists('itemtype', 'glpi_notifications')) {
+        $notification_ids = [];
+        $notifications = $DB->request([
+            'SELECT' => ['id'],
+            'FROM' => 'glpi_notifications',
+            'WHERE' => ['itemtype' => Credential::class],
+        ]);
+        foreach ($notifications as $notification) {
+            $notification_id = (int) ($notification['id'] ?? 0);
+            if ($notification_id > 0) {
+                $notification_ids[] = $notification_id;
+            }
+        }
+        if ($notification_ids !== []) {
+            foreach (['glpi_notificationtargets', 'glpi_notifications_notificationtemplates'] as $child_table) {
+                if ($DB->tableExists($child_table) && $DB->fieldExists('notifications_id', $child_table)
+                    && $DB->delete($child_table, ['notifications_id' => $notification_ids]) === false
+                ) {
+                    return false;
+                }
+            }
+            if ($DB->delete('glpi_notifications', ['id' => $notification_ids]) === false) {
+                return false;
+            }
+        }
+    }
+
     if ($DB->delete('glpi_profilerights', ['name' => [Credential::$rightname, Credential::RIGHT_REVEAL, Credential::RIGHT_BACKUP]]) === false) {
         return false;
     }
     if ($DB->tableExists('glpi_plugin_credentials_items')
-        && $DB->doQuery('DROP TABLE `glpi_plugin_credentials_items`') === false
+        && $DB->dropTable('glpi_plugin_credentials_items', true) === false
     ) {
         return false;
     }
     if ($DB->tableExists('glpi_plugin_credentials_reminders')
-        && $DB->doQuery('DROP TABLE `glpi_plugin_credentials_reminders`') === false
+        && $DB->dropTable('glpi_plugin_credentials_reminders', true) === false
     ) {
         return false;
     }
     if ($DB->tableExists('glpi_plugin_credentials_categories')
-        && $DB->doQuery('DROP TABLE `glpi_plugin_credentials_categories`') === false
+        && $DB->dropTable('glpi_plugin_credentials_categories', true) === false
+    ) {
+        return false;
+    }
+    if ($DB->tableExists('glpi_plugin_credentials_entity_locks')
+        && $DB->dropTable('glpi_plugin_credentials_entity_locks', true) === false
     ) {
         return false;
     }
     if ($DB->tableExists('glpi_plugin_credentials_credentials')
-        && $DB->doQuery('DROP TABLE `glpi_plugin_credentials_credentials`') === false
+        && $DB->dropTable('glpi_plugin_credentials_credentials', true) === false
     ) {
         return false;
     }

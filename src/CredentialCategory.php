@@ -310,12 +310,9 @@ final class CredentialCategory
     }
 
     /**
-     * Serialize category writers by locking the corresponding GLPI entity row.
-     * Every category create/edit/find-or-create/delete operation takes this lock
-     * before checking names, so concurrent operations cannot pass the same check.
-     *
-     * This avoids a schema migration that could fail on installations with
-     * pre-existing duplicate or soft-deleted category records.
+     * Serialize category writers using a plugin-owned lock row for the entity.
+     * The row is created lazily and then updated in place inside the transaction;
+     * no core GLPI table is written to coordinate plugin operations.
      */
     private static function withEntityLock(int $entities_id, callable $operation): mixed
     {
@@ -325,27 +322,33 @@ final class CredentialCategory
             return false;
         }
 
+        $lock_table = 'glpi_plugin_credentials_entity_locks';
         $DB->beginTransaction();
         try {
-            // Serialize category writers using GLPI's DB abstraction. Updating the
-            // entity row to its existing value obtains an InnoDB write lock without
-            // changing core entity data or constructing raw SQL.
-            $locked = $DB->update('glpi_entities', [
-                'date_mod' => new QueryExpression(\DBmysql::quoteName('date_mod')),
-            ], ['id' => $entities_id]);
-            if ($locked === false) {
-                throw new \RuntimeException('Unable to lock the GLPI entity while updating credential categories.');
+            // Seed the lock row. A duplicate-key exception means the row already
+            // exists (or a concurrent transaction just created it); InnoDB keeps
+            // the outer transaction usable after the failed statement.
+            $insert_error = null;
+            try {
+                $DB->insert($lock_table, [
+                    'entities_id' => $entities_id,
+                    'lock_token' => bin2hex(random_bytes(16)),
+                ]);
+            } catch (\Throwable $exception) {
+                $insert_error = $exception;
             }
 
-            $entity = $DB->request([
-                'SELECT' => ['id'],
-                'FROM' => 'glpi_entities',
-                'WHERE' => ['id' => $entities_id],
-                'LIMIT' => 1,
-            ])->current();
-            if (!is_array($entity)) {
-                $DB->rollBack();
-                return false;
+            // Updating a changing token is an atomic current write: it both proves
+            // the row exists and obtains its InnoDB lock without depending on a
+            // repeatable-read SELECT snapshot or modifying a core GLPI table.
+            $locked = $DB->update($lock_table, [
+                'lock_token' => bin2hex(random_bytes(16)),
+            ], ['entities_id' => $entities_id]);
+            if ($locked === false || $DB->getAffectedRows() !== 1) {
+                if ($insert_error !== null) {
+                    throw $insert_error;
+                }
+                throw new \RuntimeException('Unable to create or lock the Credentials entity row.');
             }
 
             $value = $operation();
