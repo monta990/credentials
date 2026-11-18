@@ -67,7 +67,7 @@ final class Security
         }
 
         $target_url = htmlspecialchars($return_url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $frame_script = '/plugins/credentials/js/credential-frame.js';
+        $frame_script = PLUGIN_CREDENTIALS_WEBDIR . '/js/credential-frame.js?v=' . rawurlencode(PLUGIN_CREDENTIALS_VERSION);
         if ($reload_parent_page) {
             $body_attributes = ' data-credentials-navigate-top="' . $target_url . '"';
         } else {
