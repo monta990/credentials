@@ -51,6 +51,8 @@ namespace {
         private int $next_id = 100;
         private int $affected_rows = 1;
         public array $last_request = [];
+        /** @var array<int, array<string,mixed>> */
+        public array $entity_lock_rows = [];
 
         public function beginTransaction(): void {}
         public function commit(): void {}
@@ -58,9 +60,15 @@ namespace {
 
         public function update(string $table, array $fields, array $where): bool
         {
-            if ($table !== 'glpi_entities' || !isset($where['id'])) {
-                throw new RuntimeException('Unexpected entity lock update.');
+            if ($table !== 'glpi_plugin_credentials_entity_locks' || !isset($where['entities_id'])) {
+                throw new RuntimeException('Unexpected plugin entity-lock update.');
             }
+            $entities_id = (int) $where['entities_id'];
+            if (!isset($this->entity_lock_rows[$entities_id])) {
+                $this->affected_rows = 0;
+                return true;
+            }
+            $this->entity_lock_rows[$entities_id] = array_merge($this->entity_lock_rows[$entities_id], $fields);
             $this->affected_rows = 1;
             return true;
         }
@@ -74,10 +82,6 @@ namespace {
         {
             $this->last_request = $criteria;
             $table = $criteria['FROM'] ?? '';
-            if ($table === 'glpi_entities') {
-                $id = (int) ($criteria['WHERE']['id'] ?? -1);
-                return new FakeCategoryIterator(in_array($id, [0, 7, 8], true) ? [['id' => $id]] : []);
-            }
             if ($table !== 'glpi_plugin_credentials_categories') {
                 throw new RuntimeException('Unexpected category query table: ' . (string) $table);
             }
@@ -110,8 +114,16 @@ namespace {
 
         public function insert(string $table, array $fields): int|false
         {
+            if ($table === 'glpi_plugin_credentials_entity_locks') {
+                $entities_id = (int) ($fields['entities_id'] ?? -1);
+                if (isset($this->entity_lock_rows[$entities_id])) {
+                    throw new RuntimeException('Duplicate plugin entity-lock row.');
+                }
+                $this->entity_lock_rows[$entities_id] = $fields;
+                return 1;
+            }
             if ($table !== 'glpi_plugin_credentials_categories') {
-                throw new RuntimeException('Unexpected insert table.');
+                throw new RuntimeException('Unexpected insert table: ' . $table);
             }
             $id = $this->next_id++;
             $this->inserted[] = ['id' => $id] + $fields;
