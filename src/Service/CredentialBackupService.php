@@ -264,8 +264,8 @@ final class CredentialBackupService
             SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES,
             $passphrase,
             $salt,
-            SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
-            SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE,
+            SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,
+            SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE,
             SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13
         );
 
@@ -285,8 +285,8 @@ final class CredentialBackupService
             'format_version' => self::FORMAT_VERSION,
             'cipher' => 'xchacha20poly1305-ietf',
             'kdf' => 'argon2id13',
-            'opslimit' => SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
-            'memlimit' => SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE,
+            'opslimit' => SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE,
+            'memlimit' => SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE,
             'salt' => base64_encode($salt),
             'nonce' => base64_encode($nonce),
             'ciphertext' => base64_encode($ciphertext),
@@ -326,10 +326,20 @@ final class CredentialBackupService
             || (int) ($envelope['format_version'] ?? 0) !== self::FORMAT_VERSION
             || ($envelope['cipher'] ?? '') !== 'xchacha20poly1305-ietf'
             || ($envelope['kdf'] ?? '') !== 'argon2id13'
-            || (int) ($envelope['opslimit'] ?? 0) !== SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE
-            || (int) ($envelope['memlimit'] ?? 0) !== SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE
         ) {
             throw new \RuntimeException(__('The selected file is not a supported Credentials backup.', 'credentials'));
+        }
+
+        // Accept the original INTERACTIVE parameters and current MODERATE parameters,
+        // but reject attacker-controlled KDF costs to prevent import-time resource exhaustion.
+        $kdf_opslimit = (int) ($envelope['opslimit'] ?? 0);
+        $kdf_memlimit = (int) ($envelope['memlimit'] ?? 0);
+        $interactive_kdf = $kdf_opslimit === SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE
+            && $kdf_memlimit === SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE;
+        $moderate_kdf = $kdf_opslimit === SODIUM_CRYPTO_PWHASH_OPSLIMIT_MODERATE
+            && $kdf_memlimit === SODIUM_CRYPTO_PWHASH_MEMLIMIT_MODERATE;
+        if (!$interactive_kdf && !$moderate_kdf) {
+            throw new \RuntimeException(__('The selected file uses unsupported backup encryption parameters.', 'credentials'));
         }
 
         $salt = base64_decode((string) ($envelope['salt'] ?? ''), true);
@@ -346,8 +356,8 @@ final class CredentialBackupService
             SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES,
             $passphrase,
             $salt,
-            SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE,
-            SODIUM_CRYPTO_PWHASH_MEMLIMIT_INTERACTIVE,
+            $kdf_opslimit,
+            $kdf_memlimit,
             SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13
         );
         try {
@@ -453,7 +463,7 @@ final class CredentialBackupService
                 }
 
                 $credential = new Credential();
-                $new_id = (int) $credential->add([
+                $new_id = (int) Credential::withTrustedWrite(static fn(): int|false => $credential->add([
                     'name' => $entry['name'],
                     'entities_id' => $entry['entities_id'],
                     'plugin_credentials_categories_id' => $category_id,
@@ -467,7 +477,7 @@ final class CredentialBackupService
                     'reviewer_users_id' => $entry['reviewer_users_id'],
                     'users_id' => (int) Session::getLoginUserID(),
                     'date_creation' => (string) ($_SESSION['glpi_currenttime'] ?? date('Y-m-d H:i:s')),
-                ]);
+                ]));
                 if ($new_id <= 0) {
                     throw new \RuntimeException(__('A credential could not be created. The import was cancelled.', 'credentials'));
                 }

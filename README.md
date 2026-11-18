@@ -96,7 +96,7 @@ Password display is controlled separately from general credential access. This a
 
 An existing credential can be linked to more than one eligible user or supported GLPI item, including assets, phone lines, domains, clusters, databases and data-center infrastructure. Removing a link only disconnects that item; it does not delete the credential or its other associations.
 
-To prevent entries from being left without an associated item, the plugin does not allow removing the final link. If a credential is no longer needed, delete the credential itself.
+To prevent entries from being left without an associated item, the plugin does not allow removing the final link. If a credential is no longer needed, archive the credential itself. Archiving removes its relationship rows from every linked item and records the event in each affected item history; the operator must be able to update at least one linked item. This is an intentional global action for that credential, even when the operator cannot update every other linked item.
 
 ## Permissions
 
@@ -117,7 +117,7 @@ The Credentials administration page is available from GLPI's plugin configuratio
 
 Administrators can use this page to:
 
-- Check manually whether a newer stable version is available on GitHub. Results are cached for six hours; the check never downloads or installs an update.
+- Enable optional stable-release checks against GitHub (disabled by default). When enabled, results are cached for six hours; the request is sent from the GLPI server and reveals its egress IP and plugin usage to GitHub. No credential data is transmitted, and the plugin never downloads or installs updates automatically.
 - Create, rename and update entity-scoped categories. Category names must be unique within their entity; a category cannot be deleted while credentials use it.
 - Review credentials that have expired or need a review soon.
 - Review credential activity in the native **History** tab of each linked user or supported GLPI item, including management and infrastructure records; the configuration page does not duplicate those records.

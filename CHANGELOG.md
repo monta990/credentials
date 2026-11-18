@@ -2,6 +2,28 @@
 
 All notable changes to Credentials are documented here.
 
+## 1.0.1 — 2026-11-18
+
+Security and compatibility update based on the Teclib' GLPI 12 review.
+
+### Security fixes
+
+- Block generic massive update/delete/purge actions on credentials and relationship rows; enforce plugin-only model writes for secret and link mutations.
+- Require update permission on at least one linked GLPI item before archiving a credential; permanent deletion remains restricted to the administration service and its retention/history checks.
+- Hide encrypted login, password, URL and notes fields from GLPI API serializers.
+- Remove plugin configuration keys and plugin-itemtype notification definitions during uninstall.
+- Replace PHP-generated inline modal scripts with an external GLPI-loaded script and correct parent-tab refresh signaling.
+- Make GitHub update checks opt-in (disabled by default), use GLPI's proxy-aware HTTP client, and cache failed checks.
+
+### Compatibility and quality
+
+- Use CommonGLPI for tab-provider classes that do not own database tables.
+- Cache Ticket, Problem and Change credential aggregation within the request to avoid duplicate tab badge/body work.
+- Move category serialization locks to a plugin-owned table instead of updating core GLPI entity rows.
+- Use English JavaScript fallback strings and keep profile-tab reads free of database writes.
+- Increase new backup exports to Argon2id MODERATE parameters while retaining import compatibility with existing INTERACTIVE backups.
+- Keep the PHP 8.5-compatible HTTP response handling and improve security regression coverage.
+
 ## 1.0.0 — 2026-11-17
 
 First stable release of Credentials for GLPI 12.0.x.

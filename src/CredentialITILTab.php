@@ -17,8 +17,11 @@ use Problem;
 use Session;
 
 /** Aggregates credentials from the inventory items attached to Problems and Changes. */
-final class CredentialITILTab extends CommonDBTM
+final class CredentialITILTab extends CommonGLPI
 {
+    /** @var array<string, array{rows:array,requires_reauth:bool,count:int}> */
+    private static array $rowsCache = [];
+
     /**
      * Native GLPI relation metadata. Keep this allowlist explicit: the context
      * route must never accept an arbitrary ITIL itemtype or relation table.
@@ -101,6 +104,10 @@ final class CredentialITILTab extends CommonDBTM
         $parent_id = (int) $parent->getID();
         if ($parent_id <= 0 || !Session::haveRight(Credential::$rightname, READ)) {
             return ['rows' => [], 'requires_reauth' => false, 'count' => 0];
+        }
+        $cache_key = $parent::class . '#' . $parent_id;
+        if (isset(self::$rowsCache[$cache_key])) {
+            return self::$rowsCache[$cache_key];
         }
 
         $config = self::getSupportedParents()[$parent::class];
@@ -188,11 +195,12 @@ final class CredentialITILTab extends CommonDBTM
         }
 
         $aggregated = CredentialTicketAggregator::aggregate($entries, array_values($protected_ids));
-        return [
+        self::$rowsCache[$cache_key] = [
             'rows' => $aggregated['rows'],
             'requires_reauth' => $requires_reauth,
             'count' => $aggregated['count'],
         ];
+        return self::$rowsCache[$cache_key];
     }
 
     public static function renderList(CommonGLPI $parent, bool $secure_page): void

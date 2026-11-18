@@ -30,6 +30,11 @@
             });
             if (!modal) return;
 
+            if (event.data.action === 'markChanged') {
+                modal.dataset.credentialsChanged = '1';
+                return;
+            }
+
             if (event.data.action === 'navigateTop') {
                 if (typeof event.data.url !== 'string' || event.data.url === '') return;
                 let destination;

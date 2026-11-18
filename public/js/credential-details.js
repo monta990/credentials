@@ -147,15 +147,15 @@
             event.preventDefault();
             const value = readPassword();
             if (!value) {
-                showStatus(copyButton.dataset.copyEmptyMessage || 'Primero revela la contraseña.', 'warning');
+                showStatus(copyButton.dataset.copyEmptyMessage || 'Reveal the password first.', 'warning');
                 return;
             }
             copyButton.disabled = true;
             try {
                 if (await writeClipboard(value)) {
-                    showStatus(copyButton.dataset.copiedMessage || 'Contraseña copiada.', 'success');
+                    showStatus(copyButton.dataset.copiedMessage || 'Password copied.', 'success');
                 } else {
-                    showStatus(copyButton.dataset.copyDeniedMessage || 'No se pudo acceder al portapapeles. Selecciona y copia la contraseña manualmente.', 'warning');
+                    showStatus(copyButton.dataset.copyDeniedMessage || 'Clipboard access is unavailable. Select and copy the password manually.', 'warning');
                     passwordValue.focus();
                     if (typeof passwordValue.select === 'function') {
                         passwordValue.select();
@@ -176,14 +176,14 @@
         hideButton.addEventListener('click', (event) => {
             event.preventDefault();
             clearPassword();
-            showStatus(hideButton.dataset.hiddenMessage || 'Contraseña oculta.', 'info');
+            showStatus(hideButton.dataset.hiddenMessage || 'Password hidden.', 'info');
             revealButton?.focus();
         });
     }
 
     root.querySelectorAll('form[data-credentials-confirm]').forEach((form) => {
         form.addEventListener('submit', (event) => {
-            if (!window.confirm(form.dataset.credentialsConfirm || '¿Confirmas esta operación?')) {
+            if (!window.confirm(form.dataset.credentialsConfirm || 'Are you sure you want to continue?')) {
                 event.preventDefault();
                 event.stopPropagation();
             }

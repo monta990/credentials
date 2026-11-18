@@ -66,41 +66,20 @@ final class Security
             return $response;
         }
 
-        $encoded_url = json_encode(
-            $return_url,
-            JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT,
-        );
-        if (!is_string($encoded_url)) {
-            throw new \RuntimeException('Unable to encode the parent item URL.');
-        }
-
-        $dirty_flag = $changed ? '1' : '0';
+        $target_url = htmlspecialchars($return_url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $frame_script = '/plugins/credentials/js/credential-frame.js';
         if ($reload_parent_page) {
-            // Let the GLPI parent page navigate itself. The iframe may be sandboxed
-            // against top navigation, and CSP may block inline scripts.
-            $target_url = htmlspecialchars($return_url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $frame_script = htmlspecialchars(
-                PLUGIN_CREDENTIALS_WEBDIR . '/js/credential-frame.js?v=' . rawurlencode(PLUGIN_CREDENTIALS_VERSION),
-                ENT_QUOTES | ENT_SUBSTITUTE,
-                'UTF-8',
-            );
-            $content = '<!doctype html><html><head><meta charset="UTF-8"><meta name="referrer" content="no-referrer"></head>'
-                . '<body data-credentials-navigate-top="' . $target_url . '">'
-                . '<script src="' . $frame_script . '" defer></script></body></html>';
+            $body_attributes = ' data-credentials-navigate-top="' . $target_url . '"';
         } else {
-            $content = '<!doctype html><html><head><meta charset="UTF-8"></head><body>'
-                . '<script>(() => {'
-                . 'try {'
-                . 'const frame = window.frameElement;'
-                . 'const modal = frame ? frame.closest(".modal") : null;'
-                . 'const bootstrap = window.parent.bootstrap;'
-                . 'if (modal && bootstrap && bootstrap.Modal) {'
-                . 'if (' . $dirty_flag . ' === "1") { modal.dataset.credentialsChanged = "1"; }'
-                . 'bootstrap.Modal.getOrCreateInstance(modal).hide();'
-                . '} else { window.top.location.assign(' . $encoded_url . '); }'
-                . '} catch (error) { window.top.location.assign(' . $encoded_url . '); }'
-                . '})();</script></body></html>';
+            $body_attributes = ' data-credentials-close-modal="1"';
         }
+        if ($changed) {
+            $body_attributes .= ' data-credentials-changed="1"';
+        }
+        $content = '<!doctype html><html><head><meta charset="UTF-8"><meta name="referrer" content="no-referrer"></head>'
+            . '<body' . $body_attributes . '>'
+            . \Html::script($frame_script, [], false)
+            . '</body></html>';
 
         $response = new Response($content);
         $response->headers->set('Content-Type', 'text/html; charset=UTF-8');

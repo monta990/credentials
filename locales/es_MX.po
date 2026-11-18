@@ -1225,6 +1225,7 @@ msgstr "Elimina todos los vínculos a elementos antes de restaurar esta credenci
 
 msgid "Cannot delete while linked"
 msgstr "No se puede eliminar mientras esté vinculada"
+
 msgid "Some linked items are unavailable or you do not have permission to read them."
 msgstr "Algunos elementos vinculados no están disponibles o no tienes permiso para consultarlos."
 
@@ -1234,29 +1235,51 @@ msgstr "Restaurar conservando los vínculos existentes"
 msgid "Restore this archived credential and keep all of its current linked items?"
 msgstr "¿Restaurar esta credencial archivada y conservar todos sus elementos vinculados actuales?"
 
-msgid "Permanently delete this archived credential and remove all of its item links? The linked GLPI items themselves will not be deleted. This cannot be undone."
-msgstr "¿Eliminar definitivamente esta credencial archivada y todos sus vínculos? Los elementos de GLPI vinculados no se eliminarán. Esta acción no se puede deshacer."
+msgid ""
+"Permanently delete this archived credential and remove all of its item links? The linked GLPI "
+"items themselves will not be deleted. This cannot be undone."
+msgstr ""
+"¿Eliminar definitivamente esta credencial archivada y todos sus vínculos? Los elementos de GLPI "
+"vinculados no se eliminarán. Esta acción no se puede deshacer."
 
 msgid "Delete credential and links"
 msgstr "Eliminar credencial y vínculos"
 
-msgid "Some linked items cannot be validated with your current permissions, so this credential cannot be restored here."
-msgstr "Algunos elementos vinculados no se pueden validar con tus permisos actuales; por eso no es posible restaurar aquí esta credencial."
+msgid ""
+"Some linked items cannot be validated with your current permissions, so this credential cannot be"
+" restored here."
+msgstr ""
+"Algunos elementos vinculados no se pueden validar con tus permisos actuales; por eso no es "
+"posible restaurar aquí esta credencial."
 
-msgid "Some linked items cannot be validated with your current permissions, so this credential cannot be permanently deleted here."
-msgstr "Algunos elementos vinculados no se pueden validar con tus permisos actuales; por eso no es posible eliminar definitivamente aquí esta credencial."
+msgid ""
+"Some linked items cannot be validated with your current permissions, so this credential cannot be"
+" permanently deleted here."
+msgstr ""
+"Algunos elementos vinculados no se pueden validar con tus permisos actuales; por eso no es "
+"posible eliminar definitivamente aquí esta credencial."
 
 msgid "Eligible for bulk permanent deletion (unlinked only)"
 msgstr "Elegibles para eliminación definitiva masiva (solo sin vínculos)"
 
-msgid "Archived records are kept in the GLPI trash and are never erased automatically. The retention period controls bulk deletion of unlinked credentials. An authorized administrator can restore a linked archived credential while keeping its current item links, or permanently delete it together with its relationship rows. Linked GLPI items themselves are never deleted."
-msgstr "Las credenciales archivadas se conservan en la papelera de GLPI y nunca se eliminan automáticamente. El periodo de conservación controla la eliminación masiva de credenciales sin vínculos. Un administrador autorizado puede restaurar una credencial archivada vinculada conservando sus vínculos actuales o eliminarla definitivamente junto con sus relaciones. Los elementos de GLPI vinculados nunca se eliminan."
+msgid ""
+"Archived records are kept in the GLPI trash and are never erased automatically. The retention "
+"period controls bulk deletion of unlinked credentials. An authorized administrator can restore a "
+"linked archived credential while keeping its current item links, or permanently delete it "
+"together with its relationship rows. Linked GLPI items themselves are never deleted."
+msgstr ""
+"Las credenciales archivadas se conservan en la papelera de GLPI y nunca se eliminan "
+"automáticamente. El periodo de conservación controla la eliminación masiva de credenciales sin "
+"vínculos. Un administrador autorizado puede restaurar una credencial archivada vinculada "
+"conservando sus vínculos actuales o eliminarla definitivamente junto con sus relaciones. Los "
+"elementos de GLPI vinculados nunca se eliminan."
 
 msgid "An archived protected credential was restored with its existing item links."
 msgstr "Se restauró una credencial protegida archivada conservando sus vínculos existentes."
 
 msgid "Restoration"
 msgstr "Restauración"
+
 msgid "Search destination items by name (at least 2 characters)"
 msgstr "Buscar elementos de destino por nombre (mínimo 2 caracteres)"
 
@@ -1275,6 +1298,7 @@ msgstr "Escribe al menos 2 caracteres para buscar."
 msgid "Searching eligible destination items…"
 msgstr "Buscando elementos de destino disponibles…"
 
+#, python-format
 msgid "%count% matching destination items shown. Select one to restore."
 msgstr "Se muestran %count% elementos de destino. Selecciona uno para restaurar."
 
@@ -1296,53 +1320,80 @@ msgstr "Anterior"
 msgid "Next"
 msgstr "Siguiente"
 
-msgid "Credential %1$d has more than %2$d linked items. No backup was created to avoid losing relationships."
-msgstr "La credencial %1$d tiene más de %2$d elementos vinculados. No se generó el respaldo para evitar perder relaciones."
+msgid ""
+"Credential %1$d has more than %2$d linked items. No backup was created to avoid losing "
+"relationships."
+msgstr ""
+"La credencial %1$d tiene más de %2$d elementos vinculados. No se generó el respaldo para evitar "
+"perder relaciones."
 
+#, python-format
 msgid "Credential %d has a relationship to an unsupported or invalid item. No backup was created."
-msgstr "La credencial %d tiene una relación con un elemento no compatible o no válido. No se generó el respaldo."
+msgstr ""
+"La credencial %d tiene una relación con un elemento no compatible o no válido. No se generó el "
+"respaldo."
 
-msgid "A linked item for credential %d is unavailable, unreadable or belongs to another entity. No backup was created."
-msgstr "Un elemento vinculado a la credencial %d no está disponible, no se puede leer o pertenece a otra entidad. No se generó el respaldo."
+#, python-format
+msgid ""
+"A linked item for credential %d is unavailable, unreadable or belongs to another entity. No "
+"backup was created."
+msgstr ""
+"Un elemento vinculado a la credencial %d no está disponible, no se puede leer o pertenece a otra "
+"entidad. No se generó el respaldo."
 
+#, python-format
 msgid "Active credential %d has no linked items. No backup was created."
 msgstr "La credencial activa %d no tiene elementos vinculados. No se generó el respaldo."
 
 msgid "The archived credential could not preserve all of its item links. The import was cancelled."
 msgstr "No fue posible conservar todos los vínculos de la credencial archivada. Se canceló la importación."
 
-msgid 'The backup contains too many total item links. Export smaller groups of credentials.'
-msgstr 'El respaldo contiene demasiados vínculos a elementos. Exporta grupos más pequeños de credenciales.'
+msgid "The backup contains too many total item links. Export smaller groups of credentials."
+msgstr "El respaldo contiene demasiados vínculos a elementos. Exporta grupos más pequeños de credenciales."
 
-msgid 'The backup contains too many total item links. Import a smaller backup file.'
-msgstr 'El respaldo contiene demasiados vínculos a elementos. Importa un archivo de respaldo más pequeño.'
+msgid "The backup contains too many total item links. Import a smaller backup file."
+msgstr "El respaldo contiene demasiados vínculos a elementos. Importa un archivo de respaldo más pequeño."
 
 msgid "A credential changed or disappeared while the backup was being prepared. Retry the export."
-msgstr "Una credencial cambió o desapareció mientras se preparaba el respaldo. Vuelve a intentar la exportación."
+msgstr ""
+"Una credencial cambió o desapareció mientras se preparaba el respaldo. Vuelve a intentar la "
+"exportación."
 
 msgid "A credential was archived while the backup was being prepared. Retry the export."
 msgstr "Una credencial se archivó mientras se preparaba el respaldo. Vuelve a intentar la exportación."
 
-msgid "A linked item changed or was removed while the backup was being imported. The import was cancelled."
-msgstr "Un elemento vinculado cambió o se eliminó durante la importación del respaldo. Se canceló la importación."
+msgid ""
+"A linked item changed or was removed while the backup was being imported. The import was "
+"cancelled."
+msgstr ""
+"Un elemento vinculado cambió o se eliminó durante la importación del respaldo. Se canceló la "
+"importación."
 
 msgid "An entity became unavailable while the backup was being prepared. Retry the export."
-msgstr "Una entidad dejó de estar disponible mientras se preparaba el respaldo. Vuelve a intentar la exportación."
+msgstr ""
+"Una entidad dejó de estar disponible mientras se preparaba el respaldo. Vuelve a intentar la "
+"exportación."
 
 msgid "An imported category could not be created. The import was cancelled."
 msgstr "No se pudo crear una categoría importada. Se canceló la importación."
 
-msgid "Credential"
-msgstr "Credencial"
-
 msgid "Credential restored while keeping all existing item links."
 msgstr "La credencial se restauró conservando todos los vínculos existentes."
 
-msgid "Encrypted backup and import are unavailable. Check that Sodium is enabled in PHP and the GLPI encryption key is available."
-msgstr "El respaldo cifrado y la importación no están disponibles. Verifica que Sodium esté habilitado en PHP y que la clave de cifrado de GLPI esté disponible."
+msgid ""
+"Encrypted backup and import are unavailable. Check that Sodium is enabled in PHP and the GLPI "
+"encryption key is available."
+msgstr ""
+"El respaldo cifrado y la importación no están disponibles. Verifica que Sodium esté habilitado en"
+" PHP y que la clave de cifrado de GLPI esté disponible."
 
-msgid "The archived credential could not be restored with its existing links. Verify that every linked item still exists, is readable and belongs to the same entity."
-msgstr "No se pudo restaurar la credencial archivada con sus vínculos existentes. Verifica que todos los elementos vinculados sigan existiendo, tengas permiso para leerlos y pertenezcan a la misma entidad."
+msgid ""
+"The archived credential could not be restored with its existing links. Verify that every linked "
+"item still exists, is readable and belongs to the same entity."
+msgstr ""
+"No se pudo restaurar la credencial archivada con sus vínculos existentes. Verifica que todos los "
+"elementos vinculados sigan existiendo, tengas permiso para leerlos y pertenezcan a la misma "
+"entidad."
 
 msgid "The credential or selected item is no longer available for linking."
 msgstr "La credencial o el elemento seleccionado ya no está disponible para vincularlo."
@@ -1371,8 +1422,13 @@ msgstr "Desvincular credencial"
 msgid "Confirm action"
 msgstr "Confirmar acción"
 
-msgid "Credentials checks for stable GitHub releases automatically when this configuration page is opened, at most once every six hours. Updates are never installed automatically."
-msgstr "Credentials busca automáticamente las versiones estables publicadas en GitHub cuando se abre esta página de configuración, como máximo una vez cada seis horas. Nunca instala actualizaciones automáticamente."
+msgid ""
+"Credentials checks for stable GitHub releases automatically when this configuration page is "
+"opened, at most once every six hours. Updates are never installed automatically."
+msgstr ""
+"Credentials busca automáticamente las versiones estables publicadas en GitHub cuando se abre esta"
+" página de configuración, como máximo una vez cada seis horas. Nunca instala actualizaciones "
+"automáticamente."
 
 msgid "Credential created successfully."
 msgstr "La credencial se creó correctamente."
@@ -1380,5 +1436,37 @@ msgstr "La credencial se creó correctamente."
 msgid "The credential could not be saved. Review the errors below; no changes were saved."
 msgstr "No se pudo guardar la credencial. Revisa los errores siguientes; no se guardaron cambios."
 
-msgid "The save operation failed because of an unexpected error. No changes were saved. Contact your GLPI administrator if the problem persists."
-msgstr "La operación de guardado falló por un error inesperado. No se guardaron cambios. Contacta al administrador de GLPI si el problema continúa."
+msgid ""
+"The save operation failed because of an unexpected error. No changes were saved. Contact your "
+"GLPI administrator if the problem persists."
+msgstr ""
+"La operación de guardado falló por un error inesperado. No se guardaron cambios. Contacta al "
+"administrador de GLPI si el problema continúa."
+
+msgid "Automatic update checks are disabled. Use the GitHub releases page to check manually."
+msgstr ""
+"Las comprobaciones automáticas de actualizaciones están desactivadas. Consulta manualmente la "
+"página de versiones de GitHub."
+
+msgid "Automatic update checks were enabled."
+msgstr "Se activaron las comprobaciones automáticas de actualizaciones."
+
+msgid "Automatic update checks were disabled."
+msgstr "Se desactivaron las comprobaciones automáticas de actualizaciones."
+
+msgid "Enable automatic update checks"
+msgstr "Activar las comprobaciones automáticas de actualizaciones"
+
+msgid ""
+"When enabled, the GLPI server checks for stable GitHub releases at most once every six hours. The"
+" request reveals the server egress IP and plugin usage to GitHub. No credential data is sent, and"
+" updates are never installed automatically."
+msgstr ""
+"Cuando está activada, el servidor GLPI comprueba si hay versiones estables en GitHub como máximo "
+"una vez cada seis horas. La solicitud revela a GitHub la IP pública de salida del servidor y el "
+"uso del plugin. No se envían datos de credenciales y las actualizaciones nunca se instalan "
+"automáticamente."
+
+msgid "Save update check settings"
+msgstr "Guardar la configuración de comprobación de actualizaciones"
+

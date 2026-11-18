@@ -16,7 +16,7 @@ use Plugin;
 use Session;
 
 /** Adds the Credentials tab to users, GLPI management items and supported asset types. */
-final class CredentialItem extends CommonDBTM
+final class CredentialItem extends CommonGLPI
 {
     public static function registerTabs(): void
     {

@@ -249,11 +249,16 @@ final class CredentialController extends AbstractController
                             || $DB->delete('glpi_plugin_credentials_reminders', [
                                 'plugin_credentials_credentials_id' => $credential_id,
                             ]) === false
+                            || $DB->update(Credential::getTable(), ['links_count' => 0], [
+                                'id' => $credential_id,
+                            ]) === false
                         ) {
                             return false;
                         }
 
-                        $deleted = (bool) $locked_credential->delete(['id' => $credential_id]);
+                        $deleted = (bool) Credential::withTrustedWrite(
+                            static fn(): bool => $locked_credential->delete(['id' => $credential_id])
+                        );
                         if (!$deleted) {
                             return false;
                         }
@@ -872,7 +877,9 @@ final class CredentialController extends AbstractController
                             $previous_review_date = (string) ($locked_credential->fields['date_last_review'] ?? '');
                             $next_review_date = (string) ($input['date_last_review'] ?? '');
                             $review_was_recorded = $next_review_date !== '' && $previous_review_date !== $next_review_date;
-                            $saved = (bool) $locked_credential->update($input);
+                            $saved = (bool) Credential::withTrustedWrite(
+                                static fn(): bool => $locked_credential->update($input)
+                            );
                             if (!$saved || !CredentialHistory::recordForLinkedItems(
                                 $credential_id,
                                 Credential::HISTORY_UPDATED,
@@ -890,7 +897,9 @@ final class CredentialController extends AbstractController
                             return $credential_id;
                         }
 
-                        $new_id = (int) $credential->add($input);
+                        $new_id = (int) Credential::withTrustedWrite(
+                            static fn(): int|false => $credential->add($input)
+                        );
                         if ($new_id <= 0) {
                             return 0;
                         }

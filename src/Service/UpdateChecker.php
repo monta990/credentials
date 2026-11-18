@@ -8,6 +8,9 @@
 
 namespace GlpiPlugin\Credentials\Service;
 
+use Glpi\Toolbox\HttpClient;
+use Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface;
+
 /** Checks the latest published stable release without making GitHub a runtime dependency. */
 final class UpdateChecker
 {
@@ -15,9 +18,14 @@ final class UpdateChecker
     private const CACHE_TTL = 21600;
 
     /** @return array{status:string,version:?string,url:?string,name:?string,published_at:?string,checked_at:?int} */
-    public static function latest(): array
+    public static function latest(bool $enabled = false): array
     {
+        if (!$enabled) {
+            return self::result(null, 'disabled');
+        }
+
         $cache_file = self::cacheFile();
+        $status_cache_file = self::statusCacheFile();
         $cached = self::readCache($cache_file);
         $stale = $cached;
 
@@ -27,42 +35,59 @@ final class UpdateChecker
         ) {
             return self::result($cached, 'cached');
         }
-        if ($cached === null) {
-            $no_release_checked_at = self::readNoReleaseCache($cache_file);
-            if ($no_release_checked_at !== null) {
-                return self::noReleaseResult($no_release_checked_at);
-            }
+        $no_release_checked_at = self::readStatusCache($status_cache_file, 'no_release');
+        if ($no_release_checked_at !== null) {
+            return self::noReleaseResult($no_release_checked_at);
+        }
+        $failed_checked_at = self::readStatusCache($status_cache_file, 'unavailable');
+        if ($failed_checked_at !== null) {
+            return $stale !== null
+                ? self::result($stale, 'unavailable_cached')
+                : self::result(null, 'unavailable');
         }
 
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'header' => "Accept: application/vnd.github+json\r\n"
-                    . "User-Agent: GLPI-Credentials-UpdateChecker\r\n"
-                    . "X-GitHub-Api-Version: 2022-11-28\r\n",
-                'timeout' => 5,
-                'ignore_errors' => true,
-            ],
-        ]);
-
         $url = 'https://api.github.com/repos/' . self::REPOSITORY . '/releases/latest';
-        // The HTTP stream wrapper populates this local variable when a response
-        // is received; keep an empty fallback for transport failures.
-        $http_response_header = [];
-        $json = @file_get_contents($url, false, $context, 0, 65536);
+        $json = false;
         $status_code = 0;
-        foreach ($http_response_header as $header) {
-            if (preg_match('#^HTTP/\S+\s+(\d{3})#i', $header, $matches)) {
-                $status_code = (int) $matches[1];
+        try {
+            // GLPI's HTTP client honors the proxy and egress configuration selected by the administrator.
+            $response = (new HttpClient())->request('GET', $url, [
+                'headers' => [
+                    'Accept' => 'application/vnd.github+json',
+                    'User-Agent' => 'GLPI-Credentials-UpdateChecker',
+                    'X-GitHub-Api-Version' => '2022-11-28',
+                ],
+                'timeout' => 5,
+                'max_redirects' => 0,
+            ]);
+            $status_code = $response->getStatusCode();
+            if ($status_code === 200) {
+                $content_length = $response->getHeaders(false)['content-length'][0] ?? null;
+                if ($content_length !== null && (int) $content_length > 65536) {
+                    throw new \RuntimeException('GitHub release response exceeds the allowed size.');
+                }
+                $json = $response->getContent(false);
+                if (strlen($json) > 65536) {
+                    $json = false;
+                }
             }
+        } catch (HttpExceptionInterface $exception) {
+            try {
+                $status_code = $exception->getResponse()->getStatusCode();
+            } catch (\Throwable) {
+                $status_code = 0;
+            }
+        } catch (\Throwable) {
+            $status_code = 0;
         }
 
         if ($json === false || $status_code !== 200) {
             if ($status_code === 404) {
                 $checked_at = time();
-                self::writeCache($cache_file, ['status' => 'no_release', 'checked_at' => $checked_at]);
+                self::writeCache($status_cache_file, ['status' => 'no_release', 'checked_at' => $checked_at]);
                 return self::noReleaseResult($checked_at);
             }
+            self::writeCache($status_cache_file, ['status' => 'unavailable', 'checked_at' => time()]);
             return $stale !== null
                 ? self::result($stale, 'unavailable_cached')
                 : self::result(null, 'unavailable');
@@ -70,6 +95,7 @@ final class UpdateChecker
 
         $data = json_decode($json, true);
         if (!is_array($data) || !empty($data['draft']) || !empty($data['prerelease'])) {
+            self::writeCache($status_cache_file, ['status' => 'unavailable', 'checked_at' => time()]);
             return $stale !== null
                 ? self::result($stale, 'unavailable_cached')
                 : self::result(null, 'unavailable');
@@ -77,6 +103,7 @@ final class UpdateChecker
 
         $version = preg_replace('/^[vV]/', '', trim((string) ($data['tag_name'] ?? '')));
         if (!is_string($version) || !preg_match('/^\d+\.\d+\.\d+$/', $version)) {
+            self::writeCache($status_cache_file, ['status' => 'unavailable', 'checked_at' => time()]);
             return $stale !== null
                 ? self::result($stale, 'unavailable_cached')
                 : self::result(null, 'unavailable');
@@ -90,18 +117,21 @@ final class UpdateChecker
             'checked_at' => time(),
         ];
         self::writeCache($cache_file, $release);
+        if (is_file($status_cache_file)) {
+            @unlink($status_cache_file);
+        }
 
         return self::result($release, 'available');
     }
 
-    /** Return the timestamp for a fresh cached "no stable release" result. */
-    private static function readNoReleaseCache(string $path): ?int
+    /** Return the timestamp for a fresh cached status such as a failed network check. */
+    private static function readStatusCache(string $path, string $status): ?int
     {
         if (!is_file($path) || !is_readable($path)) {
             return null;
         }
         $data = json_decode((string) @file_get_contents($path), true);
-        if (!is_array($data) || ($data['status'] ?? '') !== 'no_release') {
+        if (!is_array($data) || ($data['status'] ?? '') !== $status) {
             return null;
         }
         $checked_at = (int) ($data['checked_at'] ?? 0);
@@ -173,6 +203,15 @@ final class UpdateChecker
             'published_at' => $release['published_at'],
             'checked_at' => $release['checked_at'],
         ];
+    }
+
+    private static function statusCacheFile(): string
+    {
+        $base = defined('GLPI_PLUGIN_DOC_DIR') ? GLPI_PLUGIN_DOC_DIR . '/credentials' : sys_get_temp_dir() . '/glpi-credentials';
+        if (!is_dir($base)) {
+            @mkdir($base, 0750, true);
+        }
+        return $base . '/release_check_status.json';
     }
 
     private static function cacheFile(): string

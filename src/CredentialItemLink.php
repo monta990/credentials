@@ -19,6 +19,74 @@ final class CredentialItemLink extends CommonDBTM
 {
     public static string $rightname = 'plugin_credentials';
 
+    private static int $trustedWriteDepth = 0;
+
+    /** Execute one relationship insert from an already-authorized plugin service. */
+    private static function withTrustedWrite(callable $operation): mixed
+    {
+        self::$trustedWriteDepth++;
+        try {
+            return $operation();
+        } finally {
+            self::$trustedWriteDepth--;
+        }
+    }
+
+    /** Relationship rows are never exposed as independently manageable GLPI records. */
+    #[Override]
+    public function getForbiddenStandardMassiveAction()
+    {
+        return ['update', 'delete', 'purge'];
+    }
+
+    #[Override]
+    public function canViewItem(): bool
+    {
+        return false;
+    }
+
+    #[Override]
+    public function canCreateItem(): bool
+    {
+        return false;
+    }
+
+    #[Override]
+    public function canUpdateItem(): bool
+    {
+        return false;
+    }
+
+    #[Override]
+    public function canDeleteItem(): bool
+    {
+        return false;
+    }
+
+    #[Override]
+    public function canPurgeItem(): bool
+    {
+        return false;
+    }
+
+    #[Override]
+    public function prepareInputForAdd($input)
+    {
+        return self::$trustedWriteDepth > 0 && is_array($input) ? $input : false;
+    }
+
+    #[Override]
+    public function prepareInputForUpdate($input)
+    {
+        return false;
+    }
+
+    #[Override]
+    public function pre_deleteItem()
+    {
+        return false;
+    }
+
     #[Override]
     public static function getTable($classname = null): string
     {
@@ -148,7 +216,8 @@ final class CredentialItemLink extends CommonDBTM
         }
 
         $link = new self();
-        if (!$link->add($input)) {
+        $created = self::withTrustedWrite(static fn(): int|false => $link->add($input));
+        if (!$created) {
             return false;
         }
 
