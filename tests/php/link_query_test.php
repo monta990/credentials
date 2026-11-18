@@ -8,6 +8,15 @@ namespace {
     {
         public static function getTable($classname = null): string { return ''; }
         public static function getIndexName(): string { return 'id'; }
+        public function getForbiddenStandardMassiveAction() { return []; }
+        public function canViewItem(): bool { return true; }
+        public function canCreateItem(): bool { return true; }
+        public function canUpdateItem(): bool { return true; }
+        public function canDeleteItem(): bool { return true; }
+        public function canPurgeItem(): bool { return true; }
+        public function prepareInputForAdd($input) { return $input; }
+        public function prepareInputForUpdate($input) { return $input; }
+        public function pre_deleteItem() { return true; }
     }
 
     class CommonDBChild extends CommonDBTM {}
