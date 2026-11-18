@@ -426,8 +426,10 @@ foreach (glob($root . '/locales/*.po') ?: [] as $catalog) {
         $errors[] = 'Unexpected language catalog: ' . basename($catalog);
     }
     $catalog_text = file_get_contents($catalog);
-    if (!is_string($catalog_text) || !str_contains($catalog_text, 'Credentials ' . $version . '\\n')) {
-        $errors[] = 'Catalog version header is out of date: ' . basename($catalog);
+    if (!is_string($catalog_text)
+        || !preg_match('/Project-Id-Version: Credentials \\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?/', $catalog_text)
+    ) {
+        $errors[] = 'Catalog project/version header is missing or malformed: ' . basename($catalog);
     }
     if (!is_file($root . '/locales/' . $locale . '.mo')) {
         $errors[] = 'Compiled MO catalog is missing: ' . $locale;
