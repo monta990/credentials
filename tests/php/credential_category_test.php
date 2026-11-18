@@ -75,10 +75,14 @@ final class FakeCategoryDB
     public array $tables = [];
     public array $updates = [];
     public array $entityLocks = [];
+    public array $lockRows = [];
+    public array $lockRows = [];
     public array $queryLog = [];
     public mixed $beforeEntityLock = null;
     public bool $failEntityLock = false;
+    public int $affectedRows = 0;
     private int $transactionLevel = 0;
+    private int $affectedRows = 0;
     private int $nextCategoryId = 5;
     private array $existingEntities = [0, 7, 8];
 
@@ -114,6 +118,16 @@ final class FakeCategoryDB
     public function transactionLevel(): int
     {
         return $this->transactionLevel;
+    }
+
+    public function getAffectedRows(): int
+    {
+        return $this->affectedRows;
+    }
+
+    public function getAffectedRows(): int
+    {
+        return $this->affectedRows;
     }
 
     public function doQuery(string $query): FakeCategoryResult|false
@@ -158,12 +172,6 @@ final class FakeCategoryDB
     {
         $this->queryLog[] = 'REQUEST';
         $table = (string) ($criteria['FROM'] ?? '');
-        if ($table === 'glpi_entities') {
-            $entityId = (int) ($criteria['WHERE']['id'] ?? -1);
-            return new FakeCategoryIterator(
-                in_array($entityId, $this->existingEntities, true) ? [['id' => $entityId]] : []
-            );
-        }
         $rows = $this->tables[$table] ?? [];
         foreach (($criteria['WHERE'] ?? []) as $field => $expected) {
             $rows = array_values(array_filter(
@@ -188,6 +196,22 @@ final class FakeCategoryDB
 
     public function insert(string $table, array $data): int|false
     {
+        if ($table === 'glpi_plugin_credentials_entity_locks') {
+            $entityId = (int) ($data['entities_id'] ?? -1);
+            if (isset($this->lockRows[$entityId])) {
+                throw new RuntimeException('Duplicate entity lock row');
+            }
+            $this->lockRows[$entityId] = $data;
+            return 1;
+        }
+        if ($table === 'glpi_plugin_credentials_entity_locks') {
+            $entityId = (int) ($data['entities_id'] ?? -1);
+            if (isset($this->lockRows[$entityId])) {
+                throw new RuntimeException('Duplicate entity lock row');
+            }
+            $this->lockRows[$entityId] = $data;
+            return 1;
+        }
         if ($table !== 'glpi_plugin_credentials_categories') {
             return false;
         }
@@ -198,19 +222,23 @@ final class FakeCategoryDB
 
     public function update(string $table, array $data, array $where): bool
     {
-        if ($table === 'glpi_entities') {
-            $entityId = (int) ($where['id'] ?? -1);
+        if ($table === 'glpi_plugin_credentials_entity_locks') {
+            $entityId = (int) ($where['entities_id'] ?? -1);
             if ($this->failEntityLock) {
                 throw new RuntimeException('Simulated entity lock query failure');
             }
+            if (!isset($this->lockRows[$entityId])) {
+                $this->affectedRows = 0;
+                return true;
+            }
+            $this->lockRows[$entityId] = array_merge($this->lockRows[$entityId], $data);
+            $this->affectedRows = 1;
             $this->entityLocks[] = $entityId;
             if (is_callable($this->beforeEntityLock)) {
                 $callback = $this->beforeEntityLock;
                 $this->beforeEntityLock = null;
                 $callback($this, $entityId);
             }
-            // A successful SQL UPDATE returns true even when no row matched;
-            // the subsequent SELECT below verifies that the entity exists.
             return true;
         }
 
@@ -310,7 +338,7 @@ assertCategoryResult(7, $updated['entities_id'], 'category entity scope is prese
 assertCategoryResult('2026-01-01 00:00:00', $updated['date_creation'], 'creation timestamp is preserved');
 assertCategoryResult('2026-11-13 12:00:00', $updated['date_mod'], 'modification timestamp is refreshed');
 assertCategoryResult('glpi_plugin_credentials_categories', $DB->updates[0]['table'], 'updates touch only the category table');
-assertCategoryResult(7, $DB->entityLocks[0], 'category edit locks its GLPI entity');
+assertCategoryResult(7, $DB->entityLocks[0], 'category edit locks its plugin-owned entity row');
 assertCategoryResult(false, $DB->isInTransaction(), 'successful category edit releases its transaction');
 
 assertCategoryResult(
@@ -354,7 +382,7 @@ assertCategoryResult(
     'an update waiting behind a competing entity writer re-checks uniqueness after acquiring the lock'
 );
 assertCategoryResult('Network Operations', $DB->tables['glpi_plugin_credentials_categories'][0]['name'], 'a competing same-name category prevents the second update');
-assertCategoryResult(7, $DB->entityLocks[count($DB->entityLocks) - 1], 'category update locks its entity before checking uniqueness');
+assertCategoryResult(7, $DB->entityLocks[count($DB->entityLocks) - 1], 'category update locks its plugin-owned entity row before checking uniqueness');
 assertCategoryResult(false, $DB->isInTransaction(), 'duplicate rejection releases its transaction');
 
 $DB->beforeEntityLock = static function (FakeCategoryDB $database, int $entityId): void {
@@ -389,7 +417,7 @@ try {
     \GlpiPlugin\Credentials\CredentialCategory::create('Lock Failure', 7);
     throw new RuntimeException('Expected the simulated entity lock failure to propagate');
 } catch (RuntimeException $exception) {
-    assertCategoryResult('Simulated entity lock query failure', $exception->getMessage(), 'lock failure propagates after rollback');
+    assertCategoryResult('Simulated entity lock update failure', $exception->getMessage(), 'lock failure propagates after rollback');
 }
 assertCategoryResult(0, $DB->transactionLevel(), 'a failed standalone category lock rolls back its transaction');
 
@@ -400,7 +428,7 @@ try {
     \GlpiPlugin\Credentials\CredentialCategory::findOrCreateByName('Nested Lock Failure', 7);
     throw new RuntimeException('Expected the nested entity lock failure to propagate');
 } catch (RuntimeException $exception) {
-    assertCategoryResult('Simulated entity lock query failure', $exception->getMessage(), 'nested lock failure propagates after rollback');
+    assertCategoryResult('Simulated entity lock update failure', $exception->getMessage(), 'nested lock failure propagates after rollback');
 }
 assertCategoryResult(1, $DB->transactionLevel(), 'nested failure rolls back only the helper savepoint and preserves the caller transaction');
 $DB->failEntityLock = false;
