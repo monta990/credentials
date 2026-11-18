@@ -31,7 +31,14 @@ $checks = [
     'Review fields migration' => str_contains($hook, "'date_next_review'"),
     'Review responsible user field' => str_contains($hook, "'reviewer_users_id'"),
     'Category management' => str_contains($category, 'public static function create('),
-    'Category writes serialize duplicate-name checks for each GLPI entity' => str_contains($category, 'withEntityLock(') && str_contains($category, 'FOR UPDATE') && str_contains($category, 'glpi_entities'),
+    'Category writes serialize duplicate-name checks with plugin-owned entity locks' => str_contains($category, 'withEntityLock(')
+        && str_contains($category, "'glpi_plugin_credentials_entity_locks'")
+        && str_contains($category, "'lock_token' => bin2hex(random_bytes(16))")
+        && str_contains($category, '$DB->insert($lock_table, [')
+        && str_contains($category, '$DB->update($lock_table, [')
+        && str_contains($category, '$DB->getAffectedRows() !== 1')
+        && !str_contains($category, 'glpi_entities')
+        && !str_contains($category, '$DB->doQuery('),
     'Unused category protection' => str_contains($category, 'public static function deleteIfUnused('),
     'Lifecycle summary' => str_contains($admin, "'review_overdue'"),
     'Archived credential restoration' => str_contains($admin, 'public static function restore('),
