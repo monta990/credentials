@@ -105,12 +105,21 @@ namespace {
         NetworkEquipment::class . '#9' => [41],
     ];
 
+    // Each simulated source mutation below represents a new HTTP request.
+    // The production cache is intentionally request-scoped so the tab badge and
+    // body share one aggregation; clear it between simulated requests.
+    $resetRequestCache = static function (): void {
+        $cache = new \ReflectionProperty(\GlpiPlugin\Credentials\CredentialTicketTab::class, 'rowsCache');
+        $cache->setValue(null, []);
+    };
+
     $both = \GlpiPlugin\Credentials\CredentialTicketTab::getCredentialRows($ticket);
     if ($both['count'] !== 1 || count($both['rows']) !== 1 || count($both['rows'][0]['sources']) !== 2) {
         throw new RuntimeException('One credential linked to requester and ticket asset must appear once with two sources.');
     }
 
     // Unlink from requester; the asset relation must keep the ticket row and count.
+    $resetRequestCache();
     \GlpiPlugin\Credentials\Credential::$labels[User::class . '#2'] = [];
     \GlpiPlugin\Credentials\Credential::$active[User::class . '#2'] = [];
     $assetOnly = \GlpiPlugin\Credentials\CredentialTicketTab::getCredentialRows($ticket);
@@ -119,6 +128,7 @@ namespace {
     }
 
     // Re-link to requester; aggregation returns to two sources without double counting.
+    $resetRequestCache();
     \GlpiPlugin\Credentials\Credential::$labels[User::class . '#2'] = [$credential];
     \GlpiPlugin\Credentials\Credential::$active[User::class . '#2'] = [41];
     $relinked = \GlpiPlugin\Credentials\CredentialTicketTab::getCredentialRows($ticket);
@@ -127,6 +137,7 @@ namespace {
     }
 
     // Remove both links: both list and tab counter must reach zero.
+    $resetRequestCache();
     \GlpiPlugin\Credentials\Credential::$labels = [];
     \GlpiPlugin\Credentials\Credential::$active = [];
     $empty = \GlpiPlugin\Credentials\CredentialTicketTab::getCredentialRows($ticket);
@@ -135,6 +146,7 @@ namespace {
     }
 
     // Two inaccessible sources must accumulate unique protected IDs, not overwrite each other.
+    $resetRequestCache();
     $GLOBALS['SIM_ITEMS'][User::class . '#2']['reauth'] = true;
     $GLOBALS['SIM_ITEMS'][NetworkEquipment::class . '#9']['reauth'] = true;
     \GlpiPlugin\Credentials\Credential::$active = [User::class . '#2' => [41], NetworkEquipment::class . '#9' => [42]];
