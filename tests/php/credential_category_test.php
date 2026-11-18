@@ -76,11 +76,9 @@ final class FakeCategoryDB
     public array $updates = [];
     public array $entityLocks = [];
     public array $lockRows = [];
-    public array $lockRows = [];
     public array $queryLog = [];
     public mixed $beforeEntityLock = null;
     public bool $failEntityLock = false;
-    public int $affectedRows = 0;
     private int $transactionLevel = 0;
     private int $affectedRows = 0;
     private int $nextCategoryId = 5;
@@ -125,37 +123,10 @@ final class FakeCategoryDB
         return $this->affectedRows;
     }
 
-    public function getAffectedRows(): int
-    {
-        return $this->affectedRows;
-    }
-
     public function doQuery(string $query): FakeCategoryResult|false
     {
         $this->queryLog[] = $query;
-        if ($this->failEntityLock) {
-            throw new RuntimeException('Simulated entity lock query failure');
-        }
-        if (!str_contains($query, 'FOR UPDATE') || !str_contains($query, 'glpi_entities')) {
-            return false;
-        }
-
-        preg_match("/= '([0-9]+)' FOR UPDATE$/", $query, $matches);
-        $entityId = (int) ($matches[1] ?? -1);
-        if ($entityId < 0) {
-            return false;
-        }
-
-        $this->entityLocks[] = $entityId;
-        if (is_callable($this->beforeEntityLock)) {
-            $callback = $this->beforeEntityLock;
-            $this->beforeEntityLock = null;
-            $callback($this, $entityId);
-        }
-
-        return new FakeCategoryResult(
-            in_array($entityId, $this->existingEntities, true) ? ['id' => $entityId] : false
-        );
+        return false;
     }
 
     public function fetchAssoc(FakeCategoryResult $result): array|false
@@ -204,14 +175,6 @@ final class FakeCategoryDB
             $this->lockRows[$entityId] = $data;
             return 1;
         }
-        if ($table === 'glpi_plugin_credentials_entity_locks') {
-            $entityId = (int) ($data['entities_id'] ?? -1);
-            if (isset($this->lockRows[$entityId])) {
-                throw new RuntimeException('Duplicate entity lock row');
-            }
-            $this->lockRows[$entityId] = $data;
-            return 1;
-        }
         if ($table !== 'glpi_plugin_credentials_categories') {
             return false;
         }
@@ -225,7 +188,7 @@ final class FakeCategoryDB
         if ($table === 'glpi_plugin_credentials_entity_locks') {
             $entityId = (int) ($where['entities_id'] ?? -1);
             if ($this->failEntityLock) {
-                throw new RuntimeException('Simulated entity lock query failure');
+                throw new RuntimeException('Simulated entity lock update failure');
             }
             if (!isset($this->lockRows[$entityId])) {
                 $this->affectedRows = 0;
