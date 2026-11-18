@@ -5,10 +5,11 @@ declare(strict_types=1);
 final class Session
 {
     public static bool $canAccess = true;
+    public static array $accessibleEntities = [0, 7, 8];
 
     public static function haveAccessToEntity(int $entities_id): bool
     {
-        return self::$canAccess;
+        return self::$canAccess && in_array($entities_id, self::$accessibleEntities, true);
     }
 }
 
