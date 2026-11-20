@@ -35,15 +35,14 @@ final class Profile extends \Profile
             return false;
         }
 
-        if (!self::ensureRightsForProfile((int) $item->getID())) {
-            return false;
-        }
+        $rights_ready = self::ensureRightsForProfile((int) $item->getID());
 
         TemplateRenderer::getInstance()->display('@credentials/profile.html.twig', [
-            'id'      => $item->getID(),
-            'profile' => $profile,
-            'title'   => self::getTypeName(Session::getPluralNumber()),
-            'rights'  => self::getAllRights(),
+            'id'            => $item->getID(),
+            'profile'       => $profile,
+            'title'         => self::getTypeName(Session::getPluralNumber()),
+            'rights'        => $rights_ready ? self::getAllRights() : [],
+            'rights_missing' => !$rights_ready,
         ]);
 
         return true;

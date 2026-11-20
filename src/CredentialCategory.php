@@ -325,17 +325,27 @@ final class CredentialCategory
         $lock_table = 'glpi_plugin_credentials_entity_locks';
         $DB->beginTransaction();
         try {
-            // Seed the lock row. A duplicate-key exception means the row already
-            // exists (or a concurrent transaction just created it); InnoDB keeps
-            // the outer transaction usable after the failed statement.
-            $insert_error = null;
-            try {
-                $DB->insert($lock_table, [
-                    'entities_id' => $entities_id,
-                    'lock_token' => bin2hex(random_bytes(16)),
-                ]);
-            } catch (\Throwable $exception) {
-                $insert_error = $exception;
+            // Check first so ordinary calls do not intentionally issue a duplicate
+            // INSERT. The INSERT remains necessary for entities created after plugin
+            // installation; a concurrent first writer may still win that race.
+            $lock_row = $DB->request([
+                'SELECT' => ['entities_id'],
+                'FROM' => $lock_table,
+                'WHERE' => ['entities_id' => $entities_id],
+                'LIMIT' => 1,
+            ])->current();
+            if (!is_array($lock_row)) {
+                try {
+                    $DB->insert($lock_table, [
+                        'entities_id' => $entities_id,
+                        'lock_token' => bin2hex(random_bytes(16)),
+                    ]);
+                } catch (\Throwable) {
+                    // A concurrent transaction may have inserted this entity row
+                    // after the existence check. The atomic UPDATE below decides
+                    // whether a usable lock row exists; no duplicate error is
+                    // generated on the normal, already-seeded path.
+                }
             }
 
             // Updating a changing token is an atomic current write: it both proves
@@ -345,9 +355,6 @@ final class CredentialCategory
                 'lock_token' => bin2hex(random_bytes(16)),
             ], ['entities_id' => $entities_id]);
             if ($locked === false || $DB->getAffectedRows() !== 1) {
-                if ($insert_error !== null) {
-                    throw $insert_error;
-                }
                 throw new \RuntimeException('Unable to create or lock the Credentials entity row.');
             }
 

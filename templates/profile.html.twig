@@ -1,9 +1,15 @@
 <div class="spaced">
-    <form method="post" action="{{ 'Profile'|itemtype_form_path }}">
-        {% do profile.displayRightsChoiceMatrix(rights, {'title': title}) %}
-        <div class="center">
-            <input type="hidden" name="id" value="{{ id }}">
-            {{ call('Html::submit', [_x('button', 'Save'), {'name': 'update', 'icon': 'ti ti-device-floppy'}])|raw }}
+    {% if rights_missing %}
+        <div class="alert alert-warning" role="alert">
+            {{ __('Credentials permission records are missing for this profile. Run the Credentials plugin update from Setup > Plugins, then reopen this tab.', 'credentials') }}
         </div>
-    </form>
+    {% else %}
+        <form method="post" action="{{ 'Profile'|itemtype_form_path }}">
+            {% do profile.displayRightsChoiceMatrix(rights, {'title': title}) %}
+            <div class="center">
+                <input type="hidden" name="id" value="{{ id }}">
+                {{ call('Html::submit', [_x('button', 'Save'), {'name': 'update', 'icon': 'ti ti-device-floppy'}])|raw }}
+            </div>
+        </form>
+    {% endif %}
 </div>

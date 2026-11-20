@@ -64,7 +64,24 @@ final class Credential extends CommonDBTM
     #[Override]
     public function getForbiddenStandardMassiveAction()
     {
-        return ['update', 'delete', 'purge'];
+        return ['update', 'delete', 'purge', 'restore'];
+    }
+
+    /**
+     * Generic GLPI restoration bypasses the administration service's link/entity
+     * validation and item-history writes. Only an explicitly trusted plugin flow
+     * may delegate to CommonDBTM::restore().
+     *
+     * @param array<string,mixed> $input
+     */
+    #[Override]
+    public function restore(array $input, $history = true)
+    {
+        if (self::$trustedWriteDepth <= 0) {
+            return false;
+        }
+
+        return parent::restore($input, $history);
     }
 
     /** Generic model creation is disabled; controllers and import services use withTrustedWrite(). */
