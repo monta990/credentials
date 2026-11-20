@@ -334,6 +334,7 @@ final class CredentialCategory
                 'WHERE' => ['entities_id' => $entities_id],
                 'LIMIT' => 1,
             ])->current();
+            $insert_error = null;
             if (!is_array($lock_row)) {
                 try {
                     $DB->insert($lock_table, [
