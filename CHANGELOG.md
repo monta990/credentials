@@ -2,6 +2,18 @@
 
 All notable changes to Credentials are documented here.
 
+## 1.0.2 — 2026-11-20
+
+### Security fixes
+
+- Block native GLPI restore and restore massive actions at the Credential model boundary unless invoked from an explicitly trusted plugin write scope. The administrative restore workflows continue to enforce configuration rights, entity/link validation and linked-item history.
+
+### Quality and maintenance
+
+- Avoid the expected duplicate-key INSERT on every category mutation by checking for the entity lock row before seeding it; the atomic UPDATE remains the serialization point.
+- Remove the UpdateChecker cache files and their empty plugin documentation directory during uninstall.
+- Display a clear administrator notice in the Profile tab when a profile is missing Credentials rights records, instead of leaving an empty tab.
+
 ## 1.0.1 — 2026-11-18
 
 Security and compatibility update based on the Teclib' GLPI 12 review.

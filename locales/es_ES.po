@@ -1,7 +1,7 @@
 
 msgid ""
 msgstr ""
-"Project-Id-Version: Credentials 1.0.0\n"
+"Project-Id-Version: Credentials 1.0.2\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-05 18:00-0700\n"
 "PO-Revision-Date: 2026-11-05 21:10-0700\n"
@@ -1471,3 +1471,6 @@ msgstr ""
 msgid "Save update check settings"
 msgstr "Guardar la configuración de comprobación de actualizaciones"
 
+
+msgid "Credentials permission records are missing for this profile. Run the Credentials plugin update from Setup > Plugins, then reopen this tab."
+msgstr "Faltan los registros de permisos de Credentials para este perfil. Ejecuta la actualización del plugin Credentials desde Configuración > Plugins y vuelve a abrir esta pestaña."

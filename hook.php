@@ -359,6 +359,27 @@ function plugin_credentials_uninstall(): bool
         return false;
     }
 
+    // UpdateChecker stores only non-secret release metadata in this plugin-owned
+    // directory. Remove its known cache files and the empty directory on uninstall.
+    if (defined('GLPI_PLUGIN_DOC_DIR')) {
+        $cache_dir = rtrim(GLPI_PLUGIN_DOC_DIR, '/\\') . '/credentials';
+        if (is_dir($cache_dir) && !is_link($cache_dir)) {
+            foreach (['release_cache.json', 'release_check_status.json'] as $cache_name) {
+                $cache_file = $cache_dir . DIRECTORY_SEPARATOR . $cache_name;
+                if ((is_file($cache_file) || is_link($cache_file)) && !unlink($cache_file)) {
+                    return false;
+                }
+            }
+            $remaining = scandir($cache_dir);
+            if ($remaining === false) {
+                return false;
+            }
+            if (count(array_diff($remaining, ['.', '..'])) === 0 && !rmdir($cache_dir)) {
+                return false;
+            }
+        }
+    }
+
     return true;
 }
 
