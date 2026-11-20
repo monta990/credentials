@@ -340,11 +340,11 @@ final class CredentialCategory
                         'entities_id' => $entities_id,
                         'lock_token' => bin2hex(random_bytes(16)),
                     ]);
-                } catch (\Throwable) {
+                } catch (\Throwable $exception) {
                     // A concurrent transaction may have inserted this entity row
-                    // after the existence check. The atomic UPDATE below decides
-                    // whether a usable lock row exists; no duplicate error is
-                    // generated on the normal, already-seeded path.
+                    // after the existence check. Keep the exception so it can be
+                    // surfaced if the subsequent UPDATE cannot obtain the lock.
+                    $insert_error = $exception;
                 }
             }
 
@@ -355,6 +355,9 @@ final class CredentialCategory
                 'lock_token' => bin2hex(random_bytes(16)),
             ], ['entities_id' => $entities_id]);
             if ($locked === false || $DB->getAffectedRows() !== 1) {
+                if ($insert_error !== null) {
+                    throw $insert_error;
+                }
                 throw new \RuntimeException('Unable to create or lock the Credentials entity row.');
             }
 

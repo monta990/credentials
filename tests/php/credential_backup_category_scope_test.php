@@ -82,6 +82,11 @@ namespace {
         {
             $this->last_request = $criteria;
             $table = $criteria['FROM'] ?? '';
+            if ($table === 'glpi_plugin_credentials_entity_locks') {
+                $entities_id = (int) ($criteria['WHERE']['entities_id'] ?? -1);
+                $row = $this->entity_lock_rows[$entities_id] ?? null;
+                return new FakeCategoryIterator($row === null ? [] : [$row]);
+            }
             if ($table !== 'glpi_plugin_credentials_categories') {
                 throw new RuntimeException('Unexpected category query table: ' . (string) $table);
             }
